@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jornada na Palavra – Leitura Bíblica em Caravana</title>
+<meta name="theme-color" content="#b8742a">
+<style>
+:root{--bg:#f4ede0;--card:#fffaf2;--tx:#2b2118;--mut:#85766a;--ac:#b8742a;--acx:#fff;--bd:#e7dccb;--ok:#4f7c3a;--err:#c0392b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130f;--card:#221c16;--tx:#f3eadf;--mut:#a8998a;--bd:#3a3027;--ac:#d4954a;--ok:#7fae62;--err:#ef7b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17130f;--card:#221c16;--tx:#f3eadf;--mut:#a8998a;--bd:#3a3027;--ac:#d4954a;--ok:#7fae62;--err:#ef7b6b;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:110px;max-width:560px;margin-inline:auto}
+header{padding:20px 16px 8px}
+h1{font:700 13px system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 4px}
+h2{font:700 23px Georgia,"Times New Roman",serif;margin:0}
+.sub{color:var(--mut);font-size:14px}
+.err{color:var(--err);font-size:14px}
+.trail{width:100%;height:auto;display:block;margin:6px 0 2px}
+.road{fill:none;stroke:var(--ac);stroke-width:4;stroke-dasharray:1 9;stroke-linecap:round}
+.walked{fill:none;stroke:var(--ac);stroke-width:5;stroke-linecap:round}
+.stone{fill:var(--bd)}
+.peer circle{fill:var(--card);stroke:var(--mut);stroke-width:1.5}
+.peer text{font:700 10px system-ui,sans-serif;fill:var(--tx);text-anchor:middle;dominant-baseline:central}
+.me circle{fill:var(--ac)}
+.lbl{font:600 11px system-ui,sans-serif;fill:var(--mut)}
+.hill{fill:var(--ok);opacity:.28}
+.stats{display:flex;gap:8px;padding:8px 16px}
+.stat{flex:1;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 4px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--mut)}
+main{padding:8px 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none}
+.grow{flex:1;min-width:0}
+.ref{font-weight:700;margin:10px 0 2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--bg);border:1px solid var(--bd);color:var(--mut)}
+.media{width:100%;border-radius:12px;margin-top:8px;display:block;max-height:520px;object-fit:cover;background:#000}
+.car{position:relative;margin-top:8px}
+.cart{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cart::-webkit-scrollbar{display:none}
+.cars{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always}
+.cars .media{margin-top:0;border-radius:0;height:420px;max-height:62vh}
+.carc{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;pointer-events:none}
+.dots{display:flex;justify-content:center;gap:6px;margin-top:8px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:var(--bd);cursor:pointer}
+.dots button.on{background:var(--ac)}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.mth{position:relative}
+.mth img,.mth video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#000}
+.mth .mx{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:14px;cursor:pointer;padding:0}
+.mth .mr{position:absolute;left:4px;right:4px;bottom:4px;border:0;border-radius:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:4px;cursor:pointer}
+.tref{font:700 21px Georgia,serif;margin:2px 0 8px}
+.vs{font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:1.6}
+.vs sup{color:var(--ac);font:700 11px system-ui,sans-serif;margin:0 3px 0 4px}
+.chip{display:inline-block;margin:8px 6px 0 0;padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:14px;cursor:pointer}
+.chip.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}
+.act{display:flex;gap:18px;margin-top:6px}
+.like{background:none;border:0;color:var(--mut);font-size:15px;padding:6px 0;cursor:pointer}
+.like.on{color:#e0455a}
+.cms{border-top:1px solid var(--bd);margin-top:8px;padding-top:8px}
+.cm{font-size:14px;padding:4px 0}
+.msgs{max-height:58vh;min-height:200px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-top:10px;padding:2px}
+textarea.grow{resize:none;min-height:48px;max-height:180px;overflow-y:auto;line-height:1.35}
+.msg{white-space:pre-wrap}
+.txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.vbtn{font-size:15px;text-decoration:underline;margin-top:4px}
+.row.send{align-items:flex-end}
+.msg{align-self:flex-start;max-width:82%;background:var(--bg);border:1px solid var(--bd);border-radius:14px 14px 14px 4px;padding:7px 12px;font-size:15px;overflow-wrap:anywhere}
+.msg b{display:block;font-size:12px;color:var(--ac)}
+.msg.me{align-self:flex-end;background:var(--ac);color:var(--acx);border-color:transparent;border-radius:14px 14px 4px 14px}
+.msg small{display:block;font-size:11px;opacity:.65;text-align:right}
+.land{background:linear-gradient(135deg,#6e9a4f,#3f6a2c);color:#fff;border:0;text-align:center}
+.land .sub{color:#e8f3df}
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--card);border-top:1px solid var(--bd);padding:6px 4px calc(8px + env(safe-area-inset-bottom,0px));max-width:560px;margin-inline:auto;z-index:5;box-shadow:0 -2px 12px #0001}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--mut);font:600 14px system-ui,-apple-system,sans-serif;padding:4px 0;min-height:62px;justify-content:flex-end;cursor:pointer;-webkit-tap-highlight-color:transparent}
+nav button span{display:grid;place-items:center;width:56px;height:34px;border-radius:17px;font-size:24px;line-height:1}
+nav button.on{color:var(--ac);font-weight:800}
+nav button.on span{background:var(--bg);box-shadow:inset 0 0 0 2px var(--ac)}
+nav .fab{color:var(--ac);font-weight:800}
+nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);color:var(--acx);font-size:30px;margin-top:-34px;box-shadow:0 4px 14px #0004;border:4px solid var(--card)}
+.seg{display:flex;background:var(--bd);border-radius:10px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;padding:8px 2px;border-radius:8px;color:var(--tx);font-size:13px;cursor:pointer}
+.seg button.on{background:var(--card);font-weight:700}
+.rk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.rk:last-child{border:0}.pos{width:24px;text-align:center;font-weight:700;color:var(--mut)}
+.val{font-weight:700;font-size:18px;white-space:nowrap}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.cal>*{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;font-size:13px;background:var(--bd);color:var(--mut)}
+.cal button{border:0;font:inherit;font-size:13px;cursor:pointer;padding:0}
+.cal .h{background:var(--ac);color:var(--acx);font-weight:700}
+.cal .t{outline:2px solid var(--tx)}
+.cal .w{background:none;aspect-ratio:auto;font-size:11px;border-radius:0}
+.sheet{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;z-index:9}
+.sheet.show{display:flex}
+.sheet>div{background:var(--bg);width:100%;max-width:560px;margin:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow:auto}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+.btn{width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;background:var(--ac);color:var(--acx);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.5}
+.btn.g{background:none;color:var(--mut);margin-top:4px}
+.btn.o{background:var(--card);color:var(--tx);border:1px solid var(--bd);text-align:left;font-weight:400;margin-top:10px}
+.btn.o b{font-weight:700}
+label.btn{display:block;text-align:center;font-size:15px;color:var(--tx)}
+.sbtn{width:auto;margin:0;padding:11px 16px}
+a.btn{display:block;text-align:center;text-decoration:none}
+.btn.wab{background:#25D366}
+.wa{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 14px;border-radius:99px;background:#25D366;color:#fff;font-weight:700;font-size:14px;text-decoration:none}
+.two{display:flex;gap:8px}.two>*{flex:1;min-width:0}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
+.bk{padding:14px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:600 16px system-ui,sans-serif;cursor:pointer;text-align:left}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px;margin-top:12px}
+.cgrid .chip{margin:0;padding:13px 0;text-align:center;font-size:17px}
+.tst{font:700 13px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);margin:18px 0 0}
+#bibx{line-height:1.75;margin-top:10px}
+.link{background:none;border:0;color:var(--ac);font-size:13px;cursor:pointer;padding:0}
+.gate header,.gate #stats,.gate main,.gate nav{display:none}
+#gate{display:none;padding:24px 18px 40px;font-size:18px}.gate #gate{display:block}
+#gate h2{font-size:27px;margin:12px 0 6px}
+#gate .sub{font-size:17px}
+#gate label{font-size:17px;color:var(--tx);margin-top:16px}
+#gate input{font-size:20px;padding:15px;margin-top:8px}
+#gate .btn{font-size:20px;padding:17px}
+#gate .err{font-size:17px;margin-top:10px}
+#gate .link.big{display:block;font-size:17px;margin:22px auto 0;text-decoration:underline}
+.steps{display:flex;gap:6px;margin:8px 0 6px}.steps i{flex:1;height:7px;border-radius:9px;background:var(--bd)}.steps i.on{background:var(--ac)}
+.pw{position:relative}.pw input{padding-right:110px}.pw button{position:absolute;right:14px;top:50%;transform:translateY(-35%);font-size:16px}
+.bib-i{display:inline-block;margin:2px 0 6px;font-size:14px}
+.bi>div:last-child{margin-top:2px}
+.jhd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:10px}.jhd b{font-size:14px}.jhd .sub{font-size:12px;text-align:right}
+.jsw{display:flex;gap:8px;overflow-x:auto;margin:6px -16px 8px;padding:2px 16px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.jc{flex:0 0 74%;max-width:250px;display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px;font:inherit;color:var(--tx);cursor:pointer;scroll-snap-align:start}
+.jc.on{border:2px solid var(--ac);padding:9px 11px;box-shadow:0 2px 10px #0002}
+.jc b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jc .sub{font-size:12px}
+.jc .bar{display:block;height:6px;border-radius:9px;background:var(--bd);margin:6px 0 4px;overflow:hidden}.jc .bar i{display:block;height:100%;background:var(--ac)}
+.jc .js{font-size:12px;color:var(--mut)}.jc .js.pend{color:var(--ac);font-weight:700}.jc .js.ok{color:var(--ok);font-weight:700}
+.jtag{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--bd);font-size:14px}
+.ecard{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-top:12px}
+.pray{border-color:var(--ac)}
+.preqs{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:32vh;overflow:auto}
+.preqs[hidden]{display:none}
+.pcmp{padding:10px 12px}.pcmp .chk{margin-top:6px;font-size:13px}.pcmp .chk input{width:18px;height:18px}
+.pcmp .pbtn{width:auto;margin:0;padding:8px 12px;font-size:14px;flex:none}
+.pcmp hr{border:0;border-top:1px solid var(--bd);margin:10px 0 8px}
+.pcmp textarea{padding:8px 10px;font-size:15px}.pcmp .sbtn{padding:8px 12px;font-size:14px}
+.preq{background:var(--bg);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:10px;padding:8px 12px;font-size:15px;white-space:pre-wrap}
+.preq b{display:block;font-size:12px;color:var(--ac)}
+.preq small{display:block;font-size:11px;opacity:.65}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:none;margin:0}
+body:not([data-tab="feed"]) #jsw,body:not([data-tab="feed"]) #map,body:not([data-tab="feed"]) #cd,body:not([data-tab="feed"]) #stats{display:none!important}
+body:not([data-tab="feed"]) header{padding-bottom:4px}
+.cr{font-size:12px;margin-top:10px}
+#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);background:var(--tx);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90%}
+#toast.show{opacity:1;transform:translateX(-50%)}
+.vv.hl{background:color-mix(in srgb,var(--ac) 22%,transparent);border-radius:4px}
+.howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
+</style>
+</head>
+<body class="gate">
+<div id="gate">Carregando…</div>
+<header>
+  <h1>🧭 Jornada na Palavra</h1>
+  <div id="jsw"></div>
+  <h2 id="cn"></h2>
+  <div class="sub" id="cs"></div>
+  <div id="map"></div>
+  <div class="sub" id="cd"></div>
+  <button class="link" id="edj" style="display:none;margin-top:6px;font-size:14px">✏️ Editar esta jornada</button>
+</header>
+<div class="stats" id="stats"></div>
+<main id="main"></main>
+
+<nav aria-label="Menu principal">
+  <button data-t="feed"><span aria-hidden="true">🏠</span>Início</button>
+  <button data-t="bib"><span aria-hidden="true">📖</span>Bíblia</button>
+  <button class="fab" id="add" aria-label="Dar o passo de hoje"><span aria-hidden="true">👣</span>Passo</button>
+  <button data-t="chat"><span aria-hidden="true">💬</span>Chat</button>
+  <button data-t="cfg"><span aria-hidden="true">🗺️</span>Mapa</button>
+</nav>
+
+<div class="sheet" id="sh"><div id="shc"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var BOOKS=['Gênesis','Êxodo','Levítico','Números','Deuteronômio','Josué','Juízes','Rute','1 Samuel','2 Samuel','1 Reis','2 Reis','1 Crônicas','2 Crônicas','Esdras','Neemias','Ester','Jó','Salmos','Provérbios','Eclesiastes','Cantares','Isaías','Jeremias','Lamentações','Ezequiel','Daniel','Oseias','Joel','Amós','Obadias','Jonas','Miqueias','Naum','Habacuque','Sofonias','Ageu','Zacarias','Malaquias','Mateus','Marcos','Lucas','João','Atos','Romanos','1 Coríntios','2 Coríntios','Gálatas','Efésios','Filipenses','Colossenses','1 Tessalonicenses','2 Tessalonicenses','1 Timóteo','2 Timóteo','Tito','Filemom','Hebreus','Tiago','1 Pedro','2 Pedro','1 João','2 João','3 João','Judas','Apocalipse'];
+var BK='GEN EXO LEV NUM DEU JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST JOB PSA PRO ECC SNG ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL MAT MRK LUK JHN ACT ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD REV'.split(' ');
+var NC=[50,40,27,36,34,24,21,4,31,24,22,25,29,36,10,13,10,42,150,31,12,8,66,52,5,48,12,14,3,9,1,4,7,3,3,3,2,14,4,28,16,24,21,28,16,16,13,6,6,4,4,5,3,6,4,3,1,13,5,5,3,5,1,1,1,22];
+var MAXV=50*1048576,MAXF=10,PSEP='|';
+// Várias fotos/vídeos numa publicação: os caminhos ficam juntos em photo_path, separados por "|"
+function isVidPath(x){return /\.(mp4|mov|m4v|webm|3gp|3g2|avi|mkv|qt|mpe?g)$/i.test(x)}
+var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
+var tab='feed',rk='dias',loaded=false,sb,gm='in';
+function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
+function addD(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}
+function diff(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
+var TODAY=iso(new Date());
+var S={roster:{},groups:[],grp:null,me:null,canEdit:false,err:'',ch:{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5},chs:[],all:[],myJ:[],joinG:null,cur:null,posts:[],names:{},asked:false,draft:null,openC:{},media:null,step:null};
+// Tempo-limite: em conexão ruim a chamada não fica "carregando" para sempre
+function withTimeout(pr,ms){return Promise.race([pr,new Promise(function(_,rej){setTimeout(function(){rej(new Error('tempo esgotado'))},ms)})])}
+function uid(){try{if(crypto.randomUUID)return crypto.randomUUID()}catch(e){}return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function val(id){var e=document.getElementById(id);return e?e.value:''}
+function nm(u){return S.names[u]||'Peregrino'}
+// Integrantes: a lista real da caravana (group_roster) + quem publicou na jornada + você
+function roster(){return S.grp&&S.roster[S.grp.id]||null}
+function users(){var o={},R=roster();if(R)R.forEach(function(m){o[m.id]=1});S.posts.forEach(function(p){if(p.cid===S.cur)o[p.uid]=1});if(S.me)o[S.me]=1;return Object.keys(o)}
+function memberCount(){var R=roster();return R?R.length:users().length}
+function mine(u){return S.posts.filter(function(p){return p.uid===u&&p.cid===S.cur})}
+function days(u){return daysIn(u,S.cur)}
+function chap(u){return mine(u).reduce(function(a,p){return a+(+p.ch||0)},0)}
+function mins(u){return mine(u).reduce(function(a,p){return a+(+p.min||0)},0)}
+function streak(u){var d=days(u),s=0,c=d.indexOf(TODAY)>=0?TODAY:addD(TODAY,-1);while(d.indexOf(c)>=0){s++;c=addD(c,-1)}return s}
+function fmin(m){m=+m||0;if(m<60)return m+' min';var h=Math.floor(m/60),r=m%60;return h+'h'+(r?String(r).padStart(2,'0'):'')}
+function fd(d){return d.split('-').reverse().join('/')}
+function ago(ts){var m=Math.round((Date.now()-ts)/6e4);if(m<60)return 'há '+Math.max(m,1)+' min';var h=Math.round(m/60);if(h<24)return 'há '+h+' h';var d=Math.round(h/24);return d===1?'ontem':'há '+d+' dias'}
+function hhmm(t){return new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+
+// ---- Bíblia: textos livres guardados no próprio app (pasta biblia/) e planos de leitura ----
+// Cada versão livre tem um arquivo por livro: biblia/VERSÃO/LIVRO.json = [[ [versículo,texto], … ] por capítulo]
+var BC={},BB={};
+function inApp(k){var v=VERS.filter(function(x){return x.k===k})[0];return !!(v&&!v.id)}
+function bookFile(ver,b){
+  var k=ver+'/'+BK[b];
+  if(!BB[k])BB[k]=cachedJson('biblia/'+k+'.json').catch(function(e){delete BB[k];throw e});
+  return BB[k]
+}
+// Cada livro lido fica guardado no aparelho e depois abre sem internet
+var BCACHE='biblia-v1';
+async function cachedJson(url){
+  var c=null;try{if(window.caches)c=await caches.open(BCACHE)}catch(e){}
+  if(c){try{var hit=await c.match(url);if(hit)return await hit.json()}catch(e){}}
+  var r=await fetch(url);if(!r.ok)throw new Error('http '+r.status);
+  if(c)try{await c.put(url,r.clone())}catch(e){}
+  return r.json()
+}
+async function offlineCount(ver){try{if(!window.caches)return -1;var c=await caches.open(BCACHE),ks=await c.keys();return ks.filter(function(q){return q.url.indexOf('/biblia/'+ver+'/')>=0}).length}catch(e){return -1}}
+async function saveOffline(btn){
+  var ver=inApp(BIB.ver)?BIB.ver:'ALM',n=0;btn.disabled=true;
+  for(var b=0;b<66;b++){try{await bookFile(ver,b);n++}catch(e){}btn.textContent='Guardando… '+Math.round((b+1)*100/66)+'%'}
+  btn.disabled=false;btn.textContent=n===66?'✓ Pronto: '+verOf(ver).k+' disponível sem internet':'Guardou '+n+' de 66 livros. Toque para continuar.';
+}
+function bible(b,c,ver){
+  ver=ver||(inApp(BIB.ver)?BIB.ver:'ALM');
+  var k=ver+':'+BK[b]+c;if(BC[k])return Promise.resolve(BC[k]);
+  try{var s=localStorage.getItem('pd_b2_'+k);if(s){BC[k]=JSON.parse(s);return Promise.resolve(BC[k])}}catch(e){}
+  return bookFile(ver,b).then(function(bk){
+    var v=bk[c-1];if(!v||!v.length)throw new Error('capítulo vazio');BC[k]=v;
+    try{localStorage.setItem('pd_b2_'+k,JSON.stringify(v))}catch(e){}
+    return v
+  }).catch(function(e){
+    // reserva: a Almeida também está na bible-api.com
+    if(ver!=='ALM')throw e;
+    return fetch('https://bible-api.com/data/almeida/'+BK[b]+'/'+c).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json()}).then(function(j){
+      var v=j.verses.map(function(x){return[x.verse,x.text.replace(/\s+/g,' ').trim()]});BC[k]=v;return v})
+  })
+}
+function verses(v,ids){return v.map(function(x){return (ids?'<span id="v'+x[0]+'" class="vv">':'')+'<sup>'+x[0]+'</sup>'+esc(x[1])+(ids?'</span>':'')}).join(' ')}
+function goVerse(n){var e=document.getElementById('v'+n);if(!e)return;document.querySelectorAll('.vv.hl').forEach(function(x){x.classList.remove('hl')});e.classList.add('hl');e.scrollIntoView({behavior:'smooth',block:'center'});if(BIB.last){BIB.last.v=+n;bibSave()}}
+function norm(t){return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}
+function rg(a,z){var r=[];for(var i=a;i<=z;i++)r.push(i);return r}
+// Descobre quais livros a jornada cobre a partir do nome e da descrição
+function books(t){
+  t=' '+norm(t).replace(/[^a-z0-9]+/g,' ')+' ';
+  if(/ (antigo|velho) testamento /.test(t))return rg(0,38);
+  if(/ novo testamento /.test(t))return rg(39,65);
+  if(/ biblia /.test(t))return rg(0,65);
+  if(/ evangelhos /.test(t))return rg(39,42);
+  var o={};
+  rg(0,65).sort(function(a,b){return BOOKS[b].length-BOOKS[a].length}).forEach(function(i){var n=' '+norm(BOOKS[i])+' ';if(t.indexOf(n)>=0){o[i]=1;t=t.split(n).join(' ')}});
+  if(t.indexOf(' salmo ')>=0)o[18]=1;
+  if(t.indexOf(' canticos ')>=0)o[21]=1;
+  return Object.keys(o).map(Number).sort(function(a,b){return a-b})
+}
+function chaps(bs){var L=[];bs.forEach(function(b){for(var c=1;c<=NC[b];c++)L.push({b:b,c:c})});return L}
+var PL={};
+function plan(c){
+  var k=c.name+'|'+(c.desc||'')+'|'+c.start+'|'+c.end;
+  if(!(k in PL)){var L=chaps(books(c.name+' '+(c.desc||'')));PL[k]=L.length?{L:L,n:diff(c.start,c.end)+1}:null}
+  return PL[k]
+}
+// Capítulos do dia i (0 = primeiro dia), distribuídos por igual ao longo do prazo
+function dayRead(c,i){var P=plan(c);if(!P)return[];var m=P.L.length,n=P.n;return P.L.filter(function(x,j){return Math.floor(j*n/m)===i})}
+// Total de passos até a Terra Prometida
+function totalSteps(c){var P=plan(c);return P?Math.min(P.n,P.L.length):diff(c.start,c.end)+1}
+// "Salmos 1, 3–5; Provérbios 2"
+function refOf(R){
+  var by=[];R.forEach(function(x){var g=by[by.length-1];if(!g||g.b!==x.b){g={b:x.b,r:[]};by.push(g)}var l=g.r[g.r.length-1];if(l&&l[1]===x.c-1)l[1]=x.c;else g.r.push([x.c,x.c])});
+  return by.map(function(g){return BOOKS[g.b]+' '+g.r.map(function(r){return r[0]===r[1]?r[0]:r[0]+'–'+r[1]}).join(', ')}).join('; ')
+}
+// Capítulos que a pessoa já registrou nesta jornada, como {"b:c":1}
+var BYLEN=BOOKS.slice().sort(function(a,b){return b.length-a.length});
+// Capítulos de uma publicação, como ["b:c"]
+function chOfPost(p){
+  var o=[],bi=BOOKS.indexOf(p.book);
+  String(p.ref||'').split(';').forEach(function(seg){
+    seg=seg.trim();var b=bi;
+    BYLEN.some(function(n){if(seg.indexOf(n+' ')===0){b=BOOKS.indexOf(n);seg=seg.slice(n.length+1);return true}});
+    if(b<0)return;
+    seg.split(',').forEach(function(x){var m=x.trim().match(/^(\d+)(?:\s*[–-]\s*(\d+))?$/);if(!m)return;var a=+m[1],z=m[2]?+m[2]:a;if(z<a||z-a>200)return;for(var c=a;c<=z;c++)o.push(b+':'+c)});
+  });
+  return o
+}
+// Capítulos que a pessoa já registrou nesta jornada, como {"b:c":1} (sem a publicação "except", quando editando)
+function readSet(u,except){
+  var o={};
+  mine(u).forEach(function(p){if(p.id!==except)chOfPost(p).forEach(function(k){o[k]=1})});
+  return o
+}
+function stepOf(R){var one=R.every(function(x){return x.b===R[0].b});return{b:R[0].b,ref:one?refOf(R).slice(BOOKS[R[0].b].length+1):refOf(R),n:R.length}}
+function chip(x){return '<button class="chip" data-rd="'+x.b+':'+x.c+'">'+BOOKS[x.b]+' '+x.c+'</button>'}
+
+// ---- Sobre o livro: quem escreveu, quando, para quem, objetivo e curiosidade ----
+// [autor, quando, para quem, objetivo, curiosidade] · datas aproximadas; autoria segundo a tradição
+var MO='Moisés, segundo a tradição judaica e cristã',MOD='c. 1445–1405 a.C. (segundo a tradição)',VOLTA='Judeus que voltaram do exílio na Babilônia';
+var BINFO=[
+[MO,MOD,'O povo de Israel','Mostrar a origem do mundo, do ser humano e do pecado, e o começo do plano de Deus com Abraão e sua família.','O nome vem do grego e quer dizer "origem". O livro vai da criação até José no Egito.'],
+[MO,MOD,'O povo de Israel','Contar a libertação do Egito, a aliança no monte Sinai e a construção do tabernáculo.','Os Dez Mandamentos estão no capítulo 20.'],
+[MO,MOD,'O povo de Israel, especialmente os sacerdotes levitas','Ensinar como um povo pecador pode se aproximar de um Deus santo: sacrifícios, festas e santidade no dia a dia.','"Ame o seu próximo como a si mesmo", citado por Jesus, vem de Levítico 19:18.'],
+[MO,MOD,'O povo de Israel','Narrar os 40 anos no deserto, entre a incredulidade do povo e a fidelidade de Deus.','O nome vem das duas contagens (recenseamentos) do povo, nos capítulos 1 e 26.'],
+[MO+' (o relato da morte dele, no fim, foi acrescentado por outro autor)',MOD,'A nova geração de Israel, prestes a entrar em Canaã','Reunir os discursos de despedida de Moisés e renovar a aliança antes da entrada na terra prometida.','Jesus respondeu às três tentações no deserto citando Deuteronômio.'],
+['Josué, segundo a tradição, com acréscimos posteriores','c. 1400–1370 a.C.','O povo de Israel','Contar a entrada, a conquista e a divisão da terra prometida.','Em hebraico, Josué e Jesus são o mesmo nome: "o Senhor salva".'],
+['Desconhecido; a tradição judaica aponta Samuel','c. 1050–1000 a.C.','O povo de Israel','Mostrar o ciclo de pecado, opressão, clamor e livramento numa época em que "cada um fazia o que achava certo".','Débora, Gideão e Sansão estão entre os 12 juízes do livro.'],
+['Desconhecido; a tradição judaica aponta Samuel','c. 1000 a.C., já na época dos reis','O povo de Israel','Mostrar a fidelidade de Deus por meio de uma estrangeira moabita que entra na família de Davi.','Rute é bisavó do rei Davi e aparece na genealogia de Jesus (Mateus 1).'],
+['Desconhecido; parte vem dos registros de Samuel, Natã e Gade (1 Crônicas 29:29)','c. 930 a.C. ou um pouco depois','O povo de Israel','Contar a passagem dos juízes para os reis: Samuel, Saul e o começo da história de Davi.','Na Bíblia hebraica, 1 e 2 Samuel eram um livro só.'],
+['Desconhecido; parte vem dos registros de Samuel, Natã e Gade','c. 930 a.C. ou um pouco depois','O povo de Israel','Contar o reinado de Davi: suas vitórias, seu pecado, seu arrependimento e a promessa de um reino eterno.','A promessa a Davi no capítulo 7 é a base da esperança no Messias, o "filho de Davi".'],
+['Desconhecido; a tradição judaica aponta Jeremias','c. 560–540 a.C.','O povo de Israel, já no exílio','Contar de Salomão até a divisão do reino, mostrando que a fidelidade a Deus define o destino da nação.','Conta a construção do templo de Salomão e a história do profeta Elias.'],
+['Desconhecido; a tradição judaica aponta Jeremias','c. 560–540 a.C.','O povo de Israel, já no exílio','Explicar a queda de Israel (722 a.C.) e de Judá (586 a.C.) por causa da idolatria.','Termina com o rei Joaquim sendo libertado da prisão na Babilônia: um sinal de esperança.'],
+['Desconhecido; a tradição judaica aponta Esdras','c. 450–400 a.C.',VOLTA,'Lembrar ao povo que voltou do exílio a sua história, com foco em Davi e na adoração no templo.','Começa com nove capítulos de genealogias, de Adão até depois do exílio.'],
+['Desconhecido; a tradição judaica aponta Esdras','c. 450–400 a.C.',VOLTA,'Contar de Salomão até o exílio, com foco nos reis de Judá e no templo.','Termina com o decreto do rei Ciro permitindo a volta a Jerusalém.'],
+['Esdras, sacerdote e escriba, segundo a tradição','c. 440 a.C.',VOLTA,'Contar a volta da Babilônia, a reconstrução do templo e a renovação do povo pela Palavra de Deus.','Partes do livro foram escritas em aramaico, não em hebraico.'],
+['Neemias, que escreve em primeira pessoa','c. 430 a.C.',VOLTA,'Contar a reconstrução dos muros de Jerusalém e a renovação da aliança.','Os muros foram reconstruídos em apenas 52 dias (Neemias 6:15).'],
+['Desconhecido','c. 460–350 a.C.','Judeus espalhados pelo Império Persa','Mostrar Deus protegendo o seu povo, mesmo quando parece estar escondido.','O nome de Deus não aparece nenhuma vez no livro. Ele explica a origem da festa judaica de Purim.'],
+['Desconhecido','Data incerta; a história se passa na época dos patriarcas','O povo de Deus de todas as épocas','Tratar do sofrimento de quem é justo e da sabedoria e soberania de Deus.','Deus responde a Jó com perguntas sobre a criação (capítulos 38 a 41), não com explicações.'],
+['Vários autores: Davi (cerca de 73 salmos), Asafe, os filhos de Corá, Salomão, Moisés e outros','De c. 1400 a.C. (Salmo 90, de Moisés) até depois do exílio','O povo de Israel, para a oração e o louvor','Ensinar a orar e louvar a Deus em todas as situações da vida: alegria, medo, culpa e gratidão.','O Salmo 119 é o maior capítulo da Bíblia (176 versículos) e o Salmo 117 é o menor (2 versículos).'],
+['Principalmente Salomão; também Agur, o rei Lemuel e outros sábios','c. 950–700 a.C.','Os jovens e todo o povo','Ensinar sabedoria para a vida prática: "o temor do Senhor é o princípio do conhecimento" (1:7).','Tem 31 capítulos, por isso muita gente lê um por dia, conforme o dia do mês.'],
+['O "Pregador", filho de Davi; tradicionalmente Salomão','c. 935 a.C., se escrito por Salomão','O povo de Israel','Mostrar que a vida longe de Deus é vazia e concluir: "tema a Deus e guarde os seus mandamentos" (12:13).','A palavra traduzida como "vaidade" quer dizer "sopro" em hebraico: algo que passa rápido.'],
+['Salomão, segundo a tradição','c. 950 a.C.','O povo de Israel','Celebrar o amor entre marido e mulher, que muitos também leem como figura do amor de Deus pelo seu povo.','Também é chamado de Cântico dos Cânticos, ou seja, "o mais belo dos cânticos".'],
+['Isaías, profeta em Jerusalém','c. 740–680 a.C.','Judá e Jerusalém','Chamar ao arrependimento, anunciar o juízo e prometer salvação por meio do Servo do Senhor.','O capítulo 53 descreve o Servo sofredor, que o Novo Testamento aplica a Jesus.'],
+['Jeremias, com a ajuda do escriba Baruque','c. 627–580 a.C.','Judá e Jerusalém','Avisar sobre o exílio na Babilônia e anunciar uma nova aliança escrita no coração (31:31-33).','É chamado de "profeta chorão" pela dor com que anunciou a queda de Jerusalém.'],
+['Jeremias, segundo a tradição','c. 586 a.C., logo após a destruição de Jerusalém','Os sobreviventes de Judá','Lamentar a destruição de Jerusalém sem perder a esperança: "as misericórdias do Senhor se renovam a cada manhã" (3:22-23).','Os capítulos 1 a 4 são acrósticos: cada estrofe começa com uma letra do alfabeto hebraico, em ordem.'],
+['Ezequiel, sacerdote e profeta','c. 593–570 a.C.','Judeus exilados na Babilônia','Mostrar que a glória de Deus deixou o templo por causa do pecado e anunciar restauração e um coração novo.','A visão do vale de ossos secos que voltam à vida está no capítulo 37.'],
+['Daniel, segundo a tradição','c. 535 a.C., segundo a tradição','Judeus no exílio','Mostrar que Deus governa sobre os reis e impérios e permanece fiel a quem é fiel a Ele.','Uma parte do livro (2:4 a 7:28) foi escrita em aramaico, a língua da Babilônia.'],
+['Oseias','c. 755–715 a.C.','O reino do Norte (Israel)','Mostrar o amor fiel de Deus por um povo infiel, através do casamento do próprio profeta.','Deus pediu a Oseias que se casasse com Gômer, que lhe seria infiel, como retrato de Israel.'],
+['Joel','Data incerta','Judá','Usar uma praga de gafanhotos para chamar ao arrependimento e anunciar o Dia do Senhor.','Pedro citou Joel 2 no dia de Pentecostes (Atos 2), quando o Espírito Santo foi derramado.'],
+['Amós, pastor e cultivador de figos de Tecoa','c. 760–750 a.C.','O reino do Norte (Israel)','Denunciar a injustiça com os pobres e a religião sem obediência.','Amós não era profeta de profissão: era um homem do campo, de Judá, chamado para profetizar em Israel.'],
+['Obadias','Data incerta, provavelmente depois de 586 a.C.','Edom e o povo de Judá','Anunciar o juízo sobre Edom, que se alegrou com a queda de Jerusalém.','É o livro mais curto do Antigo Testamento: um só capítulo.'],
+['Jonas, segundo a tradição','c. 785–760 a.C.','O povo de Israel','Mostrar a compaixão de Deus até pelos inimigos de Israel, os habitantes de Nínive.','Jesus citou os três dias de Jonas no grande peixe como sinal da sua ressurreição.'],
+['Miqueias, de Moresete','c. 735–700 a.C.','Judá e Israel','Denunciar a injustiça e anunciar o Rei que viria trazer paz.','Anunciou que o Messias nasceria em Belém (5:2).'],
+['Naum','c. 663–612 a.C.','O povo de Judá','Anunciar a queda de Nínive, capital da Assíria, que oprimia os povos.','Nínive caiu em 612 a.C., como o profeta havia anunciado.'],
+['Habacuque','c. 605 a.C.','O povo de Judá','Um diálogo sincero com Deus sobre o mal e a justiça, que termina em confiança: "o justo viverá pela fé" (2:4).','Esse versículo foi central para Paulo (Romanos 1:17) e para a Reforma Protestante.'],
+['Sofonias, descendente do rei Ezequias','c. 630 a.C.','O povo de Judá','Anunciar o Dia do Senhor e a alegria de Deus com o seu povo restaurado.','Em 3:17, Deus é descrito cantando de alegria pelo seu povo.'],
+['Ageu','520 a.C.',VOLTA,'Incentivar o povo a terminar a reconstrução do templo.','Todas as mensagens têm data e foram dadas em menos de quatro meses.'],
+['Zacarias, sacerdote e profeta','c. 520–480 a.C.',VOLTA,'Encorajar a reconstrução e anunciar o Rei humilde que viria.','Anunciou o rei montado num jumentinho (9:9), cumprido na entrada de Jesus em Jerusalém.'],
+['Malaquias','c. 430 a.C.','Os judeus em Jerusalém depois do exílio','Chamar o povo de volta ao amor e à fidelidade a Deus: no culto, no casamento e nos dízimos.','Depois dele, foram cerca de 400 anos sem novos profetas, até João Batista.'],
+['Mateus (também chamado Levi), cobrador de impostos que virou apóstolo','c. 50–70 d.C.','Principalmente judeus','Mostrar que Jesus é o Messias prometido, o Rei, filho de Davi.','Repete muitas vezes "para que se cumprisse", ligando Jesus às profecias do Antigo Testamento.'],
+['João Marcos, companheiro de Pedro e de Paulo','c. 55–65 d.C.','Cristãos não judeus, provavelmente em Roma','Mostrar Jesus como o Servo que age com poder e dá a vida em resgate de muitos (10:45).','É o evangelho mais curto e usa muito a palavra "logo", o que dá um ritmo rápido à história.'],
+['Lucas, médico e companheiro de viagem de Paulo','c. 60 d.C.','Teófilo e cristãos não judeus','Escrever um relato ordenado e confiável da vida de Jesus, o Salvador de todos.','Lucas também escreveu Atos. Só ele conta as parábolas do filho pródigo e do bom samaritano.'],
+['João, o apóstolo "a quem Jesus amava"','c. 85–95 d.C.','Cristãos e quem ainda não crê','"Para que vocês creiam que Jesus é o Cristo, o Filho de Deus, e, crendo, tenham vida" (20:31).','Traz os sete "Eu sou" de Jesus, como "Eu sou o pão da vida" e "Eu sou o caminho".'],
+['Lucas, o mesmo autor do evangelho de Lucas','c. 62 d.C.','Teófilo','Contar como o Espírito Santo levou o evangelho de Jerusalém até Roma.','Em alguns trechos Lucas escreve "nós", mostrando que viajou junto com Paulo.'],
+['Paulo','c. 57 d.C., escrita em Corinto','A igreja em Roma','Explicar o evangelho: todos pecaram e são justificados pela fé em Cristo, judeus e não judeus.','Paulo ainda não conhecia pessoalmente essa igreja quando escreveu a carta.'],
+['Paulo','c. 55 d.C., escrita em Éfeso','A igreja em Corinto','Corrigir divisões, imoralidade e desordem no culto, e responder perguntas da igreja.','O capítulo 13 é o famoso texto sobre o amor: "o amor é paciente, o amor é bondoso".'],
+['Paulo','c. 56 d.C., escrita na Macedônia','A igreja em Corinto','Defender o seu ministério e mostrar que o poder de Deus se aperfeiçoa na fraqueza (12:9).','É a carta mais pessoal de Paulo, onde ele fala do seu "espinho na carne".'],
+['Paulo','c. 48–55 d.C.','As igrejas da região da Galácia','Defender que a salvação é pela graça, por meio da fé, e não pelas obras da lei.','É a única carta de Paulo a uma igreja que não começa agradecendo por ela: ele vai direto ao problema.'],
+['Paulo, preso','c. 60–62 d.C.','A igreja em Éfeso e da região','Mostrar as riquezas que temos em Cristo e como viver como uma Igreja unida.','Fala da "armadura de Deus" no capítulo 6.'],
+['Paulo, preso','c. 61 d.C.','A igreja em Filipos','Agradecer a ajuda da igreja e incentivar à alegria e à humildade de Cristo.','Mesmo preso, Paulo fala de alegria muitas vezes nesta carta.'],
+['Paulo, preso','c. 60–62 d.C.','A igreja em Colossos','Mostrar que Cristo é suficiente e está acima de tudo, contra falsos ensinos.','Paulo nunca tinha visitado Colossos; a igreja foi fundada por Epafras.'],
+['Paulo, junto com Silas e Timóteo','c. 50–51 d.C., escrita em Corinto','A igreja em Tessalônica','Encorajar uma igreja nova e perseguida, e ensinar sobre a volta de Cristo.','Está entre as primeiras cartas que Paulo escreveu.'],
+['Paulo, junto com Silas e Timóteo','c. 51–52 d.C.','A igreja em Tessalônica','Corrigir confusões sobre a volta de Cristo e chamar todos ao trabalho.','"Se alguém não quer trabalhar, também não coma" (3:10).'],
+['Paulo','c. 62–64 d.C.','Timóteo, que liderava a igreja em Éfeso','Orientar a liderança e a vida da igreja.','Timóteo era jovem, e Paulo diz: "ninguém despreze a sua mocidade" (4:12).'],
+['Paulo, preso em Roma','c. 66–67 d.C.','Timóteo','Despedir-se e pedir que Timóteo permaneça firme e pregue a Palavra.','É considerada a última carta de Paulo: "combati o bom combate, terminei a corrida, guardei a fé" (4:7).'],
+['Paulo','c. 63–65 d.C.','Tito, que liderava as igrejas na ilha de Creta','Orientar a organização das igrejas e a boa conduta cristã.','Paulo cita um poeta da própria ilha de Creta na carta (1:12).'],
+['Paulo, preso','c. 60–62 d.C.','Filemom, um cristão de Colossos','Pedir que Filemom receba Onésimo, um escravo que fugiu e se tornou cristão, como irmão.','É a carta mais curta de Paulo: um só capítulo.'],
+['Desconhecido (já se sugeriu Paulo, Barnabé ou Apolo)','c. 60–70 d.C.','Cristãos judeus tentados a abandonar a fé','Mostrar que Jesus é superior a tudo: aos anjos, a Moisés, aos sacerdotes e aos sacrifícios.','O capítulo 11 é a "galeria dos heróis da fé".'],
+['Tiago, irmão de Jesus e líder da igreja em Jerusalém','c. 45–50 d.C.','Cristãos judeus espalhados por várias regiões','Mostrar que a fé verdadeira aparece nas atitudes: "a fé sem obras é morta" (2:26).','Pode ter sido um dos primeiros livros do Novo Testamento a ser escrito.'],
+['Pedro, com a ajuda de Silvano','c. 62–64 d.C., escrita em Roma','Cristãos espalhados pela Ásia Menor (atual Turquia)','Encorajar a viver com esperança e santidade no meio do sofrimento.','Pedro chama Roma de "Babilônia" (5:13).'],
+['Pedro','c. 64–67 d.C.','Os mesmos cristãos da primeira carta','Alertar contra falsos mestres e firmar a esperança na volta de Cristo.','"Para o Senhor, um dia é como mil anos, e mil anos como um dia" (3:8).'],
+['João, o apóstolo','c. 85–95 d.C.','Igrejas, provavelmente da região de Éfeso','Dar segurança da salvação e ensinar a andar na luz, na verdade e no amor.','É aqui que está escrito "Deus é amor" (4:8).'],
+['João, que se apresenta como "o presbítero"','c. 85–95 d.C.','"A senhora eleita e seus filhos", provavelmente uma igreja','Incentivar a andar na verdade e no amor, sem dar espaço a falsos mestres.','Tem só 13 versículos.'],
+['João, que se apresenta como "o presbítero"','c. 85–95 d.C.','Gaio, um irmão da igreja','Elogiar Gaio pela hospitalidade e corrigir a atitude de Diótrefes.','É o livro da Bíblia com menos palavras no texto original grego.'],
+['Judas, irmão de Tiago e de Jesus','c. 65–80 d.C.','Cristãos em geral','Chamar a batalhar pela fé contra falsos mestres.','Termina com um belo louvor: "Àquele que é poderoso para guardá-los de tropeçar…" (24).'],
+['João, exilado na ilha de Patmos','c. 95 d.C.','Sete igrejas da Ásia Menor (atual Turquia)','Revelar a vitória final de Cristo e encorajar a fidelidade em meio à perseguição.','"Apocalipse" quer dizer "revelação". O livro termina com a promessa de novo céu e nova terra.']
+];
+function biBtn(b){return '<button class="link bib-i" data-bi="'+b+'">ℹ️ Sobre o livro de '+BOOKS[b]+'</button>'}
+function bookInfo(b){
+  var i=BINFO[b],it=[['✍️','Quem escreveu',i[0]],['📅','Quando foi escrito',i[1]],['👥','Para quem',i[2]],['🎯','Objetivo',i[3]],['💡','Curiosidade',i[4]]];
+  showSheet('<h1>ℹ️ Sobre o livro</h1><h2>'+BOOKS[b]+'</h2><div class="sub">'+(b<39?'Antigo':'Novo')+' Testamento · '+NC[b]+(NC[b]>1?' capítulos':' capítulo')+'</div>'+
+    it.map(function(x){return '<div class="card bi" style="margin-top:10px"><div class="sub">'+x[0]+' '+x[1]+'</div><div>'+esc(x[2])+'</div></div>'}).join('')+
+    '<div class="sub" style="margin-top:8px">Datas aproximadas. A autoria segue a tradição judaica e cristã e o que a maioria dos estudiosos aceita.</div><button class="btn g" id="x">Fechar</button>');
+}
+
+// ---- Mapa da jornada: trilha até a Terra Prometida ----
+function trail(){
+  var c=S.ch,tot=totalSteps(c),W=520,H=136,x0=24,x1=W-104;
+  function pt(f){return[x0+f*(x1-x0),H/2-4+28*Math.sin(f*Math.PI*2.5)]}
+  function path(f){var d='';for(var i=0;i<=60;i++){if(i/60>f+1e-9)break;var p=pt(i/60);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}var q=pt(f);return d+'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)}
+  var fm=Math.min(1,days(S.me).length/tot),m=pt(fm),ms='',k=Math.min(tot,14);
+  for(var j=1;j<k;j++){var q=pt(j/k);ms+='<circle class="stone" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/>'}
+  var peers=users().filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,days(u).length/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+days(u).length+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
+  var lx=W-54,ly=H/2;
+  return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+days(S.me).length+' de '+tot+' passos até a Terra Prometida">'+
+    '<path class="road" d="'+path(1)+'"/>'+(fm>0?'<path class="walked" d="'+path(fm)+'"/>':'')+ms+
+    '<text class="lbl" x="'+x0+'" y="'+(H-6)+'">Partida</text>'+
+    '<path class="hill" d="M'+(lx-38)+' '+(ly+22)+' Q'+lx+' '+(ly-38)+' '+(lx+38)+' '+(ly+22)+' Z"/>'+
+    '<text x="'+lx+'" y="'+(ly+4)+'" text-anchor="middle" font-size="28">🏞️</text>'+
+    '<text class="lbl" x="'+lx+'" y="'+(ly+40)+'" text-anchor="middle">Terra Prometida</text>'+
+    peers+'<g class="me"><title>Você: '+days(S.me).length+' passos</title><circle cx="'+m[0].toFixed(1)+'" cy="'+m[1].toFixed(1)+'" r="14"/><text x="'+m[0].toFixed(1)+'" y="'+(m[1]+6).toFixed(1)+'" text-anchor="middle" font-size="16">🚶</text></g></svg>'
+}
+
+// ---- Várias jornadas: cartões no topo para trocar com um toque ----
+// Jornadas de que a pessoa participa: as que ela entrou (guardado na conta) e as que já tem passo dado
+function isMine(id){return S.myJ.indexOf(id)>=0||S.posts.some(function(p){return p.uid===S.me&&p.cid===id})}
+function joinJ(ids){
+  ids=ids.filter(function(id){return id&&S.myJ.indexOf(id)<0});if(!ids.length)return Promise.resolve();
+  S.myJ=S.myJ.concat(ids);
+  return sb.auth.updateUser({data:{jornadas:S.myJ}}).then(function(r){if(r&&r.error)console.warn(r.error)}).catch(function(){});
+}
+function participate(id){joinJ([id]);S.cur=id;useCur();render();scrollTo(0,0)}
+function grpOf(id){return S.groups.filter(function(g){return g.id===id})[0]||null}
+function useCur(){
+  var c=S.all.filter(function(x){return x.id===S.cur})[0];
+  if(c){S.grp=grpOf(c.gid)||S.grp;try{localStorage.setItem('pd_cur',c.id)}catch(e){}}
+  S.canEdit=!!S.grp&&S.grp.role==='leader';
+  S.chs=S.all.filter(function(x){return S.grp&&x.gid===S.grp.id});
+  if(S.grp)pick(S.grp.id);
+}
+// Capítulos que o dia pede pelo roteiro (mínimo 1). Sem roteiro, qualquer registro conta como passo.
+function needOn(c,d){var P=c&&plan(c);if(!P)return 1;return Math.max(1,dayRead(c,diff(c.start,d)).length)}
+// Capítulos registrados por data: {"2026-11-06":1}
+function chOn(u,cid,except){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.id!==except)o[p.date]=(o[p.date]||0)+(+p.ch||1)});return o}
+function jOf(cid){return S.all.filter(function(x){return x.id===cid})[0]||(S.ch&&S.ch.id===cid?S.ch:null)}
+// Dias com o passo concluído: todos os capítulos do dia registrados (em uma ou mais publicações)
+function daysIn(u,cid){
+  var o=chOn(u,cid),k=Object.keys(o),c=jOf(cid),P=c&&plan(c);if(!P)return k;
+  var fin=k.reduce(function(a,d){return a+o[d]},0)>=P.L.length;
+  return k.filter(function(d){return fin||o[d]>=needOn(c,d)})
+}
+function jStatus(c){
+  var d=daysIn(S.me,c.id),tot=totalSteps(c),st=d.length;
+  if(st>=tot)return['🏞️ Chegou à Terra Prometida','ok'];
+  if(TODAY<c.start)return['Começa em '+fd(c.start),''];
+  if(TODAY>c.end)return['Encerrada · '+st+' de '+tot+' passos',''];
+  if(d.indexOf(TODAY)>=0)return['✓ Passo de hoje dado','ok'];
+  var got=chOn(S.me,c.id)[TODAY]||0,rest=needOn(c,TODAY)-got;
+  return got&&rest>0?['👣 Falta '+rest+(rest>1?' capítulos':' capítulo')+' hoje','pend']:['👣 Falta o passo de hoje','pend'];
+}
+function switcher(){
+  var items=S.all.filter(function(c){return isMine(c.id)}).sort(function(a,b){var x=TODAY>=a.start&&TODAY<=a.end,y=TODAY>=b.start&&TODAY<=b.end;return (y-x)||(a.end<b.end?-1:1)});
+  var empty=[];
+  if(items.length+empty.length<2)return '';
+  var pend=items.filter(function(c){return jStatus(c)[1]==='pend'}).length;
+  var h='<div class="jhd"><b>Suas jornadas ('+(items.length+empty.length)+')</b><span class="sub">'+(pend?'👣 '+pend+' esperando o passo de hoje':'toque para trocar')+'</span></div><div class="jsw">';
+  h+=items.map(function(c){
+    var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=daysIn(S.me,c.id).length,tot=totalSteps(c);
+    return '<button class="jc'+(on?' on':'')+'" data-js="c:'+c.id+'"'+(on?' aria-current="true"':'')+'><b>'+esc(c.name)+'</b><span class="sub">'+(g&&g.name!==c.name?'Caravana '+esc(g.name):'Passo '+st+' de '+tot)+'</span><span class="bar"><i style="width:'+Math.min(100,Math.round(st*100/tot))+'%"></i></span><span class="js '+js[1]+'">'+js[0]+'</span></button>'
+  }).join('');
+  h+=empty.map(function(g){var on=!S.cur&&S.grp&&S.grp.id===g.id;return '<button class="jc'+(on?' on':'')+'" data-js="g:'+g.id+'"><b>'+esc(g.name)+'</b><span class="sub">Caravana</span><span class="bar"><i style="width:0"></i></span><span class="js">Sem jornada traçada</span></button>'}).join('');
+  return h+'</div>';
+}
+function selJ(k){
+  var t=k.slice(0,1),id=k.slice(2);
+  if(t==='c')S.cur=id;else{S.cur=null;S.grp=grpOf(id)}
+  useCur();S.openC={};render();scrollTo(0,0);
+  var e=document.querySelector('.jc.on');if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest',inline:'center'});
+}
+function hdr(){
+  document.body.dataset.tab=tab;
+  hdrHome();
+  if(tab!=='feed')pageTitle();
+}
+// Cada aba mostra só o que é dela: no topo, o nome da página e de qual jornada se trata
+function pageTitle(){
+  var ctx=S.chs.length?S.ch.name+' · Caravana '+S.grp.name:S.grp?'Caravana '+S.grp.name:'';
+  var T={bib:['📖 Bíblia','Escolha a versão e o livro para ler.'],chat:['💬 Chat',ctx],cfg:['🗺️ Mapa da jornada',ctx]}[tab]||['',''];
+  document.getElementById('cn').textContent=T[0];document.getElementById('cs').textContent=T[1];
+}
+function hdrHome(){
+  S.ch=S.chs.filter(function(c){return c.id===S.cur})[0]||{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5};
+  document.getElementById('jsw').innerHTML=switcher();
+  document.getElementById('edj').style.display=tab==='cfg'&&S.canEdit&&S.chs.some(function(x){return x.id===S.cur})?'':'none';
+  var on=S.chs.length>0;
+  document.getElementById('stats').style.display=on?'':'none';
+  document.getElementById('map').innerHTML=on?trail():'';
+  if(!S.grp){
+    document.getElementById('cn').textContent=S.me?'Olá, '+nm(S.me).split(' ')[0]+'!':'';
+    document.getElementById('cs').textContent='Cada leitura é um passo rumo à Terra Prometida.';
+    document.getElementById('cd').textContent='';
+    return
+  }
+  var c=S.ch,tot=totalSteps(c),st=days(S.me).length,left=Math.max(0,tot-st),n=memberCount();
+  document.getElementById('cn').textContent=on?c.name:S.grp.name;
+  document.getElementById('cs').textContent='Caravana '+S.grp.name+' · '+n+(n===1?' peregrino':' peregrinos');
+  document.getElementById('cd').textContent=!on?'Aguardando o líder traçar a jornada':TODAY<c.start?'A caravana parte em '+fd(c.start):st>=tot?'Você chegou à Terra Prometida! 🏞️':'Passo '+st+' de '+tot+' · faltam '+left+' até a Terra Prometida · chegada '+fd(c.end);
+  document.getElementById('stats').innerHTML='<div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+chap(S.me)+'</b><span>capítulos</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div>';
+}
+function noCh(){return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
+function today(){
+  var c=S.ch,P=plan(c),i=diff(c.start,TODAY),done=days(S.me).indexOf(TODAY)>=0,tot=totalSteps(c);
+  if(days(S.me).length>=tot)return '<div class="card land"><div style="font-size:44px">🏞️</div><h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
+  if(!P)return done?'':'<div class="card"><b>Passo de hoje</b><div class="sub">Registre o que você leu hoje para avançar na trilha.</div><button class="btn" id="add2">👣 Dar o passo de hoje</button></div>';
+  if(i<0){var R0=dayRead(c,0);return '<div class="card"><div class="sub">Primeiro passo · a caravana parte em '+fd(c.start)+'</div><div class="tref">'+refOf(R0)+'</div>'+biBtn(R0[0].b)+R0.map(chip).join('')+'</div>'}
+  if(i>=P.n)return '';
+  var R=dayRead(c,i),rd=readSet(S.me);
+  if(!R.length){var nx=P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0];if(!nx)return '';R=[nx]}
+  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+(done?'<div class="sub" style="color:var(--ok);margin-top:12px">✓ Passo de hoje dado. Siga firme!</div>':todayBtn(c))+'</div>'
+}
+function todayBtn(c){
+  var got=chOn(S.me,S.cur)[TODAY]||0,need=needOn(c,TODAY),rest=need-got;
+  if(!got||rest<=0)return '<button class="btn" id="add2">👣 Dar o passo de hoje</button>';
+  return '<div class="sub" style="color:var(--ok);margin-top:12px">✓ '+got+' de '+need+' capítulos de hoje registrados</div><button class="btn" id="add2">👣 Registrar '+(rest>1?'os outros '+rest+' capítulos':'o outro capítulo')+'</button>'
+}
+function mediaHtml(p){
+  var L=p.imgs||[];
+  function one(m,i){return m.video?'<video class="media" src="'+esc(m.img)+'" controls playsinline preload="metadata"></video>':'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
+  if(!L.length)return '';if(L.length===1)return one(L[0],0);
+  return '<div class="car"><div class="cart" data-car>'+L.map(function(m,i){return '<div class="cars">'+one(m,i)+'</div>'}).join('')+'</div><span class="carc">1/'+L.length+'</span>'+
+    '<div class="dots">'+L.map(function(m,i){return '<button'+(i?'':' class="on"')+' data-cdot="'+i+'" aria-label="Foto '+(i+1)+'"></button>'}).join('')+'</div></div>'
+}
+// carrossel: atualiza contador e bolinhas ao deslizar
+document.addEventListener('scroll',function(e){
+  var t=e.target;if(!t.dataset||t.dataset.car===undefined)return;
+  var i=Math.round(t.scrollLeft/Math.max(1,t.clientWidth)),c=t.parentNode,n=t.children.length;
+  c.querySelector('.carc').textContent=(i+1)+'/'+n;
+  c.querySelectorAll('.dots button').forEach(function(b,j){b.classList.toggle('on',j===i)});
+},true);
+function post(p){
+  var lk=p.likes||[],on=lk.indexOf(S.me)>=0,dd=daysIn(p.uid,p.cid),n=dd.filter(function(x){return x<=p.date}).length,open=S.openC[p.id];
+  var sd=S.posts.filter(function(x){return x.uid===p.uid&&x.cid===p.cid&&x.date===p.date}),later=sd.some(function(x){return x.ts>p.ts}),cum=sd.reduce(function(a,x){return a+(x.ts<=p.ts?(+x.ch||1):0)},0),need=needOn(jOf(p.cid),p.date);
+  var what=dd.indexOf(p.date)>=0&&!later?'deu o passo '+n:'registrou '+cum+' de '+need+' capítulos do dia';
+  return '<div class="card"><div class="row"><div class="av">'+esc(nm(p.uid)[0])+'</div><div class="grow"><b>'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
+    '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
+    (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
+    mediaHtml(p)+
+    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" data-cm="'+p.id+'">💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':'')+'</div>'+
+    (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'">Enviar</button></div></div>':'')+'</div>'
+}
+function feed(){
+  var h='';
+  if(S.err)h+='<div class="card err" role="status">'+esc(S.err)+'</div>';
+  if(S.pendErr)h+='<div class="card" role="status"><b>⏳ Passo pendente</b><div class="err">'+esc(S.pendErr)+'</div><div class="two"><button class="btn" id="pdgo">Enviar agora</button><button class="btn g" id="pdno">Descartar</button></div></div>';
+  if(!loaded)return h+(S.err?'':'<div class="card sub">Carregando…</div>');
+  if(!S.grp)return h+noCh();
+  if(!S.chs.length)return h+'<div class="card sub">Nenhuma jornada traçada ainda. '+(S.canEdit?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>';
+  if(S.cur&&!isMine(S.cur))return h+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}).map(post).join('');
+  h+=today();
+  var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
+  if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
+  return h+l.map(post).join('');
+}
+function rank(){
+  if(!S.chs.length)return noCh();
+  var L=users().map(function(u){return{u:u,d:days(u).length,c:chap(u),s:streak(u),m:mins(u)}});
+  var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
+  L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
+  var seg='<div class="seg">'+[['dias','Passos'],['caps','Capítulos'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div><div class="av">'+esc(nm(r.u)[0])+'</div><div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'caps',s:'dias'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
+}
+function cal(){
+  var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join('');
+  var first=new Date(c.start+'T12:00:00').getDay(),n=diff(c.start,c.end)+1;
+  for(var i=0;i<first;i++)h+='<div class="w"></div>';
+  for(var j=0;j<n;j++){var d=addD(c.start,j),cl=(dd.indexOf(d)>=0?'h':'')+(d===TODAY?' t':'');h+=d<=TODAY?'<button class="'+cl+'" data-day="'+d+'">'+(+d.slice(8))+'</button>':'<div class="'+cl+'">'+(+d.slice(8))+'</div>'}
+  return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">Cada pedra colorida é um passo dado. Esqueceu de marcar? Toque no dia para dar o passo atrasado.</div><div class="cal">'+h+'</div></div>';
+}
+var TPL=[{n:'Bíblia em 1 ano',d:'Gênesis a Apocalipse, cerca de 3 capítulos por dia',days:365,g:7},{n:'Bíblia em 90 dias',d:'Jornada intensa, cerca de 13 capítulos por dia',days:90,g:7},{n:'Novo Testamento em 90 dias',d:'260 capítulos, cerca de 3 por dia',days:90,g:7},{n:'Os 4 Evangelhos em 30 dias',d:'Mateus, Marcos, Lucas e João, cerca de 3 capítulos por dia',days:30,g:7},{n:'Salmos em 30 dias',d:'150 salmos, 5 por dia',days:30,g:7},{n:'Provérbios em 31 dias',d:'1 capítulo por dia, um para cada dia do mês',days:31,g:7},{n:'Evangelho de João em 21 dias',d:'1 capítulo por dia',days:21,g:7},{n:'Gênesis em 50 dias',d:'1 capítulo por dia, do início de tudo ao Egito',days:50,g:7}];
+// Integrantes reais da caravana (vínculos gravados no banco), com o líder primeiro
+function membersCard(){
+  var R=roster();
+  if(!R)return '<div class="card"><b>👥 Integrantes</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+users().map(function(u){return '<div class="rk"><div class="av">'+esc(nm(u)[0])+'</div><div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+'</div>';
+  var me=R.filter(function(m){return m.id===S.me})[0],alone=R.length===1;
+  return '<div class="card"><b>👥 Integrantes ('+R.length+')</b><div class="sub" style="margin-bottom:4px">Quem está na caravana '+esc(S.grp.name)+'.</div>'+
+    R.map(function(m){return '<div class="rk"><div class="av">'+esc((m.name||'?')[0])+'</div><div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join('')+
+    (me&&(me.role!=='leader'||alone)?'<button class="btn g" data-leave="'+S.grp.id+'" style="color:var(--err)">Sair desta caravana</button>':'')+'</div>'
+}
+async function leaveGroup(gid){
+  if(!confirm('Sair da caravana "'+(grpOf(gid)||{}).name+'"? Suas publicações continuam guardadas.'))return;
+  var R=S.roster[gid]||[],me=R.filter(function(m){return m.id===S.me})[0];
+  if(me&&me.role==='leader'&&R.length>1){alert('O líder não pode sair enquanto houver outras pessoas na caravana.');return}
+  var r=await sb.from('group_members').delete().eq('group_id',gid).eq('user_id',S.me).select('user_id');
+  if(r.error||!r.data||!r.data.length){alert('Não foi possível sair. '+(r.error?why(r.error):'Tente de novo.'));return}
+  delete S.roster[gid];try{localStorage.removeItem('pd_grp');localStorage.removeItem('pd_cur')}catch(e){}
+  S.cur=null;toast('Você saiu da caravana');await boot();
+}
+function cfg(){
+  var out='<div class="card"><button class="link" data-out="1">Sair da conta</button></div>';
+  if(!S.grp)return noCh()+out;
+  var inv='<div class="card"><b>📲 Chame alguém para a caravana</b><div class="sub">Quem abrir o link cria a conta e já entra direto nesta jornada.</div>'+waBtn()+'<button class="btn g" id="shi">Outras formas de compartilhar</button><div class="sub" style="margin-top:8px">Código da caravana, para quem já tem o app:</div><div style="font-size:30px;font-weight:800;letter-spacing:.15em;text-align:center;margin:6px 0">'+esc(S.grp.invite_code)+'</div><button class="link" data-copy="1">Copiar código</button></div>'+'<div class="card"><b>Outras jornadas</b><div class="sub">Entre em outra caravana ou comece uma jornada nova.</div><div class="two"><button class="btn o" data-o="code" style="text-align:center">Tenho um código</button><button class="btn o" data-o="new" style="text-align:center">Nova jornada</button></div></div>'+out;
+  var L=S.chs.map(function(c){var st=TODAY<c.start?'em breve':TODAY>c.end?'encerrada':'em andamento',P=plan(c);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">'+fd(c.start)+' a '+fd(c.end)+' · '+c.goal+' dias/sem · '+st+(P?' · '+P.L.length+' capítulos':'')+(c.desc?'<br>'+esc(c.desc):'')+'</div></div>'+'<div style="margin-top:4px">'+(isMine(c.id)?'<span class="tag" style="color:var(--ok)">✓ Você participa</span>':'<button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button>')+'</div></div>'+(S.canEdit?'<div style="text-align:right"><button class="link" data-ed="'+c.id+'">Editar</button><br><button class="link" style="color:var(--mut)" data-d="'+c.id+'">Excluir</button></div>':'')+'</div>'}).join('')||'<div class="sub">Nenhuma jornada ainda.</div>';
+  var f=S.canEdit?'<div class="card"><b>Traçar nova jornada nesta caravana</b><label>Nome</label><input id="fc" data-keep placeholder="ex.: Evangelho de João em 21 dias"><label>Descrição ou plano (opcional)</label><input id="fd" data-keep placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="fs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="fe" value="'+addD(TODAY,29)+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="fg" min="1" max="7" value="5"><div class="err" id="fer"></div><button class="btn" id="sv">Traçar jornada</button></div>':'<div class="card sub">Só o líder pode traçar e editar jornadas nesta caravana.</div>';
+  var tp=S.canEdit?'<div class="card"><b>Roteiros prontos</b><div class="sub" style="margin-bottom:6px">Toque em Usar para preencher o formulário abaixo.</div>'+TPL.map(function(m,i){return '<div class="rk"><div class="grow"><b>'+m.n+'</b><div class="sub">'+m.d+' · '+m.days+' dias</div></div><button class="link" data-tp="'+i+'">Usar</button></div>'}).join('')+'</div>':'';
+  var oth=S.all.filter(function(c){return S.grp&&c.gid!==S.grp.id&&!isMine(c.id)&&c.end>=TODAY});
+  var O=oth.length?'<div class="card"><b>Jornadas abertas nas suas outras caravanas</b><div class="sub">Você está nessas caravanas, mas ainda não participa destas jornadas.</div>'+oth.map(function(c){var g=grpOf(c.gid);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">Caravana '+esc(g?g.name:'')+' · '+fd(c.start)+' a '+fd(c.end)+'</div></div><button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button></div>'}).join('')+'</div>':'';
+  return (S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+out;
+}
+// ---- Bíblia: livros → capítulos → leitura (Almeida) ----
+var BIB={v:'books',b:0,c:1,fs:19,last:null,ver:'ALM'};
+// Versões: só as que podem ser lidas inteiras dentro do app (domínio público ou licença aberta).
+// ARA, ARC, NAA, A21, NVI e NTLH têm direitos autorais das editoras e foram substituídas por estas,
+// para a leitura ser toda dentro do app. Quem tinha escolhido uma delas passa a ler na Almeida.
+var VERS=[
+ {k:'ALM',n:'Almeida – João Ferreira de Almeida',cr:'Domínio público.'},
+ {k:'TB',n:'TB – Tradução Brasileira (1917)',cr:'Tradução Brasileira (1917), domínio público. Transcrição do Wikisource em português, licença CC BY-SA 4.0.'},
+ {k:'BLIVRE',n:'BLIVRE – Bíblia Livre',cr:'Bíblia Livre (BLIVRE), Copyright © Diego Santos, Mario Sérgio e Marco Teles, fevereiro de 2018. Licença Creative Commons Atribuição 3.0 Brasil.'},
+];
+function credit(k){var v=verOf(k);return v.cr?'<div class="sub cr">'+esc(v.cr)+'</div>':''}
+try{var bl=JSON.parse(localStorage.getItem('pd_bib')||'null');if(bl){BIB.last=bl.last||null;BIB.fs=bl.fs||19;if(VERS.some(function(v){return v.k===bl.ver}))BIB.ver=bl.ver}}catch(e){}
+function bibSave(){try{localStorage.setItem('pd_bib',JSON.stringify({last:BIB.last,fs:BIB.fs,ver:BIB.ver}))}catch(e){}}
+function verOf(k){return VERS.filter(function(v){return v.k===k})[0]||VERS[0]}
+function yvLink(v,b,c){return 'https://www.bible.com/bible/'+v.id+'/'+BK[b]+'.'+c+'.'+v.k}
+// Nome da tradução clicável: abre a lista para trocar (ctx "bib" ou "rd:livro:capítulo")
+function verBtn(ctx){var v=verOf(BIB.ver);return '<button class="link vbtn" data-vp="'+ctx+'">'+v.n+' ▾ <span style="text-decoration:none">trocar</span></button>'}
+function verPick(ctx){
+  var it=function(v){return '<button class="btn o" data-pv="'+v.k+'" data-ctx="'+ctx+'">'+(v.k===BIB.ver?'✓ ':'')+'<b>'+v.n+'</b></button>'};
+  showSheet('<h2>Escolha a tradução</h2><div class="sub">Todas abrem aqui dentro do Jornada na Palavra.</div>'+VERS.map(it).join('')+
+    '<div class="sub" style="margin-top:12px">Por que não tem ARA, NVI ou NTLH? Elas têm direitos autorais das editoras e só podem ser mostradas com licença delas.</div><button class="btn g" id="x">Cancelar</button>');
+}
+function verChosen(k,ctx){
+  BIB.ver=k;bibSave();
+  if(ctx.indexOf('rd:')===0){var q=ctx.split(':');readCh(+q[1],+q[2])}else{closeSheet();render()}
+}
+function verSel(){var o=function(v){return '<option value="'+v.k+'"'+(v.k===BIB.ver?' selected':'')+'>'+v.n+'</option>'};return '<label style="margin-top:12px">Versão da Bíblia</label><select id="bver">'+VERS.map(o).join('')+'</select>'}
+function bibNav(b,c,dir){if(dir<0)return c>1?[b,c-1]:b>0?[b-1,NC[b-1]]:null;return c<NC[b]?[b,c+1]:b<65?[b+1,1]:null}
+function bib(){
+  var rs=S.chs.length?readSet(S.me):{};
+  if(BIB.v==='read'){
+    var b=BIB.b,c=BIB.c,p=bibNav(b,c,-1),n=bibNav(b,c,1),k=b+':'+c,ve=verOf(BIB.ver);
+    return '<div class="card"><div class="row"><button class="link" style="font-size:15px" data-bb="'+b+'">‹ '+BOOKS[b]+'</button><span class="grow"></span>'+(ve.id?'':'<button class="chip" style="margin:0" data-fs="-1" aria-label="Letra menor">A−</button><button class="chip" style="margin:0" data-fs="1" aria-label="Letra maior">A+</button>')+'</div>'+
+      '<h2 style="margin-top:14px">'+BOOKS[b]+' '+c+'</h2><div>'+verBtn('bib')+'</div><div>'+biBtn(b)+'</div>'+(rs[k]?'<div class="sub">✓ Você já leu este capítulo</div>':'')+
+      (ve.id?'<div class="card" style="margin-top:12px;background:var(--bg)"><div class="sub">A '+ve.k+' tem direitos autorais da editora. Ela abre no YouVersion, o aplicativo de Bíblia gratuito, no capítulo certo. Depois é só voltar para o Jornada na Palavra.</div><a class="btn" href="'+esc(yvLink(ve,b,c))+'" target="_blank" rel="noopener">📖 Ler '+BOOKS[b]+' '+c+' na '+ve.k+'</a></div>'
+        :'<div class="row" style="margin-top:8px"><label for="vsel" style="margin:0">Ir para o versículo</label><select id="vsel" style="width:auto;padding:6px 10px"><option value="">–</option></select></div><div class="vs" id="bibx" style="font-size:'+BIB.fs+'px">Carregando…</div>'+credit(BIB.ver))+
+      (S.chs.length&&!rs[k]?'<button class="btn" data-mark="'+k+'">👣 Li este capítulo: dar um passo</button>':'')+
+      '<div class="two" style="margin-top:6px">'+(p?'<button class="btn o" style="text-align:center" data-bgo="'+p[0]+':'+p[1]+'">‹ '+BOOKS[p[0]]+' '+p[1]+'</button>':'<span></span>')+(n?'<button class="btn o" style="text-align:center" data-bgo="'+n[0]+':'+n[1]+'">'+BOOKS[n[0]]+' '+n[1]+' ›</button>':'<span></span>')+'</div></div>'
+  }
+  if(BIB.v==='chaps'){
+    var bb=BIB.b,nr=rg(1,NC[bb]).filter(function(c){return rs[bb+':'+c]}).length;
+    return '<div class="card"><button class="link" style="font-size:15px" data-bv="books">‹ Todos os livros</button><h2 style="margin-top:10px">'+BOOKS[bb]+'</h2>'+biBtn(bb)+'<div class="sub">'+NC[bb]+(NC[bb]>1?' capítulos':' capítulo')+(nr?' · '+nr+' já lido'+(nr>1?'s':''):'')+' · toque no número para ler</div><div class="cgrid">'+rg(1,NC[bb]).map(function(c){return '<button class="chip'+(rs[bb+':'+c]?' on':'')+'" data-bgo="'+bb+':'+c+'">'+c+'</button>'}).join('')+'</div></div>'
+  }
+  function grid(a,z){return '<div class="bgrid">'+rg(a,z).map(function(b){return '<button class="bk" data-bb="'+b+'" data-q="'+norm(BOOKS[b])+'">'+BOOKS[b]+'</button>'}).join('')+'</div>'}
+  return '<div class="card">'+verSel()+
+    (BIB.last?'<button class="btn" data-bgo="'+BIB.last.b+':'+BIB.last.c+'" data-bv2="'+(BIB.last.v||'')+'">Continuar lendo '+BOOKS[BIB.last.b]+' '+BIB.last.c+(BIB.last.v?':'+BIB.last.v:'')+'</button>':'')+
+    '<button class="btn o" id="boff" style="text-align:center">📥 Guardar esta versão para ler sem internet (4 MB)</button>'+
+    '<input id="bq" data-keep placeholder="🔎 Procurar livro (ex.: Salmos)" style="margin-top:14px" autocomplete="off">'+
+    '<div class="tst" data-tst>Antigo Testamento</div>'+grid(0,38)+'<div class="tst" data-tst>Novo Testamento</div>'+grid(39,65)+'</div>'
+}
+function bibFilter(){
+  var q=norm(val('bq').trim());
+  document.querySelectorAll('.bk').forEach(function(e){e.style.display=!q||(' '+e.dataset.q).indexOf(' '+q)>=0?'':'none'});
+  document.querySelectorAll('[data-tst]').forEach(function(e){e.style.display=q?'none':''});
+}
+function bibGo(v,b,c){BIB.v=v;if(b!==undefined)BIB.b=b;if(c!==undefined)BIB.c=c;if(v==='read'){BIB.last={b:BIB.b,c:BIB.c};bibSave()}tab='bib';render();scrollTo(0,0)}
+// ---- Chat da jornada ----
+var chatBusy=false;
+// ---- Sala de oração: chamada de áudio e vídeo (Jitsi Meet) da caravana ----
+var AVISO=true;try{AVISO=localStorage.getItem('pd_aviso')!=='0'}catch(e){}
+function roomName(){return 'JornadaNaPalavra-Oracao-'+String(S.grp.id).replace(/[^a-zA-Z0-9]/g,'')}
+function roomLink(){
+  var q=function(v){return encodeURIComponent(JSON.stringify(v))};
+  return 'https://meet.jit.si/'+roomName()+'#userInfo.displayName='+q(nm(S.me))+'&config.subject='+q('🙏 Sala de oração · '+S.grp.name)+'&config.startWithVideoMuted=true&config.prejoinConfig.enabled=true';
+}
+function prayCard(){
+  return '<div class="card pray pcmp"><div class="row"><b class="grow">🙏 Sala de oração</b><a class="btn pbtn" id="pray" href="'+esc(roomLink())+'" target="_blank" rel="noopener">Entrar na sala</a></div>'+
+    '<div class="row" style="justify-content:space-between;gap:8px"><label class="chk"><input type="checkbox" id="paviso"'+(AVISO?' checked':'')+'> Avisar no chat que entrei</label><button class="link" id="phow" style="margin-top:6px">Como funciona?</button></div>'+
+    '<hr><button class="link" id="ptog" style="font-size:14px;font-weight:700" aria-expanded="'+PEDOPEN+'"><span id="pcnt">Pedidos de oração</span> '+(PEDOPEN?'▴':'▾')+'</button>'+
+    '<div id="preqs" class="preqs"'+(PEDOPEN?'':' hidden')+'><div class="sub">Carregando…</div></div>'+
+    '<div class="row send" style="margin-top:8px"><textarea id="pin" class="grow" rows="1" data-keep placeholder="Escreva um pedido de oração…" maxlength="1500" enterkeyhint="enter"></textarea><button class="btn sbtn" id="psend">Enviar</button></div><div class="err" id="per"></div></div>'
+}
+function prayHow(){
+  showSheet('<h1>🙏 Sala de oração</h1><h2>Como funciona</h2><ol class="howto">'+
+    '<li>Toque em <b>Entrar na sala de oração</b>. A chamada abre no navegador ou no aplicativo <b>Jitsi Meet</b>, se você tiver.</li>'+
+    '<li>Quando o celular perguntar, toque em <b>Permitir</b> o microfone e a câmera.</li>'+
+    '<li>Você entra com a <b>câmera desligada</b>. Para ligar, toque no ícone da câmera.</li>'+
+    '<li>Se aparecer <b>“Aguardando o moderador”</b>, a primeira pessoa precisa tocar em <b>Entrar</b> (Log-in) e usar uma conta Google. Depois disso, todos entram direto.</li>'+
+    '<li>Para sair, toque no botão <b>vermelho</b> de desligar.</li></ol>'+
+    '<div class="sub">A sala é só desta caravana: o endereço dela não é divulgado em lugar nenhum.</div><button class="btn g" id="x">Fechar</button>');
+}
+function prayIn(){
+  if(!AVISO||!S.cur)return;
+  var k='pd_pray_'+S.grp.id,last=0;try{last=+localStorage.getItem(k)||0}catch(e){}
+  if(Date.now()-last<30*6e4)return;
+  try{localStorage.setItem(k,String(Date.now()))}catch(e){}
+  sb.from('messages').insert({challenge_id:S.cur,body:'🙏 Entrei na sala de oração agora. Venha orar comigo! (aba Chat › Entrar na sala de oração)'}).then(function(){loadChat(true)});
+}
+// ---- Pedidos de oração: ficam na tabela de mensagens, marcados pelo começo do texto ----
+var PED='🙏 Pedido de oração: ';
+function isPed(m){return (m.body||'').indexOf(PED)===0}
+var PEDOPEN=false;
+function pedTog(){
+  PEDOPEN=!PEDOPEN;var l=document.getElementById('preqs'),t=document.getElementById('ptog');
+  if(l)l.hidden=!PEDOPEN;if(t){t.setAttribute('aria-expanded',PEDOPEN);t.lastChild.textContent=PEDOPEN?' ▴':' ▾'}
+}
+function chat(){
+  if(!S.chs.length)return noCh();
+  return prayCard()+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
+}
+async function loadChat(force){
+  var e=document.getElementById('msgs');if(tab!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
+  try{
+    var r=await sb.from('messages').select('id,user_id,body,created_at').eq('challenge_id',S.cur).order('created_at',{ascending:false}).limit(200);
+    e=document.getElementById('msgs');if(!e)return;
+    if(r.error){e.innerHTML='<div class="err">Não foi possível abrir a conversa. '+esc(why(r.error))+'</div>';return}
+    var A=(r.data||[]).slice().reverse(),key=A.length+':'+(A.length?A[A.length-1].id:'');
+    var miss=A.map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
+    if(miss.length){var pr=await sb.from('profiles').select('id,name').in('id',miss);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name});e=document.getElementById('msgs');if(!e)return}
+    if(!force&&e.dataset.k===key)return;e.dataset.k=key;
+    var P=A.filter(isPed).reverse(),L=A.filter(function(m){return !isPed(m)}),pe=document.getElementById('preqs');
+    var pc=document.getElementById('pcnt');if(pc)pc.textContent='📜 Pedidos de oração ('+P.length+')';
+    if(pe)pe.innerHTML=P.length?P.map(function(m){return '<div class="preq"><b>'+(m.user_id===S.me?'Você':esc(nm(m.user_id)))+'</b>'+esc(m.body.slice(PED.length))+'<small>'+ago(Date.parse(m.created_at))+'</small></div>'}).join(''):'<div class="sub">Nenhum pedido ainda. Se precisar de oração, escreva aqui. 🙏</div>';
+    e.innerHTML=L.length?L.map(function(m){var me=m.user_id===S.me;return '<div class="msg'+(me?' me':'')+'">'+(me?'':'<b>'+esc(nm(m.user_id))+'</b>')+esc(m.body)+'<small>'+hhmm(m.created_at)+'</small></div>'}).join(''):'<div class="sub">Nenhuma mensagem ainda. Diga olá para a caravana! 👋</div>';
+    e.scrollTop=e.scrollHeight;
+  }finally{chatBusy=false}
+}
+async function sendChat(){
+  var i=document.getElementById('cin'),b=i.value.trim(),er=document.getElementById('cer');if(!b)return;
+  i.value='';grow(i);er.textContent='';
+  var r=await sb.from('messages').insert({challenge_id:S.cur,body:b});
+  if(r.error){i.value=b;er.textContent='Não foi possível enviar. '+why(r.error);return}
+  loadChat(true);
+}
+async function sendPed(){
+  var i=document.getElementById('pin'),b=i.value.trim(),er=document.getElementById('per');if(!b)return;
+  i.value='';grow(i);er.textContent='';
+  var r=await sb.from('messages').insert({challenge_id:S.cur,body:PED+b});
+  if(r.error){i.value=b;er.textContent='Não foi possível enviar. '+why(r.error);return}
+  if(!PEDOPEN)pedTog();
+  loadChat(true);
+}
+async function sendComment(id){
+  var i=document.getElementById('ci-'+id),b=i?tidy(i.value):'';if(!b.trim())return;
+  i.disabled=true;
+  var r=await sb.from('comments').insert({checkin_id:id,body:b});
+  if(r.error){i.disabled=false;alert('Não foi possível comentar. '+why(r.error));return}
+  i.value='';await loadData();
+}
+// Preenche o texto bíblico depois de desenhar a tela
+function after(){
+  document.querySelectorAll('.vx[data-b]').forEach(function(e){
+    bible(+e.dataset.b,+e.dataset.c).then(function(v){e.innerHTML=verses(v.slice(0,4))+(v.length>4?' …':'')}).catch(function(){e.textContent='Não foi possível carregar o texto. Verifique a conexão.'})
+  });
+  if(tab==='chat')loadChat(true);
+  if(tab==='bib'){
+    var bx=document.getElementById('bibx');
+    if(bx&&!bx.dataset.ok){var b=BIB.b,c=BIB.c;bible(b,c).then(function(v){var e=document.getElementById('bibx');if(e&&BIB.b===b&&BIB.c===c){e.innerHTML=verses(v,1);e.dataset.ok=1;
+      var vs=document.getElementById('vsel');if(vs)vs.innerHTML='<option value="">–</option>'+v.map(function(x){return '<option>'+x[0]+'</option>'}).join('');
+      if(BIB.goV){var gv=BIB.goV;BIB.goV=null;setTimeout(function(){goVerse(gv)},60)}}}).catch(function(){var e=document.getElementById('bibx');if(e)e.textContent='Não foi possível carregar o texto. Verifique a internet e toque no capítulo de novo.'})}
+    if(document.getElementById('bq'))bibFilter();
+    var bo=document.getElementById('boff');if(bo){var ov=inApp(BIB.ver)?BIB.ver:'ALM';offlineCount(ov).then(function(n){if(n>=66&&bo.isConnected){bo.textContent='✓ '+verOf(ov).k+' já está guardada para ler sem internet';bo.disabled=true}})}
+  }
+}
+function render(){
+  hdr();
+  var mn=document.getElementById('main'),keep={},fid=document.activeElement&&document.activeElement.id;
+  // lendo um capítulo: a atualização automática não redesenha a tela (não perde a posição da leitura)
+  var vk=tab==='bib'&&BIB.v==='read'?'bib:'+BIB.b+':'+BIB.c+':'+BIB.ver:'';
+  if(vk&&mn.dataset.k===vk){document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});return}
+  mn.dataset.k=vk;
+  mn.querySelectorAll('[data-keep]').forEach(function(e){if(e.value)keep[e.id]=e.value});
+  mn.innerHTML={feed:feed,bib:bib,chat:chat,cfg:cfg}[tab]();
+  Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e)e.value=keep[id]});
+  if(fid&&keep[fid]!==undefined){var f=document.getElementById(fid);if(f)f.focus()}
+  document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});
+  after();
+}
+function showSheet(h){var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
+function closeSheet(){document.getElementById('sh').classList.remove('show')}
+
+// ---- Dar um passo (check-in) ----
+function openSheet(pre){
+  if(!S.chs.length){onb('ask');return}
+  var c=S.ch,mx=TODAY<c.end?TODAY:c.end;
+  if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
+  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video}}):[];
+  showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
+    '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
+    ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
+    '<label>Reflexão (opcional)</label><textarea id="t" rows="3" placeholder="O que Deus falou ao seu coração?">'+(E?esc(E.note):'')+'</textarea><div class="err" id="er"></div><button class="btn" id="ok">'+(E?'💾 Salvar alterações':'👣 Dar o passo')+'</button><button class="btn g" id="x">Cancelar</button>');
+  if(E&&E.min){var mi=document.getElementById('mn');if(mi)mi.value=E.min}
+  drawMedia();
+  stepFor(dt);
+}
+// Escolha dos capítulos: um único lugar, já marcado com a sugestão do roteiro;
+// capítulos já registrados ficam travados para não contarem duas vezes
+var MAXFREE=10;
+function stepFor(d){
+  var e=document.getElementById('stepr'),ok=document.getElementById('ok'),P=plan(S.ch),done=!S.edit&&days(S.me).indexOf(d)>=0,block='',h='<div class="sub" style="margin-top:4px">'+(d===TODAY?'Hoje':'Passo atrasado de '+fd(d))+'</div>';
+  var ex=S.edit&&S.edit.id,rd=readSet(S.me,ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.got=chOn(S.me,S.cur,ex)[d]||0;
+  if(P){
+    var R=dayRead(S.ch,diff(S.ch.start,d)),avail=P.L.filter(function(x){return !rd[x.b+':'+x.c]});
+    S.pbs={};P.L.forEach(function(x){S.pbs[x.b]=1});
+    // todo dia tem passo: se o roteiro não marca capítulo, vale o próximo ainda não lido
+    // o que falta do dia: dá para registrar um capítulo agora e o outro depois
+    S.need=Math.min(Math.max(1,Math.max(1,R.length)-S.got),avail.length);
+    if(S.got&&!S.edit)h+='<div class="sub" style="color:var(--ok)">✓ Você já registrou '+S.got+' de '+(S.got+S.need)+' capítulos deste dia. Falta'+(S.need>1?'m ':' ')+S.need+'.</div>';
+    if(!avail.length)block='Você já leu todos os capítulos desta jornada. 🏞️';
+    // sugestão do dia (sem os já lidos), completada com os próximos não lidos
+    if(S.edit)S.sel=chOfPost(S.edit).slice(0,S.need);
+    else R.forEach(function(x){if(!rd[x.b+':'+x.c])S.sel.push(x.b+':'+x.c)});
+    for(var i=0;!S.edit&&S.sel.length<S.need&&i<avail.length;i++){var k=avail[i].b+':'+avail[i].c;if(S.sel.indexOf(k)<0)S.sel.push(k)}
+  }
+  if(S.edit&&!P)S.sel=chOfPost(S.edit).slice(0,MAXFREE);
+  // veio da Bíblia com "Li este capítulo": ele entra primeiro na seleção
+  if(S.preSel){
+    var pk=S.preSel,pq=pk.split(':'),pb=+pq[0],pc=+pq[1];S.preSel=null;
+    if(!rd[pk]&&(!P||P.L.some(function(x){return x.b===pb&&x.c===pc}))){
+      var pi=S.sel.indexOf(pk);if(pi>=0)S.sel.splice(pi,1);
+      S.sel.unshift(pk);if(S.need&&S.sel.length>S.need)S.sel.length=S.need;
+    }
+  }
+  S.bk=S.sel.length?+S.sel[0].split(':')[0]:(P?P.L[0].b:Math.max(0,BOOKS.indexOf((mine(S.me)[0]||{}).book)));
+  var bks=P?Object.keys(S.pbs).map(Number):rg(0,65);
+  h+='<label>Qual capítulo você leu?</label><select id="sbk">'+bks.map(function(b){return '<option value="'+b+'"'+(b===S.bk?' selected':'')+'>'+BOOKS[b]+'</option>'}).join('')+'</select><div id="chg" style="margin-top:4px"></div><div class="sub" id="selc" style="margin-top:8px"></div>';
+  if(done)block='Você já deu o passo deste dia. Escolha outra data.';
+  e.innerHTML=h+(block?'<div class="err" style="margin-top:8px">'+block+'</div>':'');
+  ok.disabled=!!block;
+  if(!block)drawChaps();else{document.getElementById('sbk').disabled=true}
+}
+function drawChaps(){
+  var P=plan(S.ch),b=S.bk,cs=P?P.L.filter(function(x){return x.b===b}).map(function(x){return x.c}):rg(1,NC[b]);
+  document.getElementById('chg').innerHTML=cs.map(function(c){var k=b+':'+c,r=S.read[k],on=S.sel.indexOf(k)>=0;return '<button class="chip'+(on?' on':'')+'" data-sc="'+k+'"'+(r?' disabled title="Você já leu este capítulo" style="opacity:.45"':'')+'>'+(r?'✓ ':'')+c+'</button>'}).join('');
+  var n=S.sel.length;
+  document.getElementById('selc').textContent=S.need>1?'Marque 1 ou '+S.need+' capítulos · '+n+' marcado'+(n===1?'':'s')+'. Pode registrar um agora e o outro depois.':S.need?'Escolha 1 capítulo · '+n+' de 1 marcado':n?n+(n>1?' capítulos marcados':' capítulo marcado'):'Toque no capítulo que você leu.';
+  var ok=document.getElementById('ok');if(ok&&!ok.disabled)ok.textContent=okLbl();
+}
+function okLbl(){var n=S.sel.length;if(S.edit)return '💾 Salvar alterações';return S.need&&n&&n<S.need?'📖 Registrar '+(n>1?n+' capítulos':'1 capítulo'):'👣 Dar o passo'}
+function pickChap(k){
+  var i=S.sel.indexOf(k),er=document.getElementById('er');er.textContent='';
+  if(i>=0)S.sel.splice(i,1);
+  else if(S.need===1)S.sel=[k];
+  else if(S.need&&S.sel.length>=S.need){er.textContent='Você já marcou '+S.need+' capítulos. Desmarque um para trocar.';return}
+  else if(!S.need&&S.sel.length>=MAXFREE){er.textContent='Marque no máximo '+MAXFREE+' capítulos por passo.';return}
+  else S.sel.push(k);
+  drawChaps();
+}
+// Duração do vídeo (em segundos); null se o aparelho não conseguir ler
+function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
+  var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
+var MAXSEC=15;
+async function setMedia(inp,src,rep){
+  var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
+  for(var i=0;i<fs.length;i++){
+    var f=fs[i],v=/^video\//.test(f.type)||(!f.type&&isVidPath(f.name||''));
+    if(!v&&!/^image\//.test(f.type)){er.textContent='Escolha fotos ou vídeos.';continue}
+    if(v&&f.size>MAXV){er.textContent='Um vídeo tem mais de 50 MB. Grave um vídeo mais curto (até '+MAXSEC+' segundos).';continue}
+    if(v){var du=await vidDur(f);if(du&&du>MAXSEC+0.9){er.textContent='O vídeo tem '+Math.round(du)+' segundos. O máximo é '+MAXSEC+' segundos: grave um vídeo mais curto.';continue}}
+    var it={file:f,src:src,video:v,img:URL.createObjectURL(f)};
+    if(rep!=null&&S.media[rep]){S.media[rep]=it;rep=null}
+    else if(S.media.length>=MAXF){er.textContent='No máximo '+MAXF+' fotos por publicação.';break}
+    else S.media.push(it);
+  }
+  drawMedia();
+}
+function drawMedia(){
+  var e=document.getElementById('mprev');if(!e)return;var L=S.media||[];
+  e.innerHTML=L.length?'<div class="mgrid">'+L.map(function(m,i){return '<div class="mth">'+(m.video?'<video src="'+esc(m.img)+'" playsinline muted></video>':'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'';
+}
+// ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
+var MAXB=300*1024,MAXSIDE=1600,MINSIDE=1024;
+function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('imagem'))};im.src=u})}
+function toJpg(cv,q){return new Promise(function(r){cv.toBlob(r,'image/jpeg',q)})}
+// Reduz o tamanho e a qualidade aos poucos até caber em 300 KB. Primeiro baixa a qualidade (até 0,62,
+// que ainda deixa letras nítidas); só depois diminui a imagem, sem passar de 1024 px no lado maior.
+async function shrinkP(file){
+  var im;try{im=await loadImg(file)}catch(e){return null}
+  var W=im.naturalWidth,H=im.naturalHeight,big=Math.max(W,H);if(!big)return null;
+  if(/jpe?g/i.test(file.type)&&file.size<=MAXB&&big<=MAXSIDE)return file;
+  var side=Math.min(MAXSIDE,big),best=null,Q=[.86,.8,.74,.68,.62];
+  for(;;){
+    var k=side/big,cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);
+    var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,cv.width,cv.height);
+    for(var i=0;i<Q.length;i++){var bl=await toJpg(cv,Q[i]);if(!bl)return best;if(!best||bl.size<best.size)best=bl;if(bl.size<=MAXB)return bl}
+    if(side<=MINSIDE)return best;
+    side=Math.max(MINSIDE,Math.round(side*.85));
+  }
+}
+// Miniatura (até 720 px, ~60 KB) para o mural; a foto inteira só abre ao tocar
+function hasThumb(x){return /\/[0-9a-f]{40}\.jpg$/.test(x)}
+function thumbOf(x){return x.replace(/\.jpg$/,'.t.jpg')}
+async function makeThumb(blob){
+  try{var im=await loadImg(blob),big=Math.max(im.naturalWidth,im.naturalHeight),k=Math.min(1,720/big),cv=document.createElement('canvas');
+    cv.width=Math.round(im.naturalWidth*k);cv.height=Math.round(im.naturalHeight*k);var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,cv.width,cv.height);
+    return await toJpg(cv,.72)}catch(e){return null}
+}
+// Impressão digital do arquivo: a mesma foto gera sempre o mesmo nome, então não é guardada duas vezes
+async function fileHash(blob){
+  try{var d=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());return Array.prototype.map.call(new Uint8Array(d),function(x){return ('0'+x.toString(16)).slice(-2)}).join('').slice(0,40)}
+  catch(e){return Date.now()+'-'+Math.random().toString(36).slice(2,8)}
+}
+// Apaga do armazenamento as fotos que nenhuma publicação sua usa mais
+async function dropUnused(paths){
+  var gone=[];
+  for(var i=0;i<paths.length;i++){
+    var p=paths[i];if(!p||p.indexOf(S.me+'/')!==0)continue;
+    try{
+      var r=await sb.from('checkins').select('id').eq('user_id',S.me).like('photo_path','%'+p+'%').limit(1);
+      if(r.error||(r.data&&r.data.length))continue;
+      gone.push(p);
+    }catch(e){}
+  }
+  gone=gone.concat(gone.filter(hasThumb).map(thumbOf));
+  if(gone.length)try{await sb.storage.from('photos').remove(gone)}catch(e){}
+}
+// ---- Publicar: só conta como feito quando o servidor confirma ----
+var USE_KEY=true;
+async function publish(){
+  var er=document.getElementById('er'),btn=document.getElementById('ok'),dt=val('dt'),cid=S.stepCid||S.cur,c=jOf(cid)||S.ch,mx=TODAY<c.end?TODAY:c.end,m=S.media,mn=parseInt(val('mn'),10);
+  er.textContent='';
+  if(!dt||dt<c.start||dt>mx){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
+  if(S.edit)dt=S.edit.date;
+  else if(daysIn(S.me,cid).indexOf(dt)>=0){er.textContent='Você já deu o passo deste dia.';return}
+  if(!S.sel.length){er.textContent='Toque no capítulo que você leu.';return}
+  if(S.need&&S.sel.length>S.need){er.textContent='Marque no máximo '+S.need+(S.need>1?' capítulos':' capítulo')+' para este dia.';return}
+  var R=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
+  if(R.some(function(x){return readSet(S.me,S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
+  var st=stepOf(R);
+  if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
+  if(!S.media.length){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}
+  if(S.edit)return saveEdit(st,mn,m,btn,er);
+  btn.disabled=true;btn.textContent='Enviando… não feche o app';
+  try{
+    var pm=await upMedia();
+    btn.textContent='Salvando…';
+    var row={challenge_id:cid,read_date:dt,book:BOOKS[st.b],ref:st.ref||null,chapters:st.n,note:tidy(val('t'))||null,photo_path:pm.photo_path,media_type:pm.media_type,media_source:pm.media_source||'galeria',study_minutes:mn};
+    // fica guardada no aparelho até o servidor confirmar: se o app fechar ou a internet cair agora,
+    // ela é enviada sozinha na próxima vez que o app abrir (antes, as fotos subiam e a publicação se perdia)
+    pendSave({row:row,key:S.ckey||(S.ckey=uid()),at:Date.now()});
+    var saved=await saveCheckin(row);
+    pendClear();
+    // confirmado pelo servidor: aparece no mural na hora, mesmo antes da próxima atualização
+    var lu={};S.media.forEach(function(x){if(x.path)lu[x.path]=x.img});
+    var np=toPost(Object.assign({likes:[],comments:[]},saved),lu);np.local=true;
+    S.posts=S.posts.filter(function(x){return x.id!==np.id});S.posts.unshift(np);
+    S.media=null;S.ckey=null;closeSheet();tab='feed';render();scrollTo(0,0);toast('✓ Passo publicado');
+    loadData();
+  }catch(e){
+    // as fotos que já subiram ficam guardadas: ao tentar de novo, não são enviadas outra vez
+    btn.disabled=false;btn.textContent='🔁 Tentar de novo';
+    er.textContent='Não foi possível publicar. '+why(e)+' Sua leitura e as fotos continuam aqui: toque em "Tentar de novo".';
+  }
+}
+// ---- Publicação que não terminou de enviar ----
+function pendKey(){return 'pd_pend_'+S.me}
+function pendSave(o){try{localStorage.setItem(pendKey(),JSON.stringify(o))}catch(e){}}
+function pendGet(){try{return JSON.parse(localStorage.getItem(pendKey())||'null')}catch(e){return null}}
+function pendClear(){try{localStorage.removeItem(pendKey())}catch(e){}S.pendErr=''}
+var PEND_BUSY=false;
+async function resumePending(){
+  var p=pendGet();if(!p||!p.row||PEND_BUSY||!S.me)return;
+  if(Date.now()-(p.at||0)>7*864e5){pendClear();return}
+  // se esses capítulos já estão registrados (foi publicada por outro caminho), não envia de novo
+  var ja={};S.posts.forEach(function(x){if(x.uid===S.me&&x.cid===p.row.challenge_id)chOfPost(x).forEach(function(k){ja[k]=1})});
+  if(chOfPost({book:p.row.book,ref:p.row.ref||''}).some(function(k){return ja[k]})){pendClear();return}
+  PEND_BUSY=true;
+  try{await saveCheckin(p.row,p.key);pendClear();toast('✓ Seu passo de '+fd(p.row.read_date)+' que tinha ficado pendente foi publicado');await loadData()}
+  catch(e){S.pendErr='Seu passo de '+fd(p.row.read_date)+' ('+(p.row.book||'')+' '+(p.row.ref||'')+') não terminou de enviar. '+why(e);render()}
+  finally{PEND_BUSY=false}
+}
+window.addEventListener('online',function(){resumePending()});
+// Grava a publicação sem duplicar: antes e depois de qualquer falha, confere se ela já está no banco
+async function saveCheckin(row,key){
+  async function find(){
+    var q=sb.from('checkins').select('*').eq('user_id',S.me).eq('challenge_id',row.challenge_id).eq('read_date',row.read_date).eq('photo_path',row.photo_path);
+    q=row.ref?q.eq('ref',row.ref):q.is('ref',null);
+    var r=await withTimeout(q.limit(1),20000);if(r.error)return null;return r.data&&r.data[0]||null
+  }
+  var ex=await find().catch(function(){return null});if(ex)return ex;
+  var body=Object.assign({},row);if(USE_KEY)body.client_key=key||S.ckey||(S.ckey=uid());
+  var r;
+  try{r=await withTimeout(sb.from('checkins').insert(body).select('*').single(),45000)}
+  catch(e){var f=await find().catch(function(){return null});if(f)return f;throw e}
+  if(r.error){
+    if(USE_KEY&&/client_key/i.test((r.error.message||'')+(r.error.details||''))){USE_KEY=false;return saveCheckin(row,key)}
+    var f2=await find().catch(function(){return null});if(f2)return f2;
+    throw r.error
+  }
+  if(!r.data){var f3=await find();if(f3)return f3;throw new Error('o servidor não confirmou a gravação')}
+  return r.data
+}
+// Envia as fotos novas (as que já estavam salvas ficam como estão) e devolve os campos da publicação
+async function upMedia(){
+  var paths=[],nw=null;S.fresh=[];
+  for(var i=0;i<S.media.length;i++){
+    var m=S.media[i];if(m.path){if(paths.indexOf(m.path)<0)paths.push(m.path);continue}
+    var blob=m.file,ct=m.file.type,ext;nw=nw||m;
+    if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4'}
+    else{var sb2=await shrinkP(m.file);if(sb2){blob=sb2;ct='image/jpeg';ext='jpg'}else ext=((m.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg'}
+    var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
+    if(paths.indexOf(path)<0){
+      var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false}),m.video?300000:120000);
+      if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))throw up.error;
+      if(!up.error)S.fresh.push(path);
+      if(ext==='jpg'&&hasThumb(path)){var th=await makeThumb(blob);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),th,{contentType:'image/jpeg',upsert:false}),60000)}catch(x){}}
+    }
+    m.path=path;if(paths.indexOf(path)<0)paths.push(path);
+  }
+  return{photo_path:paths.join(PSEP),media_type:S.media[0].video?'video':'image',media_source:nw?nw.src:null}
+}
+async function saveEdit(st,mn,m,btn,er){
+  btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    var up={book:BOOKS[st.b],ref:st.ref||null,chapters:st.n,note:tidy(val('t'))||null,study_minutes:mn};
+    var pm=await upMedia();up.photo_path=pm.photo_path;up.media_type=pm.media_type;up.media_source=pm.media_source||S.edit.ms||null;
+    var r;
+    try{r=await withTimeout(sb.from('checkins').update(up).eq('id',S.edit.id).eq('user_id',S.me).select('id'),45000)}
+    catch(e){var v=await sb.from('checkins').select('id').eq('id',S.edit.id).eq('photo_path',up.photo_path).eq('study_minutes',mn);if(v.data&&v.data.length)r={data:v.data};else throw e}
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length)throw new Error('sem permissão para editar esta publicação');
+    var now=pm.photo_path.split(PSEP),old=(S.edit.imgs||[]).map(function(x){return x.path}).filter(function(x){return x&&now.indexOf(x)<0});
+    dropUnused(old);
+    S.edit=null;S.media=null;closeSheet();tab='feed';toast('✓ Publicação atualizada');await loadData();
+  }catch(e){btn.disabled=false;btn.textContent='🔁 Tentar de novo';er.textContent='Não foi possível salvar. '+why(e)}
+}
+function toast(t){var e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.setAttribute('role','status');document.body.appendChild(e)}e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},3500)}
+function editPost(id){
+  var p=S.posts.filter(function(x){return x.id===id})[0];if(!p||p.uid!==S.me)return;
+  if(p.cid!==S.cur){S.cur=p.cid;useCur();hdr()}
+  openSheet({edit:p});
+}
+function readCh(b,c){
+  var ve=verOf(BIB.ver);
+  showSheet('<h2>'+BOOKS[b]+' '+c+'</h2><div>'+verBtn('rd:'+b+':'+c)+'</div><div>'+biBtn(b)+'</div>'+
+    (ve.id?'<div class="card" style="margin-top:12px"><div class="sub">A '+ve.k+' abre no YouVersion, já neste capítulo.</div><a class="btn" href="'+esc(yvLink(ve,b,c))+'" target="_blank" rel="noopener">📖 Ler '+BOOKS[b]+' '+c+' na '+ve.k+'</a></div>'
+      :'<div class="vs" id="rdx" style="margin-top:10px">Carregando…</div>'+credit(BIB.ver))+'<div class="two">'+(c>1?'<button class="btn g" data-rd="'+b+':'+(c-1)+'">‹ '+BOOKS[b]+' '+(c-1)+'</button>':'')+(c<NC[b]?'<button class="btn g" data-rd="'+b+':'+(c+1)+'">'+BOOKS[b]+' '+(c+1)+' ›</button>':'')+'</div><button class="btn g" id="x">Fechar</button>');
+  if(!ve.id)bible(b,c).then(function(v){var e=document.getElementById('rdx');if(e)e.innerHTML=verses(v)}).catch(function(){var e=document.getElementById('rdx');if(e)e.textContent='Não foi possível carregar o texto. Verifique a conexão.'});
+}
+// ---- Editar jornada (líder) ----
+function editCh(id){
+  var c=S.chs.filter(function(x){return x.id===id})[0];if(!c)return;
+  var g=grpOf(c.gid)||S.grp,np=S.posts.filter(function(p){return p.cid===c.id}).length;
+  showSheet('<h1>✏️ Editar jornada</h1><h2>'+esc(c.name)+'</h2><div class="sub">Você criou esta caravana, então pode mudar tudo desta jornada.</div>'+
+    '<div class="ecard"><b>📖 Roteiro de leitura</b><div class="sub">Troque por um roteiro pronto ou escreva o nome com o livro (ex.: "Romanos em 16 dias").</div>'+
+    '<div>'+TPL.map(function(m,i){return '<button class="chip" data-etp="'+i+'">'+m.n+'</button>'}).join('')+'</div>'+
+    '<label>Nome da jornada</label><input id="en" value="'+esc(c.name)+'"><label>Descrição ou plano</label><input id="ed" value="'+esc(c.desc)+'"></div>'+
+    '<div class="ecard"><b>📅 Datas e meta</b><div class="two"><div><label>Partida</label><input type="date" id="es" value="'+c.start+'"></div><div><label>Chegada (prazo)</label><input type="date" id="ee" value="'+c.end+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="eg" min="1" max="7" value="'+c.goal+'"></div>'+
+    '<div class="card sub" id="eprev" style="margin-top:12px"></div>'+(np?'<div class="sub">'+(np>1?'Já existem '+np+' passos':'Já existe 1 passo')+' nesta jornada. Eles continuam salvos mesmo se você trocar o roteiro ou as datas.</div>':'')+
+    '<div class="ecard"><b>🐪 Caravana</b><label>Nome da caravana</label><input id="egn" value="'+esc(g?g.name:'')+'" data-gid="'+(g?g.id:'')+'"></div>'+
+    '<div class="err" id="eer"></div><button class="btn" id="esv" data-id="'+c.id+'">Salvar alterações</button><button class="btn g" id="x">Cancelar</button>'+
+    '<button class="btn g" style="color:var(--err);margin-top:14px" data-d="'+c.id+'">🗑️ Excluir esta jornada</button>');
+  eprev();
+}
+function eprev(){
+  var e=document.getElementById('eprev');if(!e)return;var d={name:val('en'),desc:val('ed'),start:val('es'),end:val('ee')};
+  if(!d.start||!d.end||d.end<d.start){e.textContent='Confira as datas: a chegada precisa ser depois da partida.';return}
+  var bs=books(d.name+' '+d.desc),L=chaps(bs),n=diff(d.start,d.end)+1;
+  e.innerHTML=L.length?'<b>Roteiro:</b> '+L.length+' capítulos em '+n+' dias · '+(L.length>=n?'cerca de '+Math.round(L.length/n)+' por dia':'menos de 1 por dia')+' · '+Math.min(n,L.length)+' passos até a Terra Prometida':'Sem roteiro automático: inclua um livro da Bíblia no nome (ex.: "Romanos em 16 dias") para ter a leitura de cada dia.';
+}
+async function saveCh(id){
+  var er=document.getElementById('eer'),b=document.getElementById('esv'),n=val('en').trim(),s=val('es'),e=val('ee'),g=parseInt(val('eg'),10);
+  if(!n||!s||!e){er.textContent='Preencha nome, partida e chegada.';return}
+  if(e<s){er.textContent='A chegada precisa ser depois da partida.';return}
+  if(!(g>=1&&g<=7)){er.textContent='A meta vai de 1 a 7 dias por semana.';return}
+  b.disabled=true;
+  var gi=document.getElementById('egn'),gn=gi?gi.value.trim():'',gid=gi?gi.dataset.gid:'',og=grpOf(gid);
+  if(gi&&!gn){er.textContent='Escreva o nome da caravana.';return}
+  b.disabled=true;b.textContent='Salvando…';
+  var r=await sb.from('challenges').update({name:n,description:val('ed').trim()||null,start_date:s,end_date:e,goal_per_week:g}).eq('id',id).select();
+  if(r.error||!r.data||!r.data.length){b.disabled=false;b.textContent='Salvar alterações';er.textContent=r.error?'Não foi possível salvar. '+why(r.error):'Não foi possível salvar: só quem criou a caravana pode editar esta jornada.';return}
+  if(og&&gn!==og.name){
+    var q=await sb.from('groups').update({name:gn}).eq('id',gid).select();
+    if(q.error||!q.data||!q.data.length){b.disabled=false;b.textContent='Salvar alterações';er.textContent='A jornada foi salva, mas não deu para mudar o nome da caravana. '+(q.error?why(q.error):'');await loadData();return}
+    og.name=gn;
+  }
+  closeSheet();await loadData();
+}
+// ---- Boas-vindas: convidado ou criar a própria jornada ----
+function onb(s){
+  var h,er='<div class="err" id="oer" style="margin-top:8px"></div>';
+  if(s==='ask')h='<h1>🧭 Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Você foi convidado para uma caravana ou quer começar a sua própria jornada rumo à Terra Prometida?</div><button class="btn o" data-o="code"><b>✉️ Fui convidado</b><br><span class="sub">Tenho um código de convite</span></button><button class="btn o" data-o="new"><b>✨ Quero começar minha jornada</b><br><span class="sub">Escolha um roteiro de leitura e chame quem quiser</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
+  else if(s==='code')h='<h2>Entrar na caravana</h2><div class="sub">Digite o código que você recebeu de quem te convidou.</div><label>Código de convite</label><input id="ocode" placeholder="ex.: A1B2C3" autocapitalize="characters">'+er+'<button class="btn" id="oj">Entrar na caravana</button><button class="btn g" data-o="ask">Voltar</button>';
+  else if(s==='new')h='<h2>Escolha o roteiro</h2><div class="sub">Cada dia de leitura é um passo. O último passo é a chegada à Terra Prometida.</div>'+TPL.map(function(m,i){return '<button class="btn o" data-o="t'+i+'"><b>'+m.n+'</b><br><span class="sub">'+m.d+'</span></button>'}).join('')+'<button class="btn o" data-o="custom"><b>✏️ Personalizado</b><br><span class="sub">Escreva o seu, ex.: "Romanos em 16 dias"</span></button><button class="btn g" data-o="ask">Voltar</button>';
+  else if(s==='custom')h='<h2>Sua jornada</h2><div class="sub">Escreva o nome com o livro ou parte da Bíblia, que traçamos o roteiro de leitura.</div><label>Nome</label><input id="qn" placeholder="ex.: Romanos em 16 dias"><label>Descrição (opcional)</label><input id="qd" placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="qs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="qe" value="'+addD(TODAY,29)+'"></div></div>'+er+'<button class="btn" id="oq">Continuar</button><button class="btn g" data-o="new">Voltar</button>';
+  else if(s==='sum')h=summ(S.draft)+er+'<button class="btn" id="oc">🚶 Começar a jornada</button><button class="btn g" data-o="new">Voltar</button>';
+  showSheet(h);after();
+}
+function summ(d){
+  var bs=books(d.name+' '+d.desc),L=chaps(bs),n=diff(d.start,d.end)+1,per=L.length/n;
+  var h='<h1>Entendemos sua jornada</h1><h2>'+esc(d.name)+'</h2><div class="sub">Partida '+fd(d.start)+' · chegada '+fd(d.end)+' · '+n+' dias</div>';
+  if(!L.length)return h+'<div class="card sub" style="margin-top:12px">Não identificamos um livro da Bíblia no nome. Tudo bem: cada pessoa registra o que leu. Para ter a leitura do dia automática, use nomes como "Romanos em 16 dias" ou "Novo Testamento em 90 dias".</div>';
+  var R=dayRead(d,0);
+  h+='<div class="card" style="margin-top:12px"><b>'+(bs.length>3?BOOKS[bs[0]]+' a '+BOOKS[bs[bs.length-1]]+' ('+bs.length+' livros)':bs.map(function(b){return BOOKS[b]}).join(', '))+'</b><div class="sub">'+L.length+' capítulos em '+n+' dias · '+(per>=1?'cerca de '+Math.round(per)+' por dia':'menos de 1 por dia')+' · '+Math.min(n,L.length)+' passos até a Terra Prometida</div></div>';
+  return h+'<div class="card"><div class="sub">Primeiro passo · '+fd(d.start)+'</div><div class="tref">'+refOf(R)+'</div><div class="vs vx" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div></div>';
+}
+async function myGroups(){
+  // só os vínculos da própria pessoa (se o banco passar a mostrar os dos outros integrantes, não duplica)
+  var m=await sb.from('group_members').select('user_id,role,groups(id,name,invite_code)').eq('user_id',S.me);
+  if(m.error)m=await sb.from('group_members').select('role,groups(id,name,invite_code)');
+  if(m.error)throw m.error;
+  var seen={};
+  return(m.data||[]).filter(function(x){return x.groups&&(x.user_id===undefined||x.user_id===S.me)}).map(function(x){return{id:x.groups.id,name:x.groups.name,invite_code:x.groups.invite_code,role:x.role}}).filter(function(g){if(seen[g.id])return false;seen[g.id]=1;return true});
+}
+function pick(id){try{localStorage.setItem('pd_grp',id)}catch(e){}}
+// ---- Link de convite: ?c=CÓDIGO entra direto na caravana depois do login ----
+var INV=null;
+function readInv(){
+  var q=new URLSearchParams(location.search).get('c');
+  if(q){INV=q.trim().toUpperCase();try{localStorage.setItem('pd_inv',INV)}catch(e){}}
+  else{try{INV=localStorage.getItem('pd_inv')}catch(e){}}
+}
+function clearInv(){INV=null;try{localStorage.removeItem('pd_inv')}catch(e){}if(location.search)history.replaceState(null,'',location.pathname)}
+function invLink(){return location.origin+location.pathname+'?c='+encodeURIComponent(S.grp.invite_code)}
+function waLink(){return 'https://wa.me/?text='+encodeURIComponent('Bora caminhar comigo pela Bíblia? 🧭 Entre na minha jornada "'+S.ch.name+'" no app Jornada na Palavra: '+invLink())}
+function waBtn(){return '<a class="btn wab" href="'+esc(waLink())+'" target="_blank" rel="noopener">📲 Chamar alguém no WhatsApp</a>'}
+function shareInv(btn){
+  var u=invLink(),tx='Bora caminhar comigo pela Bíblia? Entre na minha jornada "'+S.ch.name+'" no app Jornada na Palavra:';
+  if(navigator.share){navigator.share({title:'Jornada na Palavra',text:tx,url:u}).catch(function(){});return}
+  try{navigator.clipboard.writeText(tx+' '+u);btn.textContent='Link copiado!'}catch(e){prompt('Copie o link:',u)}
+}
+async function useInv(){
+  var code=INV;clearInv();
+  var ex=S.groups.filter(function(g){return String(g.invite_code).toUpperCase()===code})[0];
+  if(ex){pick(ex.id);S.joinG=ex.id;return null}
+  var old=S.groups.map(function(g){return g.id}),r=await sb.rpc('join_group',{p_code:code});
+  if(r.error){S.invErr='Não foi possível entrar pelo convite. '+why(r.error);return null}
+  S.groups=await myGroups();
+  var g=S.groups.filter(function(x){return old.indexOf(x.id)<0})[0];if(g){pick(g.id);S.joinG=g.id}
+  return g||null
+}
+function welcome(g){
+  var c=S.ch,P=plan(c),R=P?dayRead(c,Math.max(0,diff(c.start,TODAY))):[];
+  showSheet('<h1>Convite aceito</h1><h2>Bem-vindo à caravana!</h2><div class="sub">Você entrou em <b>'+esc(g.name)+'</b>'+(S.chs.length?' · '+esc(c.name):'')+'. Cada leitura é um passo rumo à Terra Prometida.</div>'+(R.length?'<div class="card" style="margin-top:12px"><div class="sub">Passo de hoje</div><div class="tref">'+refOf(R)+'</div><div class="vs vx" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div></div>':'')+'<button class="btn" id="x">🚶 Começar a caminhar</button>');
+  after();
+}
+async function joinCode(){
+  var cd=val('ocode').trim(),er=document.getElementById('oer'),b=document.getElementById('oj');
+  if(!cd){er.textContent='Informe o código.';return}
+  b.disabled=true;
+  try{
+    var old=S.groups.map(function(g){return g.id}),r=await sb.rpc('join_group',{p_code:cd});
+    if(r.error)throw r.error;
+    var g=(await myGroups()).filter(function(x){return old.indexOf(x.id)<0})[0];if(g){pick(g.id);S.joinG=g.id}
+    closeSheet();tab='feed';S.cur=null;await boot();
+  }catch(e){b.disabled=false;er.textContent='Não foi possível entrar. '+why(e)}
+}
+async function createOwn(){
+  var d=S.draft,er=document.getElementById('oer'),b=document.getElementById('oc');b.disabled=true;
+  try{
+    var old=S.groups.map(function(g){return g.id}),r=await sb.rpc('create_group',{p_name:d.name});
+    if(r.error)throw r.error;
+    var g=(await myGroups()).filter(function(x){return old.indexOf(x.id)<0})[0];
+    if(!g)throw new Error('caravana não encontrada');
+    var c=await sb.from('challenges').insert({group_id:g.id,name:d.name,description:d.desc||null,start_date:d.start,end_date:d.end,goal_per_week:d.goal||7}).select().single();
+    if(c.error)throw c.error;
+    pick(g.id);S.cur=c.data.id;await joinJ([c.data.id]);closeSheet();tab='feed';await boot();
+    showSheet('<h1>Jornada traçada</h1><h2>Chame a sua caravana</h2><div class="sub">Quem abrir o link cria a conta e já entra direto em "'+esc(d.name)+'".</div>'+waBtn()+'<button class="btn g" id="shi">Outras formas de compartilhar</button><button class="btn g" id="x">Agora não</button>');
+  }catch(e){b.disabled=false;er.textContent='Não foi possível começar a jornada. '+why(e)}
+}
+// ---- Entrada e cadastro (telas simples, letra grande, uma coisa por vez) ----
+var REG={step:1,name:'',ph:'',email:''};
+function pwBox(id,ac){return '<div class="pw"><input id="'+id+'" type="password" autocomplete="'+ac+'"><button class="link" data-eye="'+id+'">👁️ Mostrar</button></div>'}
+function gate(m,msg){
+  document.body.classList.add('gate');gm=m;
+  var er='<div class="err" id="gmsg">'+esc(msg||'')+'</div>',h='<h1>🧭 Jornada na Palavra</h1>';
+  var inv=INV?'<div class="card" style="margin-top:12px;border-color:var(--ac)"><b>📩 Você foi chamado para uma caravana!</b><div class="sub">'+(m==='in'?'Entre':'Faça seu cadastro')+' e você já entra direto na jornada.</div></div>':'';
+  if(m==='up'){
+    var s=REG.step;
+    h+='<div class="sub">Cadastro · etapa '+s+' de 3</div><div class="steps">'+[1,2,3].map(function(i){return '<i class="'+(i<=s?'on':'')+'"></i>'}).join('')+'</div>'+(s===1?inv:'');
+    if(s===1)h+='<h2>Qual é o seu nome?</h2><div class="sub">É assim que a caravana vai ver você.</div><input id="an" autocomplete="name" autocapitalize="words" placeholder="Ex.: Maria da Silva" value="'+esc(REG.name)+'">'+er+'<button class="btn" id="g1">Continuar</button><button class="link big" data-gm="in">Já tenho cadastro, quero entrar</button>';
+    else if(s===2)h+='<h2>Qual é o seu WhatsApp?</h2><div class="sub">Coloque o número com DDD.<br>Ex.: (11) 91234-5678</div><input id="aph" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(DDD) número" value="'+esc(telMask(REG.ph))+'"><label>Digite o mesmo número de novo, para conferir</label><input id="aph2" class="tel" type="tel" inputmode="numeric" autocomplete="off" placeholder="(DDD) número">'+er+'<button class="btn" id="g2">Continuar</button><button class="btn g" id="gb">Voltar</button>';
+    else h+='<h2>Seu e-mail e uma senha</h2><div class="sub">Você vai usar o e-mail e a senha para entrar no app de qualquer celular.</div><label>Seu e-mail</label><input id="ae" type="email" inputmode="email" autocomplete="email" autocapitalize="off" placeholder="exemplo@gmail.com" value="'+esc(REG.email)+'"><label>Crie uma senha (pelo menos 6 letras ou números)</label>'+pwBox('ap','new-password')+'<div class="sub" style="margin-top:6px">Anote a senha para não esquecer.</div>'+er+'<button class="btn" id="ga">Criar meu cadastro</button><button class="btn g" id="gb">Voltar</button>';
+  }else if(m==='mail'){
+    h+='<h2>📧 Agora abra o seu e-mail</h2><div class="sub">Enviamos uma mensagem para<br><b style="color:var(--tx)">'+esc(REG.email)+'</b></div><ol class="howto"><li>Abra o aplicativo de e-mail (Gmail, Outlook…).</li><li>Procure a mensagem <b>“Confirme seu cadastro no Jornada na Palavra”</b>. Se não achar, olhe em <b>Spam</b> ou <b>Lixo eletrônico</b>.</li><li>Toque no botão <b>Confirmar meu cadastro</b>. O Jornada na Palavra vai abrir sozinho.</li></ol>'+er+'<button class="btn" data-gm="in">Já confirmei, quero entrar</button><button class="btn g" id="grs">Não chegou? Enviar de novo</button><button class="btn g" id="gwe">Errei o e-mail</button>';
+  }else if(m==='forgot'){
+    h+='<h2>Esqueceu a senha?</h2><div class="sub">Sem problema. Digite seu e-mail e vamos mandar um botão para você criar uma senha nova.</div><label>Seu e-mail</label><input id="ae" type="email" inputmode="email" autocomplete="email" autocapitalize="off" value="'+esc(REG.email)+'">'+er+'<button class="btn" id="gf">Enviar e-mail</button><button class="btn g" data-gm="in">Voltar</button>';
+  }else if(m==='newpw'){
+    h+='<h2>Crie sua nova senha</h2><div class="sub">Use pelo menos 6 letras ou números e anote para não esquecer.</div><label>Nova senha</label>'+pwBox('np','new-password')+er+'<button class="btn" id="gn">Salvar nova senha</button>';
+  }else{
+    h+='<h2>Bem-vindo de volta!</h2><div class="sub">Leitura bíblica em caravana: cada leitura é um passo rumo à Terra Prometida.</div>'+inv+'<label>Seu e-mail</label><input id="ae" type="email" inputmode="email" autocomplete="email" autocapitalize="off" value="'+esc(REG.email)+'"><label>Sua senha</label>'+pwBox('ap','current-password')+er+'<button class="btn" id="ga">Entrar</button><button class="link big" data-gm="forgot">Esqueci minha senha</button><button class="link big" data-gm="up">Ainda não tenho cadastro</button>';
+  }
+  document.getElementById('gate').innerHTML=h;scrollTo(0,0);
+}
+function regNext(s){
+  if(s===1){var n=val('an').trim();if(n.length<2){gmsg('Escreva o seu nome.');return}REG.name=n;REG.step=2}
+  else{var a=digits(val('aph')),b=digits(val('aph2'));
+    if(a.length<10||a.length>11){gmsg('Confira o número: coloque o DDD e o número, por exemplo (11) 91234-5678.');return}
+    if(a!==b){gmsg('Os dois números estão diferentes. Digite o mesmo número nos dois campos.');return}
+    REG.ph=a;REG.step=3}
+  gate('up');var f=document.querySelector('#gate input');if(f)f.focus();
+}
+function redirTo(){return location.origin+location.pathname+(INV?'?c='+encodeURIComponent(INV):'')}
+async function resendMail(){
+  var b=document.getElementById('grs');b.disabled=true;
+  var r=await sb.auth.resend({type:'signup',email:REG.email,options:{emailRedirectTo:redirTo()}});
+  b.disabled=false;gmsg(r.error?'Não foi possível reenviar. '+why(r.error):'Pronto! Enviamos o e-mail de novo. Olhe também em Spam.');
+}
+async function forgot(){
+  var em=val('ae').trim();if(!/\S+@\S+\.\S+/.test(em)){gmsg('Digite o seu e-mail.');return}
+  REG.email=em;var b=document.getElementById('gf');b.disabled=true;
+  var r=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+  b.disabled=false;gmsg(r.error?'Não foi possível enviar. '+why(r.error):'Pronto! Abra seu e-mail e toque no botão “Criar nova senha”.');
+}
+async function newPw(){
+  var p=val('np');if(p.length<6){gmsg('A senha precisa ter pelo menos 6 letras ou números.');return}
+  var b=document.getElementById('gn');b.disabled=true;
+  var r=await sb.auth.updateUser({password:p});
+  if(r.error){b.disabled=false;gmsg('Não foi possível salvar. '+why(r.error));return}
+  S.recovery=false;if(location.hash)history.replaceState(null,'',location.pathname+location.search);boot();
+}
+function gmsg(t){var e=document.getElementById('gmsg');if(e)e.textContent=t}
+function digits(t){return String(t).replace(/\D/g,'').replace(/^55(?=\d{10,11}$)/,'')}
+function tidy(t){return String(t||'').replace(/\r\n?/g,'\n').replace(/^(?:[ \t]*\n)+/,'').replace(/\s+$/,'')}
+function grow(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight+2,180)+'px'}
+function telMask(v){var d=digits(v).slice(0,11);if(d.length<3)return d.length?'('+d:'';var a='('+d.slice(0,2)+') ',r=d.slice(2);return a+(r.length>8?r.slice(0,5)+'-'+r.slice(5):r.length>4?r.slice(0,4)+'-'+r.slice(4):r)}
+document.addEventListener('input',function(e){
+  if(e.target.classList.contains('tel'))e.target.value=telMask(e.target.value);
+  if(/^e[ndse]$/.test(e.target.id))eprev();
+  if(e.target.id==='bq')bibFilter();
+  if(e.target.classList.contains('grow'))grow(e.target);
+});
+// ---- Verificação do telefone por SMS (liga sozinha quando o SMS estiver ativo no Supabase) ----
+var PH_ON=null,TEL={n:'',sent:false};
+function phoneOn(){
+  if(!PH_ON)PH_ON=fetch(SB_URL+'/auth/v1/settings',{headers:{apikey:SB_KEY}}).then(function(r){return r.json()}).then(function(j){return !!(j.external&&j.external.phone)}).catch(function(){return false});
+  return PH_ON
+}
+function telGate(msg){
+  document.body.classList.add('gate');gm='tel';
+  var er='<div class="err" id="gmsg" style="margin-top:8px">'+esc(msg||'')+'</div>';
+  document.getElementById('gate').innerHTML='<h1>🧭 Jornada na Palavra</h1><h2>Confirme seu telefone</h2><div class="sub">'+(TEL.sent?'Enviamos um código por SMS para '+esc(telMask(TEL.n))+'.':'Vamos enviar um código por SMS para confirmar que o número é seu.')+'</div><div class="card" style="margin-top:14px">'+(TEL.sent?'<label>Código de 6 dígitos</label><input id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:.3em;text-align:center">'+er+'<button class="btn" id="tv">Confirmar</button><button class="btn g" id="ts">Reenviar código</button><button class="btn g" id="tch">Trocar número</button>':'<label>Telefone (WhatsApp)</label><input id="tnum" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" value="'+esc(telMask(TEL.n))+'">'+er+'<button class="btn" id="ts">Enviar código por SMS</button>')+'</div><button class="link" data-out="1">Sair da conta</button>';
+}
+async function telSend(){
+  var i=document.getElementById('tnum');if(i)TEL.n=digits(i.value);
+  if(TEL.n.length<10||TEL.n.length>11){gmsg('Informe o telefone com DDD, ex.: (11) 91234-5678.');return}
+  var b=document.getElementById('ts');b.disabled=true;
+  var r=await sb.auth.updateUser({phone:'+55'+TEL.n});
+  if(r.error){b.disabled=false;gmsg('Não foi possível enviar o SMS. '+why(r.error));return}
+  TEL.sent=true;telGate();
+}
+async function telVerify(){
+  var c=val('tcode').replace(/\D/g,'');
+  if(c.length<6){gmsg('Digite os 6 dígitos do código.');return}
+  var b=document.getElementById('tv');b.disabled=true;
+  var r=await sb.auth.verifyOtp({phone:'+55'+TEL.n,token:c,type:'phone_change'});
+  if(r.error){b.disabled=false;gmsg(/expired|invalid/i.test(r.error.message||'')?'Código inválido ou expirado. Confira ou peça outro.':why(r.error));return}
+  TEL.sent=false;boot();
+}
+function why(e){var m=(e&&(e.message||e.error_description))||String(e||'');
+  if(/not confirmed/i.test(m))return 'Confirme seu e-mail antes de entrar (veja a caixa de entrada e o spam).';
+  if(/invalid login/i.test(m))return 'E-mail ou senha incorretos.';
+  if(/already registered/i.test(m))return 'Este e-mail já tem conta. Toque em "Já tenho conta".';
+  if(/email rate limit|over_email_send_rate_limit/i.test(m+(e&&e.code||'')))return 'O servidor atingiu o limite de e-mails de confirmação por hora. Tente de novo mais tarde ou avise o líder da caravana.';
+  if(/rate limit|too many requests|429/i.test(m+(e&&e.status||'')))return 'Muitas tentativas em pouco tempo: o servidor pediu uma pausa. Aguarde alguns minutos e tente de novo.';
+  if(/failed to fetch|networkerror|load failed/i.test(m))return 'Sem conexão com o servidor.';
+  if(/exceeded the maximum allowed size|payload too large/i.test(m))return 'O arquivo é grande demais (máximo 50 MB).';
+  if(/mime type|invalid_mime/i.test(m))return 'Esse tipo de arquivo não é aceito. Use foto (JPG/PNG) ou vídeo (MP4/MOV).';
+  if(/could not find|does not exist|schema cache/i.test(m))return 'O banco ainda não foi atualizado para esta versão do app. ('+m+')';
+  if(/not.?authorized|sending (confirmation|recovery|magic)|error sending|email_address_not_authorized/i.test(m))return 'Não conseguimos enviar o e-mail agora. Avise o líder da caravana.';
+  if(/password should be|weak password|at least 6/i.test(m))return 'A senha precisa ter pelo menos 6 letras ou números.';
+  if(/invalid.*email|unable to validate email|email address .* is invalid/i.test(m))return 'Esse e-mail parece estar errado. Confira se digitou certinho.';
+  if(/only request this after|security purposes/i.test(m))return 'Aguarde um minutinho antes de pedir de novo.';
+  if(/signups? not allowed|signup is disabled/i.test(m))return 'Os cadastros estão fechados no momento. Avise o líder da caravana.';
+  if(/same password|different from the old/i.test(m))return 'A nova senha precisa ser diferente da antiga.';
+  if(/jwt|session.*(missing|expired)|refresh token/i.test(m))return 'Sua sessão expirou. Entre de novo com seu e-mail e senha.';
+  if(/row-level security|42501|permission denied/i.test(m+(e&&e.code||'')))return 'O servidor recusou: confira se a data está dentro do período da jornada e se você ainda está na caravana.';
+  if(/tempo esgotado/i.test(m))return 'A internet está lenta e o servidor não respondeu a tempo.';
+  return /[a-z]{3,} [a-z]{3,}/i.test(m)&&!/[ãçéêíóõú]/i.test(m)?'Algo deu errado. Tente de novo em instantes. (detalhe: '+m+')':m}
+async function boot(){
+  var r=await sb.auth.getSession(),ses=r.data&&r.data.session;
+  if(!ses){S.me=null;if(gm!=='mail'&&gm!=='forgot')gate('in',S.linkErr);S.linkErr='';return}
+  S.me=ses.user.id;
+  var md=ses.user.user_metadata||{};S.myJ=Array.isArray(md.jornadas)?md.jornadas.slice():[];
+  if(S.recovery){gate('newpw');return}
+  if(await phoneOn()){
+    var gu=await sb.auth.getUser(),us=gu.data&&gu.data.user;
+    if(us&&!us.phone_confirmed_at){if(!TEL.n)TEL.n=digits((us.user_metadata&&us.user_metadata.phone)||us.phone||'');if(gm!=='tel')telGate();return}
+  }
+  try{S.groups=await myGroups()}catch(e){gate('in','Não foi possível carregar seus dados. '+why(e));return}
+  var joined=null;
+  if(INV){try{joined=await useInv()}catch(e){S.invErr='Não foi possível entrar pelo convite. '+why(e)}S.asked=true;S.cur=null}
+  document.body.classList.remove('gate');
+  if(!S.groups.length){
+    S.grp=null;S.canEdit=false;S.chs=[];S.all=[];S.posts=[];S.cur=null;S.err='';loaded=true;
+    if(!S.names[S.me]){var p=await sb.from('profiles').select('id,name').eq('id',S.me);(p.data||[]).forEach(function(x){S.names[x.id]=x.name})}
+    render();
+    if(S.invErr){onb('code');document.getElementById('oer').textContent=S.invErr;S.invErr=''}
+    else if(!S.asked){S.asked=true;onb('ask')}
+    return
+  }
+  var sv=null;try{sv=localStorage.getItem('pd_grp')}catch(e){}
+  S.grp=S.groups.filter(function(g){return g.id===sv})[0]||S.groups[0];
+  S.canEdit=S.grp.role==='leader';
+  await loadData();
+  resumePending();
+  if(joined)welcome(joined);
+  else if(S.invErr){onb('code');document.getElementById('oer').textContent=S.invErr;S.invErr=''}
+}
+// ---- Carregar dados ----
+// • Cada carga tem um número: se uma carga antiga terminar depois de uma nova, ela é descartada
+//   (antes, a atualização automática podia "apagar" da tela uma publicação recém-feita).
+// • As publicações vêm em páginas de 1000 (o Supabase devolve no máximo 1000 por vez;
+//   antes, acima disso as mais antigas sumiam e a contagem de passos ficava errada).
+// • Links das fotos são reaproveitados até perto de vencer (antes eram trocados a cada 30 s e
+//   o celular baixava todas as fotos de novo).
+var LD=0,SU={},FIRST=true;
+async function signed(paths){
+  var now=Date.now(),need=paths.filter(function(x){var c=SU[x];return !c||c.exp-now<15*6e4});
+  for(var i=0;i<need.length;i+=200){
+    var part=need.slice(i,i+200);
+    try{
+      var su=await sb.storage.from('photos').createSignedUrls(part,21600);
+      (su.data||[]).forEach(function(u){if(u.path)SU[u.path]={url:u.signedUrl||'',exp:now+(u.signedUrl?21000e3:30*6e4)}});
+    }catch(e){}
+  }
+  var o={};paths.forEach(function(x){o[x]=SU[x]&&SU[x].url||''});return o
+}
+// Integrantes: as regras do banco já deixam cada integrante ler os vínculos e os nomes da própria caravana
+async function loadRosters(){
+  var gids=S.groups.map(function(g){return g.id});if(!gids.length)return;
+  try{
+    var r=await sb.from('group_members').select('group_id,user_id,role,joined_at').in('group_id',gids);
+    if(r.error)return;
+    var by={};gids.forEach(function(g){by[g]=[]});
+    (r.data||[]).forEach(function(m){if(by[m.group_id]&&!by[m.group_id].some(function(x){return x.id===m.user_id}))by[m.group_id].push({id:m.user_id,role:m.role})});
+    var ids=Object.keys((r.data||[]).reduce(function(o,m){o[m.user_id]=1;return o},{}));
+    if(ids.length){var pr=await sb.from('profiles').select('id,name').in('id',ids);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name})}
+    gids.forEach(function(g){S.roster[g]=by[g].map(function(m){return{id:m.id,role:m.role,name:nm(m.id)}}).sort(function(a,b){return (b.role==='leader')-(a.role==='leader')||a.name.localeCompare(b.name,'pt')})});
+  }catch(e){}
+}
+async function loadData(){
+  if(!S.grp)return;
+  var my=++LD,stale=function(){return my!==LD};
+  try{
+    var gids=S.groups.map(function(g){return g.id});
+    var c=await withTimeout(sb.from('challenges').select('*').in('group_id',gids).order('start_date',{ascending:false}),30000);
+    if(stale())return;
+    if(c.error)throw c.error;
+    S.all=c.data.map(function(x){return{id:x.id,gid:x.group_id,name:x.name,desc:x.description||'',start:x.start_date,end:x.end_date,goal:x.goal_per_week}});
+    if(S.joinG){var jg=S.joinG,nw=S.all.filter(function(x){return x.gid===jg&&x.end>=TODAY});S.joinG=null;if(nw.length){joinJ(nw.map(function(x){return x.id}));S.cur=nw[nw.length-1].id}}
+    if(!S.all.some(function(x){return x.id===S.cur})){
+      var sv=null;try{sv=localStorage.getItem('pd_cur')}catch(e){}
+      var act=function(x){return TODAY>=x.start&&TODAY<=x.end},myL=S.all.filter(function(x){return S.myJ.indexOf(x.id)>=0});
+      var inG=S.all.filter(function(x){return x.gid===S.grp.id});
+      var ch=S.all.filter(function(x){return x.id===sv})[0]||myL.filter(act)[0]||myL[0]||inG.filter(act)[0]||inG[0];
+      S.cur=ch?ch.id:null;
+    }
+    useCur();
+    var ids=S.all.map(function(x){return x.id}),rows=[];
+    if(ids.length){
+      for(var from=0;from<20000;from+=1000){
+        var k=await withTimeout(sb.from('checkins').select('*,likes(user_id),comments(id,user_id,body,created_at)').in('challenge_id',ids).order('created_at',{ascending:false}).order('id',{ascending:true}).range(from,from+999),30000);
+        if(stale())return;
+        if(k.error)throw k.error;
+        (k.data||[]).forEach(function(r){if(!rows.some(function(x){return x.id===r.id}))rows.push(r)});
+        if(!k.data||k.data.length<1000)break;
+      }
+    }
+    await loadRosters();if(stale())return;
+    // nomes: só de quem aparece (antes baixava os nomes de todos os usuários do app)
+    var want={};rows.forEach(function(p){want[p.user_id]=1;(p.comments||[]).forEach(function(c){want[c.user_id]=1})});if(S.me)want[S.me]=1;
+    var miss=Object.keys(want).filter(function(u){return !S.names[u]});
+    if(miss.length){var pr=await sb.from('profiles').select('id,name').in('id',miss);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name})}
+    var paths=[].concat.apply([],rows.filter(function(p){return p.photo_path}).map(function(p){return p.photo_path.split(PSEP)}));
+    var urls=await signed(paths.concat(paths.filter(hasThumb).map(thumbOf)));if(stale())return;
+    var pend=S.posts.filter(function(p){return p.local&&!rows.some(function(r){return r.id===p.id})});
+    S.posts=pend.concat(rows.map(function(p){return toPost(p,urls)}));
+    // escolhe automaticamente uma jornada sua só ao abrir o app (antes isso acontecia a cada 30 s
+    // e tirava a pessoa da jornada que ela estava olhando)
+    if(FIRST){FIRST=false;var mineL=S.all.filter(function(x){return isMine(x.id)});
+      if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}}
+    loaded=true;S.err='';
+  }catch(e){
+    if(stale())return;
+    S.err='Não foi possível atualizar agora. '+why(e)+' Tentaremos de novo em instantes.';
+  }
+  render();
+}
+function toPost(p,urls){
+  var pl=p.photo_path?p.photo_path.split(PSEP):[];
+  return{imgs:pl.map(function(x){var vid=pl.length===1?p.media_type==='video':isVidPath(x),t=!vid&&hasThumb(x)&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:t||urls[x]||'',video:vid}}).filter(function(m){return m.img}),
+    id:p.id,uid:p.user_id,cid:p.challenge_id,date:p.read_date,book:p.book,ref:p.ref||'—',ch:p.chapters,note:p.note||'',mt:p.media_type||'image',ms:p.media_source||'',min:p.study_minutes||0,
+    likes:(p.likes||[]).map(function(l){return l.user_id}),cm:(p.comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1}),ts:Date.parse(p.created_at)}
+}
+async function auth(){
+  var em=val('ae').trim(),pw=val('ap');
+  if(!/\S+@\S+\.\S+/.test(em)){gmsg('Digite o seu e-mail, por exemplo maria@gmail.com.');return}
+  if(pw.length<6){gmsg(gm==='up'?'A senha precisa ter pelo menos 6 letras ou números.':'Digite a sua senha.');return}
+  REG.email=em;
+  var b=document.getElementById('ga');b.disabled=true;b.textContent='Aguarde…';
+  if(gm==='up'){
+    var r=await sb.auth.signUp({email:em,password:pw,options:{data:{name:REG.name,phone:'+55'+REG.ph},emailRedirectTo:redirTo()}});
+    if(r.error){b.disabled=false;b.textContent='Criar meu cadastro';gmsg('Não foi possível criar o cadastro. '+why(r.error));return}
+    // cadastro entra direto no app (sem confirmar e-mail); se o servidor não abriu a sessão, tenta entrar com a mesma senha
+    var ses=r.data.session;
+    if(!ses){var l2=await sb.auth.signInWithPassword({email:em,password:pw});ses=!l2.error&&l2.data.session}
+    if(ses){S.names[ses.user.id]=REG.name;REG.step=1;boot()}else{REG.step=1;gate('mail')}
+  }else{
+    var l=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(l.error){b.disabled=false;b.textContent='Entrar';gmsg(why(l.error));return}
+    boot();
+  }
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button');if(!t)return;var d=t.dataset;
+  if(d.t){tab=d.t;render();scrollTo(0,0)}
+  else if(t.id==='add'||t.id==='add2')openSheet();
+  else if(t.id==='x')closeSheet();
+  else if(t.id==='ok')publish();
+  else if(t.id==='pdgo'){S.pendErr='';render();resumePending()}
+  else if(t.id==='pdno'){if(confirm('Descartar este passo pendente? Ele não será publicado.')){pendClear();render()}}
+  else if(d.mn){document.getElementById('mn').value=d.mn;document.querySelectorAll('[data-mn]').forEach(function(b){b.classList.toggle('on',b===t)})}
+  else if(d.sc)pickChap(d.sc);
+  else if(d.bb!==undefined){closeSheet();bibGo('chaps',+d.bb)}
+  else if(d.bgo){var g2=d.bgo.split(':');closeSheet();BIB.goV=d.bv2?+d.bv2:null;bibGo('read',+g2[0],+g2[1]);if(BIB.goV&&BIB.last)BIB.last.v=BIB.goV}
+  else if(t.id==='boff')saveOffline(t);
+  else if(d.bv)bibGo(d.bv);
+  else if(d.fs){BIB.fs=Math.max(15,Math.min(30,BIB.fs+2*(+d.fs)));bibSave();var bx=document.getElementById('bibx');if(bx)bx.style.fontSize=BIB.fs+'px'}
+  else if(d.mark){S.preSel=d.mark;openSheet()}
+  else if(d.vp)verPick(d.vp);
+  else if(d.pv)verChosen(d.pv,d.ctx);
+  else if(d.r){rk=d.r;render()}
+  else if(d.etp!==undefined){var mt=TPL[+d.etp],es0=val('es')||TODAY;document.getElementById('en').value=mt.n;document.getElementById('ed').value=mt.d;document.getElementById('ee').value=addD(es0,mt.days-1);document.querySelectorAll('[data-etp]').forEach(function(x){x.classList.toggle('on',x===t)});eprev()}
+  else if(d.js)selJ(d.js);
+  else if(d.pj)participate(d.pj);
+  else if(d.leave)leaveGroup(d.leave);
+  else if(d.bi!==undefined)bookInfo(+d.bi);
+  else if(d.rd){var q=d.rd.split(':');readCh(+q[0],+q[1])}
+  else if(t.id==='shi')shareInv(t);
+  else if(d.day)openSheet({d:d.day});
+  else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
+  else if(d.cs)sendComment(d.cs);
+  else if(t.id==='csend')sendChat();
+  else if(t.id==='psend')sendPed();
+  else if(t.id==='ptog')pedTog();
+  else if(t.id==='phow')prayHow();
+  else if(d.ed)editCh(d.ed);
+  else if(d.ep)editPost(d.ep);
+  else if(d.mx!==undefined){S.media.splice(+d.mx,1);drawMedia()}
+  else if(d.mr!==undefined){S.rep=+d.mr;document.getElementById('frep').click()}
+  else if(d.cdot!==undefined){var ct=t.closest('.car').querySelector('[data-car]');ct.scrollTo({left:ct.clientWidth*(+d.cdot),behavior:'smooth'})}
+  else if(t.id==='edj')editCh(S.cur);
+  else if(t.id==='esv')saveCh(d.id);
+  else if(d.o){if(d.o[0]==='t'){var m0=TPL[+d.o.slice(1)];S.draft={name:m0.n,desc:m0.d,start:TODAY,end:addD(TODAY,m0.days-1),goal:m0.g};onb('sum')}else onb(d.o)}
+  else if(t.id==='oq'){var qn=val('qn').trim(),qs=val('qs'),qe=val('qe'),oe=document.getElementById('oer');if(!qn||!qs||!qe){oe.textContent='Preencha nome, partida e chegada.';return}if(qe<qs){oe.textContent='A chegada precisa ser depois da partida.';return}S.draft={name:qn,desc:val('qd').trim(),start:qs,end:qe,goal:7};onb('sum')}
+  else if(t.id==='oc')createOwn();
+  else if(t.id==='oj')joinCode();
+  else if(d.l){var p=S.posts.filter(function(x){return x.id===d.l})[0];if(!p)return;var i=p.likes.indexOf(S.me),q2=i>=0?sb.from('likes').delete().eq('checkin_id',p.id).eq('user_id',S.me):sb.from('likes').insert({checkin_id:p.id});if(i>=0)p.likes.splice(i,1);else p.likes.push(S.me);render();q2.then(function(r){if(r.error)loadData()})}
+  else if(t.id==='sv'){var n=val('fc').trim(),st=val('fs'),en=val('fe'),er=document.getElementById('fer');if(!n||!st||!en){er.textContent='Preencha nome, partida e chegada.';return}if(en<st){er.textContent='A chegada precisa ser depois da partida.';return}t.disabled=true;sb.from('challenges').insert({group_id:S.grp.id,name:n,description:val('fd').trim()||null,start_date:st,end_date:en,goal_per_week:+val('fg')||5}).select().single().then(function(r){if(r.error){t.disabled=false;er.textContent='Não foi possível traçar a jornada. '+why(r.error);return}document.getElementById('fc').value='';document.getElementById('fd').value='';S.cur=r.data.id;joinJ([r.data.id]);tab='feed';loadData()})}
+  else if(d.tp!==undefined){var m=TPL[+d.tp],st0=val('fs')||TODAY;document.getElementById('fc').value=m.n;document.getElementById('fd').value=m.d;document.getElementById('fs').value=st0;document.getElementById('fe').value=addD(st0,m.days-1);document.getElementById('fg').value=m.g;document.getElementById('fc').scrollIntoView({behavior:'smooth',block:'center'})}
+  else if(d.d){var np=S.posts.filter(function(x){return x.cid===d.d}),pp=np.map(function(x){return x.uid}).filter(function(u,i,a){return a.indexOf(u)===i}).length,okd;
+    if(np.length)okd=(prompt('ATENÇÃO: esta jornada tem '+np.length+(np.length>1?' publicações':' publicação')+' de '+pp+(pp>1?' pessoas':' pessoa')+'. Ao excluir, elas são apagadas para sempre, com as fotos, Amém e comentários.\n\nSe quiser só mudar o roteiro ou as datas, use "Editar" (as publicações ficam).\n\nPara excluir mesmo assim, escreva EXCLUIR:')||'').trim().toUpperCase()==='EXCLUIR';
+    else okd=confirm('Excluir esta jornada? Ela ainda não tem publicações.');
+    if(okd)sb.from('challenges').delete().eq('id',d.d).then(function(r){if(r.error)alert('Não foi possível excluir. '+why(r.error));else{closeSheet();if(S.cur===d.d)S.cur=null}loadData()})}
+  else if(d.gm){if(d.gm==='up')REG.step=1;gate(d.gm)}
+  else if(t.id==='ga')auth();
+  else if(t.id==='g1')regNext(1);
+  else if(t.id==='g2')regNext(2);
+  else if(t.id==='gb'){REG.step=Math.max(1,REG.step-1);gate('up')}
+  else if(t.id==='grs')resendMail();
+  else if(t.id==='gwe'){REG.step=3;gate('up')}
+  else if(t.id==='gf')forgot();
+  else if(t.id==='gn')newPw();
+  else if(d.eye){var pi=document.getElementById(d.eye),sh=pi.type==='password';pi.type=sh?'text':'password';t.textContent=sh?'🙈 Esconder':'👁️ Mostrar'}
+  else if(t.id==='ts')telSend();
+  else if(t.id==='tv')telVerify();
+  else if(t.id==='tch'){TEL.sent=false;telGate()}
+  else if(d.out){sb.auth.signOut().then(function(){S.me=null;S.grp=null;S.groups=[];S.chs=[];S.all=[];S.myJ=[];S.posts=[];S.cur=null;S.asked=false;TEL={n:'',sent:false};loaded=false;closeSheet();gate('in')})}
+  else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
+});
+document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  if(document.body.classList.contains('gate')&&e.target.tagName==='INPUT'){var gb=document.querySelector('#gate .btn:not(.g)');if(gb){e.preventDefault();gb.click()}return}
+  // Enter pula linha; Ctrl+Enter (ou Cmd+Enter) envia
+  if(!(e.ctrlKey||e.metaKey))return;
+  if(e.target.id==='cin'){e.preventDefault();sendChat()}
+  else if(e.target.id==='pin'){e.preventDefault();sendPed()}
+  else if(/^ci-/.test(e.target.id)){e.preventDefault();sendComment(e.target.id.slice(3))}
+});
+document.getElementById('sh').addEventListener('click',function(e){if(e.target.id==='sh')closeSheet()});
+document.addEventListener('change',function(e){
+  var id=e.target.id;
+  if(id==='dt')stepFor(e.target.value);
+  else if(id==='sbk'){S.bk=+e.target.value;drawChaps()}
+  else if(id==='bver'){BIB.ver=e.target.value;bibSave();render()}
+  else if(id==='vsel'&&e.target.value)goVerse(e.target.value);
+  else if(id==='mn')document.querySelectorAll('[data-mn]').forEach(function(b){b.classList.toggle('on',b.dataset.mn===e.target.value)});
+  else if(id==='paviso'){AVISO=e.target.checked;try{localStorage.setItem('pd_aviso',AVISO?'1':'0')}catch(x){}}
+  else if(id==='fcam')setMedia(e.target,'camera');
+  else if(id==='fgal')setMedia(e.target,'galeria');
+  else if(id==='frep')setMedia(e.target,'galeria',S.rep);
+});
+function init(){
+  render();
+  if(!window.supabase){document.getElementById('gate').textContent='Não foi possível carregar o app. Verifique a conexão.';return}
+  // Links que voltam do e-mail: criar nova senha ou link vencido
+  var hs=location.hash+'&'+location.search;
+  S.recovery=/type=recovery/.test(hs);
+  if(/error_code=|error_description=/.test(hs)){S.linkErr=/expired/i.test(decodeURIComponent(hs))?'Esse link do e-mail venceu. Entre com seu e-mail e senha, ou toque em “Esqueci minha senha” para receber outro.':'Não foi possível usar o link do e-mail. Tente entrar com seu e-mail e senha.';history.replaceState(null,'',location.pathname+location.search.replace(/[?&](error|error_code|error_description)=[^&]*/g,''))}
+  sb=supabase.createClient(SB_URL,SB_KEY);
+  sb.auth.onAuthStateChange(function(ev){if(ev==='PASSWORD_RECOVERY'){S.recovery=true;gate('newpw')}});
+  readInv();
+  boot().then(function(){if(INV&&!S.me&&!S.linkErr&&gm==='in'){REG.step=1;gate('up')}});
+  setInterval(function(){TODAY=iso(new Date());if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show'))loadData()},30000);
+  setInterval(function(){if(!document.hidden)loadChat()},5000);
+}
+init();
+</script>
+</body>
+</html>

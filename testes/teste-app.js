@@ -430,6 +430,39 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'cronômetro mostrou ' + relogio + '; arquivo ' + aud.split('.').pop() + ' de ' + Math.round(S.DB.objects[aud].size / 1024) + ' KB';
   });
 
+  await teste('Áudio publica mesmo com o armazenamento aceitando só fotos e vídeos (como o do app hoje)', async () => {
+    const S = novoServidor({ tipos: ['image/*', 'video/*'] });
+    const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pa = await abrir(browser, base, S, A);
+    await pa.click('#add'); await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    await pa.evaluate(() => { vidDur = () => Promise.resolve(127) }); // 2:07, como o do celular
+    await pa.setInputFiles('#faud', { name: 'Gravação.m4a', mimeType: 'audio/x-m4a', buffer: Buffer.alloc(40000, 7) });
+    await pa.waitForSelector('#mprev .aud');
+    await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    const ok = await esperar(() => Object.keys(S.DB.checkins).length === 1, 8000);
+    const er = await pa.textContent('#er').catch(() => '');
+    const k = Object.values(S.DB.checkins)[0], aud = k && k.photo_path.split('|').find(isA => /\.m4a$/.test(isA));
+    const nAud = await pa.$$eval('.card .aud audio', a => a.length);
+    await pa.context().close();
+    exige(ok, 'não publicou: ' + er);
+    exige(aud && S.DB.objects[aud], 'áudio não ficou guardado');
+    exige(nAud === 1, 'tocador não apareceu');
+    return 'recusado como áudio, enviado como vídeo MP4 e mostrado como áudio';
+  });
+
+  await teste('Áudio publica quando o armazenamento só aceita vídeo .mov (formato do iPhone)', async () => {
+    const S = novoServidor({ tipos: ['image/jpeg', 'image/png', 'video/quicktime'] });
+    const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pa = await abrir(browser, base, S, A);
+    await pa.click('#add'); await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    await pa.evaluate(() => { vidDur = () => Promise.resolve(60) });
+    await pa.setInputFiles('#faud', { name: 'voz.m4a', mimeType: 'audio/mp4', buffer: Buffer.alloc(20000, 3) });
+    await pa.waitForSelector('#mprev .aud'); await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    const ok = await esperar(() => Object.keys(S.DB.checkins).length === 1, 8000);
+    await pa.context().close();
+    exige(ok, 'não publicou');
+  });
+
   await teste('Gravação para sozinha no limite de 3 minutos', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
     const pa = await abrir(browser, base, S, A);

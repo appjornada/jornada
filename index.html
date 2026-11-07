@@ -871,6 +871,7 @@ async function addAudio(f,src){
   var k=S.media.findIndex(function(m){return m.audio});if(k>=0)S.media[k]=it;else S.media.push(it);
   drawMedia();drawRec();return true
 }
+function audioAsVideo(ct){ct=String(ct||'');return /webm/.test(ct)?['video/webm','video/mp4']:/ogg/.test(ct)?['video/ogg','video/mp4']:/mpeg|mp3/.test(ct)?['video/mpeg','video/mp4']:['video/mp4','video/quicktime']}
 function fmt(t){t=Math.max(0,Math.round(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
 var REC=null;
 function drawRec(){
@@ -1039,6 +1040,13 @@ async function upMedia(){
     var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
     if(paths.indexOf(path)<0){
       var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false}),m.video||m.audio?300000:120000);
+      // armazenamento que só aceita fotos e vídeos: o áudio vai marcado como vídeo do mesmo formato
+      // (m4a = mp4, weba = webm); o arquivo continua tocando como áudio na publicação
+      if(m.audio&&up.error&&/mime|not supported|invalid_mime|415/i.test((up.error.message||'')+(up.error.statusCode||'')+(up.error.error||''))){
+        var alts=audioAsVideo(ct);
+        for(var ai=0;ai<alts.length&&up.error&&/mime|not supported|invalid_mime|415/i.test((up.error.message||'')+(up.error.statusCode||'')+(up.error.error||''));ai++)
+          up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:alts[ai],upsert:false}),300000);
+      }
       if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))throw up.error;
       if(!up.error)S.fresh.push(path);
       if(ext==='jpg'&&hasThumb(path)){var th=await makeThumb(blob);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),th,{contentType:'image/jpeg',upsert:false}),60000)}catch(x){}}

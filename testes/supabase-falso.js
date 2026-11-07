@@ -114,7 +114,7 @@ function novoServidor(opts = {}) {
     return err('Could not find the function', 'PGRST202');
   }
   function storage(me, q) {
-    if (q.op === 'upload') { if (!q.path.startsWith(me + '/')) return err('rls', '42501'); if (DB.objects[q.path]) return err('The resource already exists', '409'); DB.objects[q.path] = { size: q.size, owner: me }; return { data: { path: q.path }, error: null } }
+    if (q.op === 'upload') { if (!q.path.startsWith(me + '/')) return err('rls', '42501'); if (O.tipos && !O.tipos.some(t => t.endsWith('/*') ? (q.ct || '').startsWith(t.slice(0, -1)) : t === q.ct)) return { data: null, error: { message: 'mime type ' + q.ct + ' is not supported', statusCode: '415' } }; if (DB.objects[q.path]) return err('The resource already exists', '409'); DB.objects[q.path] = { size: q.size, owner: me }; return { data: { path: q.path }, error: null } }
     if (q.op === 'remove') { const gone = q.paths.filter(p => p.startsWith(me + '/') && DB.objects[p]); gone.forEach(p => delete DB.objects[p]); return { data: gone.map(name => ({ name })), error: null } }
     if (q.op === 'sign') return { data: q.paths.map(p => ({ path: p, signedUrl: DB.objects[p] || p.startsWith('antigo/') ? 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#c96"/></svg>') + '#' + p : null, error: DB.objects[p] ? null : 'not found' })), error: null };
   }
@@ -150,7 +150,7 @@ const cliente = `(function(){
       updateUser:function(d){if(d&&d.data)localStorage.setItem('fake_md',JSON.stringify(d.data));return Promise.resolve({data:{},error:null})},
       onAuthStateChange:function(){},signOut:function(){return Promise.resolve({})}},
     storage:{from:function(){return{
-      upload:function(p,b){return call({storage:1,op:'upload',path:p,size:b.size})},
+      upload:function(p,b,o){return call({storage:1,op:'upload',path:p,size:b.size,ct:(o&&o.contentType)||b.type})},
       remove:function(ps){return call({storage:1,op:'remove',paths:ps})},
       createSignedUrls:function(ps){return call({storage:1,op:'sign',paths:ps})}}}}
   }}};

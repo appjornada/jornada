@@ -155,6 +155,9 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);background:var(--tx);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90%}
 #toast.show{opacity:1;transform:translateX(-50%)}
 .vv.hl{background:color-mix(in srgb,var(--ac) 22%,transparent);border-radius:4px}
+.aud{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:6px 10px}.aud audio{flex:1;min-width:0;height:40px}
+.recing{display:flex;align-items:center;gap:8px;font-size:17px;padding:10px 0}.recing .dot{width:12px;height:12px;border-radius:50%;background:#e0455a;animation:pisca 1s infinite}
+@keyframes pisca{50%{opacity:.25}}
 .howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
 </style>
 </head>
@@ -190,6 +193,9 @@ var NC=[50,40,27,36,34,24,21,4,31,24,22,25,29,36,10,13,10,42,150,31,12,8,66,52,5
 var MAXV=50*1048576,MAXF=10,PSEP='|';
 // Várias fotos/vídeos numa publicação: os caminhos ficam juntos em photo_path, separados por "|"
 function isVidPath(x){return /\.(mp4|mov|m4v|webm|3gp|3g2|avi|mkv|qt|mpe?g)$/i.test(x)}
+// Áudio (até 3 min): gravado no app ou escolhido do celular; extensões próprias para não confundir com vídeo
+function isAudPath(x){return /\.(weba|m4a|mp3|aac|ogg|oga|opus|wav|amr)$/i.test(x)}
+var MAXAUD=180,MAXAB=15*1048576;
 var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
 var tab='feed',rk='dias',loaded=false,sb,gm='in';
 function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
@@ -511,7 +517,11 @@ function todayBtn(c){
   return '<div class="sub" style="color:var(--ok);margin-top:12px">✓ '+got+' de '+need+' capítulos de hoje registrados</div><button class="btn" id="add2">👣 Registrar '+(rest>1?'os outros '+rest+' capítulos':'o outro capítulo')+'</button>'
 }
 function mediaHtml(p){
-  var L=p.imgs||[];
+  var A=(p.imgs||[]).filter(function(m){return m.audio}),L=(p.imgs||[]).filter(function(m){return !m.audio});
+  var au=A.map(function(m){return '<div class="aud"><span aria-hidden="true">🎙️</span><audio src="'+esc(m.img)+'" controls preload="none"></audio></div>'}).join('');
+  return mediaVis(p,L)+au;
+}
+function mediaVis(p,L){
   function one(m,i){return m.video?'<video class="media" src="'+esc(m.img)+'" controls playsinline preload="metadata"></video>':'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
   if(!L.length)return '';if(L.length===1)return one(L[0],0);
   return '<div class="car"><div class="cart" data-car>'+L.map(function(m,i){return '<div class="cars">'+one(m,i)+'</div>'}).join('')+'</div><span class="carc">1/'+L.length+'</span>'+
@@ -762,20 +772,21 @@ function render(){
   after();
 }
 function showSheet(h){var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
-function closeSheet(){document.getElementById('sh').classList.remove('show')}
+function closeSheet(){if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show')}
 
 // ---- Dar um passo (check-in) ----
 function openSheet(pre){
   if(!S.chs.length){onb('ask');return}
   var c=S.ch,mx=TODAY<c.end?TODAY:c.end;
   if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
-  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video}}):[];
+  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio}}):[];
   showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
     '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
     ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
+    '<label>Áudio (opcional, até 3 minutos)</label><div id="arec"></div><input type="file" id="faud" accept="audio/*" hidden>'+
     '<label>Reflexão (opcional)</label><textarea id="t" rows="3" placeholder="O que Deus falou ao seu coração?">'+(E?esc(E.note):'')+'</textarea><div class="err" id="er"></div><button class="btn" id="ok">'+(E?'💾 Salvar alterações':'👣 Dar o passo')+'</button><button class="btn g" id="x">Cancelar</button>');
   if(E&&E.min){var mi=document.getElementById('mn');if(mi)mi.value=E.min}
-  drawMedia();
+  drawMedia();drawRec();
   stepFor(dt);
 }
 // Escolha dos capítulos: um único lugar, já marcado com a sugestão do roteiro;
@@ -839,6 +850,7 @@ async function setMedia(inp,src,rep){
   var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
   for(var i=0;i<fs.length;i++){
     var f=fs[i],v=/^video\//.test(f.type)||(!f.type&&isVidPath(f.name||''));
+    if(/^audio\//.test(f.type)||(!f.type&&isAudPath(f.name||''))){if(await addAudio(f,src))continue;else continue}
     if(!v&&!/^image\//.test(f.type)){er.textContent='Escolha fotos ou vídeos.';continue}
     if(v&&f.size>MAXV){er.textContent='Um vídeo tem mais de 50 MB. Grave um vídeo mais curto (até '+MAXSEC+' segundos).';continue}
     if(v){var du=await vidDur(f);if(du&&du>MAXSEC+0.9){er.textContent='O vídeo tem '+Math.round(du)+' segundos. O máximo é '+MAXSEC+' segundos: grave um vídeo mais curto.';continue}}
@@ -849,9 +861,49 @@ async function setMedia(inp,src,rep){
   }
   drawMedia();
 }
+// ---- Áudio: gravar no app ou escolher do celular (um por publicação, até 3 minutos) ----
+async function addAudio(f,src){
+  var er=document.getElementById('er');
+  if(f.size>MAXAB){er.textContent='O áudio tem mais de 15 MB. Grave um áudio de até 3 minutos.';return false}
+  var du=await vidDur(f);
+  if(du&&du>MAXAUD+0.9){er.textContent='O áudio tem '+fmt(du)+'. O máximo é 3 minutos: grave um áudio mais curto.';return false}
+  var it={file:f,src:src,audio:true,img:URL.createObjectURL(f)};
+  var k=S.media.findIndex(function(m){return m.audio});if(k>=0)S.media[k]=it;else S.media.push(it);
+  drawMedia();drawRec();return true
+}
+function fmt(t){t=Math.max(0,Math.round(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+var REC=null;
+function drawRec(){
+  var e=document.getElementById('arec');if(!e)return;var has=(S.media||[]).some(function(m){return m.audio});
+  if(REC&&REC.on){e.innerHTML='<div class="recing" role="status"><span class="dot"></span> Gravando <b id="rect">'+fmt(REC.t)+'</b> de 3:00</div><button class="btn" id="rstop">⏹️ Parar e usar o áudio</button><button class="btn g" id="rcancel">Cancelar gravação</button>';return}
+  e.innerHTML='<div class="two"><button class="btn o" id="rgo" style="margin-top:0;text-align:center">🎙️ '+(has?'Gravar outro':'Gravar áudio')+'</button><label class="btn o" for="faud" style="margin-top:0">🎵 Escolher áudio</label></div>'+(has?'<div class="sub" style="margin-top:4px">Um áudio por publicação: gravar ou escolher outro substitui o atual.</div>':'');
+}
+async function recStart(){
+  var er=document.getElementById('er');er.textContent='';
+  if(!navigator.mediaDevices||!window.MediaRecorder){er.textContent='Este celular não grava áudio pelo app. Use "Escolher áudio" com um áudio gravado no gravador do celular.';return}
+  var st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(x){er.textContent='Não foi possível usar o microfone. Toque em "Permitir" quando o celular perguntar, ou libere o microfone nas configurações do navegador.';return}
+  var types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],mt=types.filter(function(t){try{return MediaRecorder.isTypeSupported(t)}catch(x){return false}})[0]||'';
+  var mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt,audioBitsPerSecond:64000}):new MediaRecorder(st)}catch(x){st.getTracks().forEach(function(t){t.stop()});er.textContent='Não foi possível gravar neste celular. Use "Escolher áudio".';return}
+  var parts=[];REC={on:true,t:0,mr:mr,st:st,keep:true};
+  mr.ondataavailable=function(ev){if(ev.data&&ev.data.size)parts.push(ev.data)};
+  mr.onstop=function(){
+    var r=REC;st.getTracks().forEach(function(t){t.stop()});clearInterval(r.iv);REC=null;
+    if(!r.keep||!parts.length){drawRec();return}
+    var ty=(mr.mimeType||mt||'audio/webm').split(';')[0],ext=/mp4|m4a|aac/.test(ty)?'m4a':/ogg/.test(ty)?'ogg':'weba';
+    var f=new File(parts,'gravacao.'+ext,{type:ty});
+    var it={file:f,src:'gravacao',audio:true,img:URL.createObjectURL(f),dur:r.t};
+    var k=S.media.findIndex(function(m){return m.audio});if(k>=0)S.media[k]=it;else S.media.push(it);
+    drawMedia();drawRec();
+  };
+  mr.start(1000);
+  REC.iv=setInterval(function(){if(!REC)return;REC.t++;var x=document.getElementById('rect');if(x)x.textContent=fmt(REC.t);if(REC.t>=MAXAUD)recStop(true)},1000);
+  drawRec();
+}
+function recStop(keep){if(!REC)return;REC.keep=keep;REC.on=false;try{REC.mr.stop()}catch(x){}}
 function drawMedia(){
-  var e=document.getElementById('mprev');if(!e)return;var L=S.media||[];
-  e.innerHTML=L.length?'<div class="mgrid">'+L.map(function(m,i){return '<div class="mth">'+(m.video?'<video src="'+esc(m.img)+'" playsinline muted></video>':'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'';
+  var e=document.getElementById('mprev');if(!e)return;var M=S.media||[],L=M.filter(function(m){return !m.audio});
+  var au=M.map(function(m,i){return m.audio?'<div class="aud"><span aria-hidden="true">🎙️</span><audio src="'+esc(m.img)+'" controls preload="metadata"></audio><button class="link" data-mx="'+i+'" aria-label="Remover áudio" style="color:var(--err)">✕ Remover</button></div>':''}).join('');
+  e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?'<video src="'+esc(m.img)+'" playsinline muted></video>':'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
 }
 // ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
 var MAXB=300*1024,MAXSIDE=1600,MINSIDE=1024;
@@ -913,7 +965,7 @@ async function publish(){
   if(R.some(function(x){return readSet(S.me,S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
   var st=stepOf(R);
   if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
-  if(!S.media.length){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}
+  if(!S.media.some(function(x){return !x.audio})){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}
   if(S.edit)return saveEdit(st,mn,m,btn,er);
   btn.disabled=true;btn.textContent='Enviando… não feche o app';
   try{
@@ -981,18 +1033,20 @@ async function upMedia(){
   for(var i=0;i<S.media.length;i++){
     var m=S.media[i];if(m.path){if(paths.indexOf(m.path)<0)paths.push(m.path);continue}
     var blob=m.file,ct=m.file.type,ext;nw=nw||m;
-    if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4'}
+    if(m.audio){ct=(ct||'audio/mp4').split(';')[0];ext=/webm/.test(ct)?'weba':/ogg/.test(ct)?'ogg':/mpeg|mp3/.test(ct)?'mp3':/wav/.test(ct)?'wav':/aac/.test(ct)?'aac':'m4a'}
+    else if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4'}
     else{var sb2=await shrinkP(m.file);if(sb2){blob=sb2;ct='image/jpeg';ext='jpg'}else ext=((m.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg'}
     var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
     if(paths.indexOf(path)<0){
-      var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false}),m.video?300000:120000);
+      var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false}),m.video||m.audio?300000:120000);
       if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))throw up.error;
       if(!up.error)S.fresh.push(path);
       if(ext==='jpg'&&hasThumb(path)){var th=await makeThumb(blob);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),th,{contentType:'image/jpeg',upsert:false}),60000)}catch(x){}}
     }
     m.path=path;if(paths.indexOf(path)<0)paths.push(path);
   }
-  return{photo_path:paths.join(PSEP),media_type:S.media[0].video?'video':'image',media_source:nw?nw.src:null}
+  var vis=S.media.filter(function(x){return !x.audio})[0]||S.media[0];
+  return{photo_path:paths.join(PSEP),media_type:vis.video?'video':vis.audio?'audio':'image',media_source:nw?nw.src:null}
 }
 async function saveEdit(st,mn,m,btn,er){
   btn.disabled=true;btn.textContent='Salvando…';
@@ -1240,7 +1294,7 @@ function why(e){var m=(e&&(e.message||e.error_description))||String(e||'');
   if(/rate limit|too many requests|429/i.test(m+(e&&e.status||'')))return 'Muitas tentativas em pouco tempo: o servidor pediu uma pausa. Aguarde alguns minutos e tente de novo.';
   if(/failed to fetch|networkerror|load failed/i.test(m))return 'Sem conexão com o servidor.';
   if(/exceeded the maximum allowed size|payload too large/i.test(m))return 'O arquivo é grande demais (máximo 50 MB).';
-  if(/mime type|invalid_mime/i.test(m))return 'Esse tipo de arquivo não é aceito. Use foto (JPG/PNG) ou vídeo (MP4/MOV).';
+  if(/mime type|invalid_mime/i.test(m))return 'Esse tipo de arquivo não é aceito pelo servidor. Use foto (JPG/PNG), vídeo (MP4/MOV) ou áudio (M4A/MP3). Se for áudio, avise o líder para liberar áudio no armazenamento.';
   if(/could not find|does not exist|schema cache/i.test(m))return 'O banco ainda não foi atualizado para esta versão do app. ('+m+')';
   if(/not.?authorized|sending (confirmation|recovery|magic)|error sending|email_address_not_authorized/i.test(m))return 'Não conseguimos enviar o e-mail agora. Avise o líder da caravana.';
   if(/password should be|weak password|at least 6/i.test(m))return 'A senha precisa ter pelo menos 6 letras ou números.';
@@ -1364,7 +1418,7 @@ async function loadData(){
 }
 function toPost(p,urls){
   var pl=p.photo_path?p.photo_path.split(PSEP):[];
-  return{imgs:pl.map(function(x){var vid=pl.length===1?p.media_type==='video':isVidPath(x),t=!vid&&hasThumb(x)&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:t||urls[x]||'',video:vid}}).filter(function(m){return m.img}),
+  return{imgs:pl.map(function(x){var aud=isAudPath(x),vid=!aud&&(pl.length===1?p.media_type==='video':isVidPath(x)),t=!vid&&hasThumb(x)&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:t||urls[x]||'',video:vid,audio:aud}}).filter(function(m){return m.img}),
     id:p.id,uid:p.user_id,cid:p.challenge_id,date:p.read_date,book:p.book,ref:p.ref||'—',ch:p.chapters,note:p.note||'',mt:p.media_type||'image',ms:p.media_source||'',min:p.study_minutes||0,
     likes:(p.likes||[]).map(function(l){return l.user_id}),cm:(p.comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1}),ts:Date.parse(p.created_at)}
 }
@@ -1422,7 +1476,10 @@ document.addEventListener('click',function(e){
   else if(t.id==='phow')prayHow();
   else if(d.ed)editCh(d.ed);
   else if(d.ep)editPost(d.ep);
-  else if(d.mx!==undefined){S.media.splice(+d.mx,1);drawMedia()}
+  else if(d.mx!==undefined){S.media.splice(+d.mx,1);drawMedia();drawRec()}
+  else if(t.id==='rgo')recStart();
+  else if(t.id==='rstop')recStop(true);
+  else if(t.id==='rcancel')recStop(false);
   else if(d.mr!==undefined){S.rep=+d.mr;document.getElementById('frep').click()}
   else if(d.cdot!==undefined){var ct=t.closest('.car').querySelector('[data-car]');ct.scrollTo({left:ct.clientWidth*(+d.cdot),behavior:'smooth'})}
   else if(t.id==='edj')editCh(S.cur);
@@ -1475,6 +1532,7 @@ document.addEventListener('change',function(e){
   else if(id==='paviso'){AVISO=e.target.checked;try{localStorage.setItem('pd_aviso',AVISO?'1':'0')}catch(x){}}
   else if(id==='fcam')setMedia(e.target,'camera');
   else if(id==='fgal')setMedia(e.target,'galeria');
+  else if(id==='faud')setMedia(e.target,'galeria');
   else if(id==='frep')setMedia(e.target,'galeria',S.rep);
 });
 function init(){

@@ -509,7 +509,7 @@ function today(){
   if(i>=P.n)return '';
   var R=dayRead(c,i),rd=readSet(S.me);
   if(!R.length){var nx=P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0];if(!nx)return '';R=[nx]}
-  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+(done?'<div class="sub" style="color:var(--ok);margin-top:12px">✓ Passo de hoje dado. Siga firme!</div>':todayBtn(c))+'</div>'
+  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-live="vx'+R[0].b+':'+R[0].c+':'+BIB.ver+'" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+(done?'<div class="sub" style="color:var(--ok);margin-top:12px">✓ Passo de hoje dado. Siga firme!</div>':todayBtn(c))+'</div>'
 }
 function todayBtn(c){
   var got=chOn(S.me,S.cur)[TODAY]||0,need=needOn(c,TODAY),rest=need-got;
@@ -671,8 +671,8 @@ function roomLink(){
 function prayCard(){
   return '<div class="card pray pcmp"><div class="row"><b class="grow">🙏 Sala de oração</b><a class="btn pbtn" id="pray" href="'+esc(roomLink())+'" target="_blank" rel="noopener">Entrar na sala</a></div>'+
     '<div class="row" style="justify-content:space-between;gap:8px"><label class="chk"><input type="checkbox" id="paviso"'+(AVISO?' checked':'')+'> Avisar no chat que entrei</label><button class="link" id="phow" style="margin-top:6px">Como funciona?</button></div>'+
-    '<hr><button class="link" id="ptog" style="font-size:14px;font-weight:700" aria-expanded="'+PEDOPEN+'"><span id="pcnt">Pedidos de oração</span> '+(PEDOPEN?'▴':'▾')+'</button>'+
-    '<div id="preqs" class="preqs"'+(PEDOPEN?'':' hidden')+'><div class="sub">Carregando…</div></div>'+
+    '<hr><button class="link" id="ptog" style="font-size:14px;font-weight:700" aria-expanded="'+PEDOPEN+'"><span id="pcnt" data-live="pcnt'+S.cur+'">Pedidos de oração</span> '+(PEDOPEN?'▴':'▾')+'</button>'+
+    '<div id="preqs" class="preqs" data-live="preqs'+S.cur+'"'+(PEDOPEN?'':' hidden')+'><div class="sub">Carregando…</div></div>'+
     '<div class="row send" style="margin-top:8px"><textarea id="pin" class="grow" rows="1" data-keep placeholder="Escreva um pedido de oração…" maxlength="1500" enterkeyhint="enter"></textarea><button class="btn sbtn" id="psend">Enviar</button></div><div class="err" id="per"></div></div>'
 }
 function prayHow(){
@@ -701,7 +701,7 @@ function pedTog(){
 }
 function chat(){
   if(!S.chs.length)return noCh();
-  return prayCard()+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
+  return prayCard()+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs" data-live="msgs'+S.cur+'"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
 }
 async function loadChat(force){
   var e=document.getElementById('msgs');if(tab!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
@@ -744,7 +744,7 @@ async function sendComment(id){
 }
 // Preenche o texto bíblico depois de desenhar a tela
 function after(){
-  document.querySelectorAll('.vx[data-b]').forEach(function(e){
+  document.querySelectorAll('.vx[data-b]').forEach(function(e){if(e.dataset.ok)return;e.dataset.ok=1;
     bible(+e.dataset.b,+e.dataset.c).then(function(v){e.innerHTML=verses(v.slice(0,4))+(v.length>4?' …':'')}).catch(function(){e.textContent='Não foi possível carregar o texto. Verifique a conexão.'})
   });
   if(tab==='chat')loadChat(true);
@@ -765,11 +765,43 @@ function render(){
   if(vk&&mn.dataset.k===vk){document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});return}
   mn.dataset.k=vk;
   mn.querySelectorAll('[data-keep]').forEach(function(e){if(e.value)keep[e.id]=e.value});
-  mn.innerHTML={feed:feed,bib:bib,chat:chat,cfg:cfg}[tab]();
+  var html={feed:feed,bib:bib,chat:chat,cfg:cfg}[tab](),y=window.scrollY;
+  // mesma aba: atualiza só o que mudou (Amém, comentário, atualização automática) e a página não pula;
+  // fotos, vídeos e áudios que não mudaram continuam os mesmos (não recarregam nem param de tocar)
+  if(mn.dataset.tab===tab&&mn.firstChild){var tp=document.createElement('template');tp.innerHTML=html;morphKids(mn,tp.content);if(Math.abs(window.scrollY-y)>1)window.scrollTo(0,y)}
+  else mn.innerHTML=html;
+  mn.dataset.tab=tab;
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e)e.value=keep[id]});
   if(fid&&keep[fid]!==undefined){var f=document.getElementById(fid);if(f)f.focus()}
   document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});
   after();
+}
+// Atualização seletiva da tela: compara o que está na tela com o novo conteúdo e troca só o que mudou
+function morphKids(oldP,newP){
+  var oc=Array.prototype.slice.call(oldP.childNodes),nc=Array.prototype.slice.call(newP.childNodes),out=[],used=new Set(),byH=new Map();
+  oc.forEach(function(c){if(c.nodeType===1){var h=c.outerHTML,l=byH.get(h);if(!l)byH.set(h,l=[]);l.push(c)}});
+  for(var i=0;i<nc.length;i++){
+    var n=nc[i],o=oc[i];
+    // um elemento igual ao que já está na tela é reaproveitado como está
+    if(n.nodeType===1){var l=byH.get(n.outerHTML),same=null;if(l)for(var j=0;j<l.length;j++)if(!used.has(l[j])){same=l[j];break}
+      if(same){used.add(same);out.push(same);continue}}
+    if(o&&!used.has(o)){used.add(o);out.push(morphNode(o,n))}else out.push(n);
+  }
+  var igual=out.length===oldP.childNodes.length&&out.every(function(x,k){return x===oldP.childNodes[k]});
+  if(!igual)oldP.replaceChildren.apply(oldP,out);
+}
+function morphNode(o,n){
+  if(o.nodeType!==n.nodeType)return n;
+  if(o.nodeType===3){if(o.nodeValue!==n.nodeValue)o.nodeValue=n.nodeValue;return o}
+  if(o.nodeType!==1||o.tagName!==n.tagName)return n;
+  // partes que o app preenche depois (texto bíblico, conversa): continuam como estão
+  if(n.hasAttribute('data-live')&&o.hasAttribute('data-live')&&o.getAttribute('data-live')===n.getAttribute('data-live'))return o;
+  if(/^(IMG|VIDEO|AUDIO|IFRAME|CANVAS|svg)$/i.test(o.tagName))return o.outerHTML===n.outerHTML?o:n;
+  if(/^(TEXTAREA|INPUT|SELECT)$/.test(o.tagName))return o.outerHTML===n.outerHTML?o:n;
+  var oa=o.attributes,na=n.attributes,k;
+  for(k=oa.length-1;k>=0;k--)if(!n.hasAttribute(oa[k].name))o.removeAttribute(oa[k].name);
+  for(k=0;k<na.length;k++)if(o.getAttribute(na[k].name)!==na[k].value)o.setAttribute(na[k].name,na[k].value);
+  morphKids(o,n);return o
 }
 function showSheet(h){var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
 function closeSheet(){if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show')}

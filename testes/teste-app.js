@@ -16,6 +16,7 @@ function servirApp() {
   return new Promise(res => {
     const srv = http.createServer((req, rsp) => {
       let u = decodeURIComponent(req.url.split('?')[0].split('#')[0]);
+      if (u.startsWith('/img/')) return setTimeout(() => { rsp.writeHead(200, { 'content-type': 'image/svg+xml', 'cache-control': 'no-store' }); rsp.end('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c96"/></svg>') }, 350); // foto com atraso de rede
       if (u === '/' || u === '/index.html') { rsp.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return rsp.end(fs.readFileSync(HTML)) }
       const f = path.join(RAIZ, u);
       if (!f.startsWith(RAIZ) || !fs.existsSync(f)) { rsp.writeHead(404); return rsp.end() }
@@ -66,7 +67,7 @@ async function teste(nome, fn) {
 function exige(c, msg) { if (!c) throw new Error(msg) }
 
 (async () => {
-  const srv = await servirApp(), base = 'http://localhost:' + srv.address().port;
+  const srv = await servirApp(), base = 'http://localhost:' + srv.address().port; global.IMG = base + '/img/';
   const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] }); // microfone simulado
   console.log('Testando ' + path.relative(RAIZ, HTML));
 
@@ -491,6 +492,33 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(/3:20/.test(m1) && n1 === 0, 'aceitou o longo: ' + m1);
     exige(/foto ou vídeo/.test(m2) && Object.keys(S.DB.checkins).length === 0, 'publicou só com áudio: ' + m2);
     return m1;
+  });
+
+  await teste('Amém, abrir comentários, comentar e atualização automática não fazem a página pular', async () => {
+    const S = novoServidor({ imgBase: IMG });
+    const A = S.usuario('Ana'), B = S.usuario('Bruno'); const g = S.caravana(A, 'G'); S.entrar(B, g); const c = S.jornada(g, 'Romanos em 16 dias');
+    for (let i = 0; i < 10; i++) { const p = B.id + '/f' + i + '.jpg'; S.DB.objects[p] = { size: 1 }; S.publicacao(B, c, { ref: String(i + 1), photo_path: p, note: 'Reflexão ' + i, created_at: new Date(Date.now() - i * 6e4).toISOString() }) }
+    const pa = await abrir(browser, base, S, A);
+    await pa.addStyleTag({ content: '*{overflow-anchor:none!important}' }); // como o Safari do iPhone, que não segura a posição da tela
+    await pa.waitForFunction(() => [...document.querySelectorAll('img.media')].every(i => i.complete && i.naturalWidth), null, { timeout: 15000 });
+    const alvo = '.card:has(.ref:text-is("Romanos 6"))';
+    await pa.$eval(alvo, e => e.scrollIntoView({ block: 'center' })); await new Promise(r => setTimeout(r, 300));
+    await pa.$eval(alvo + ' img.media', i => { i.__mesma = 1 });
+    const pulos = [];
+    const medir = async (acao, fn) => { const y0 = await pa.evaluate(() => scrollY); await fn(); await new Promise(r => setTimeout(r, 900)); const y1 = await pa.evaluate(() => scrollY); pulos.push(acao + ': ' + Math.round(y1 - y0) + ' px'); return Math.abs(y1 - y0) };
+    const d1 = await medir('Amém', () => pa.click(alvo + ' [data-l]'));
+    const d2 = await medir('abrir comentários', () => pa.click(alvo + ' [data-cm]'));
+    await pa.fill(alvo + ' textarea', 'Que lindo!');
+    const d3 = await medir('comentar', async () => { await pa.click(alvo + ' [data-cs]'); await esperar(() => Object.keys(S.DB.comments).length === 1) });
+    const d4 = await medir('atualização automática', () => pa.evaluate(() => loadData()));
+    const mesma = await pa.$eval(alvo + ' img.media', i => i.__mesma === 1);
+    const amem = await pa.textContent(alvo + ' [data-l]'), cm = await pa.textContent(alvo + ' .cms');
+    await pa.context().close();
+    exige(S.DB.likes.length === 1 && /1 Amém/.test(amem), 'Amém não registrou');
+    exige(/Que lindo!/.test(cm), 'comentário não apareceu');
+    exige(Math.max(d1, d2, d3, d4) <= 5, 'a página pulou — ' + pulos.join(', '));
+    exige(mesma, 'a foto foi recarregada');
+    return pulos.join(', ') + '; a foto não recarregou';
   });
 
   // ---------- 6. Regressão ----------

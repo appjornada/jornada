@@ -86,7 +86,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(S.DB.gm.filter(m => m.group_id === g.id).length === 6, 'vínculos duplicados ou faltando');
     const pgs = await Promise.all([L, ...P].map(u => abrir(browser, base, S, u)));
     for (const pg of pgs) {
-      const cs = await pg.textContent('#cs');
+      const cs = await pg.textContent('#hcs');
       exige(/6 peregrinos/.test(cs), 'cabeçalho mostra "' + cs + '" em vez de 6 peregrinos');
       await pg.click('nav [data-t="cfg"]');
       exige(/Participantes \(6\)/.test(await pg.textContent('main')), 'não mostra 6 participantes');
@@ -104,14 +104,14 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const L = S.usuario('Líder'), A = S.usuario('Ana'), B = S.usuario('Bruno');
     const g = S.caravana(L, 'Grupo'); S.entrar(A, g); S.jornada(g, 'João em 21 dias');
     const pl = await abrir(browser, base, S, L);
-    exige(/2 peregrinos/.test(await pl.textContent('#cs')), 'começo errado: ' + await pl.textContent('#cs'));
+    exige(/2 peregrinos/.test(await pl.textContent('#hcs')), 'começo errado: ' + await pl.textContent('#hcs'));
     S.entrar(B, g); await recarregar(pl);
-    exige(/3 peregrinos/.test(await pl.textContent('#cs')), 'novo participante não apareceu');
+    exige(/3 peregrinos/.test(await pl.textContent('#hcs')), 'novo participante não apareceu');
     const pb = await abrir(browser, base, S, B);
     await pb.click('nav [data-t="cfg"]'); pb.once('dialog', d => d.accept());
     await pb.click('main [data-mball]'); await pb.click('[data-leave]'); await esperar(() => S.DB.gm.length === 2);
     await recarregar(pl);
-    exige(/2 peregrinos/.test(await pl.textContent('#cs')), 'contagem não voltou para 2 após a saída');
+    exige(/2 peregrinos/.test(await pl.textContent('#hcs')), 'contagem não voltou para 2 após a saída');
     exige(!S.DB.gm.some(m => m.user_id === B.id), 'vínculo não foi removido');
     await pl.context().close(); await pb.context().close();
     return 'entrou → 3; saiu → 2';

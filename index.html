@@ -24,22 +24,20 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--bg:#0e1705;--card:#172309;--tx:#f2ead3;--mut:#b8b298;--bd:#2c3b18;--ac:#e6b04a;--acx:#14200a;--act:#f0c45c;--vd:#34501a;--vt:#22320d;--ok:#93c46e;--err:#ff8f80;--sh:none;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 var(--ft);padding-bottom:110px;max-width:560px;margin-inline:auto}
-header{padding:20px 16px 8px}
+header{padding:12px 16px 6px}
 h1{font:700 13px var(--ft);letter-spacing:.12em;text-transform:uppercase;color:var(--act);margin:0 0 4px}
 /* Marca: o JORNADA dourado do logo, sem o círculo */
-h1.brand{text-align:center;margin:0 0 14px;line-height:0}
-h1.brand img{width:150px;height:auto;display:inline-block}
-body[data-tab="feed"] h1.brand img{width:230px}
+h1.brand{text-align:center;margin:0 0 8px;line-height:0}
+h1.brand img{width:140px;height:auto;display:inline-block}
+body[data-tab="feed"] #pt{display:none}body[data-tab="feed"] h1.brand{margin-bottom:2px}
 #gate h1.brand{margin:4px 0 22px}#gate h1.brand img{width:250px}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) h1.brand img{filter:brightness(.72) saturate(1.3)}}
 :root[data-theme="light"] h1.brand img{filter:brightness(.72) saturate(1.3)}
 /* Cartão da caravana no Início */
-.hc{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:16px;box-shadow:var(--sh)}
-body:not([data-tab="feed"]) .hc{background:none;border:0;padding:0;box-shadow:none;border-radius:0}
+.card.hc{padding:16px}
 .hc-top{display:flex;align-items:flex-start;gap:8px}
 .hc-more{flex:none;width:44px;height:44px;margin:-8px -10px 0 0;border:0;border-radius:50%;background:none;color:var(--tx);font:700 24px/1 var(--ft);letter-spacing:1px;cursor:pointer}
-body:not([data-tab="feed"]) .hc-more{display:none}
-body[data-tab="feed"] #cs{font-size:17px;margin-top:2px}
+.hc h2{font:700 26px/1.15 var(--ft)}.hc .hcs{font-size:17px;margin-top:2px}
 .jpill{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:44px;margin-top:12px;padding:8px 14px;border:1px solid var(--bd);border-radius:12px;background:none;color:var(--tx);font:600 16px var(--ft);cursor:pointer}
 .jpill span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.jpill svg{flex:none}
 .jpill .jb{flex:none;font-size:12px;padding:2px 7px;border-radius:99px;background:var(--ac);color:var(--acx)}
@@ -53,12 +51,11 @@ body[data-tab="feed"] #cs{font-size:17px;margin-top:2px}
 .pbar .dt{top:8px;width:15px;height:15px;margin-left:-7px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 25%,transparent)}
 .pbar .tp{position:absolute;right:-34px;top:-3px;font-size:26px;line-height:1}
 .pl{text-align:right;font-size:14px;color:var(--mut);margin-top:2px}
-#cd:not(:empty){display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);color:var(--mut);font-size:15px}
-#cd .link{flex:none;font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:8px 0}
+.hc-ft{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);color:var(--mut);font-size:15px}
+.hc-ft .link{flex:none;font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:8px 0}
 .jlist .jc{flex:none;width:100%;max-width:none;margin-top:8px}.jlist .jc b{white-space:normal}
 h2{font:700 24px/1.2 var(--ft);margin:0}
 #cn{font:700 25px/1.2 var(--fd);letter-spacing:.02em}
-body[data-tab="feed"] #cn{font:700 28px/1.15 var(--ft);letter-spacing:0}
 .sub{color:var(--mut);font-size:14px}
 .err{color:var(--err);font-size:14px}
 .trail{width:100%;height:auto;display:block;margin:6px 0 2px}
@@ -70,7 +67,7 @@ body[data-tab="feed"] #cn{font:700 28px/1.15 var(--ft);letter-spacing:0}
 .me circle{fill:var(--ac)}
 .lbl{font:600 11px var(--ft);fill:var(--mut)}
 .hill{fill:var(--ok);opacity:.28}
-.stats{display:flex;gap:8px;padding:8px 16px}
+.stats{display:flex;gap:8px;margin-bottom:12px}
 .stat{flex:1;background:var(--card);border:1px solid var(--bd);box-shadow:var(--sh);border-radius:14px;padding:10px 4px;text-align:center}
 .stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--mut)}
 main{padding:8px 16px}
@@ -114,6 +111,7 @@ main{padding:8px 16px}
 .hoje .tref{font-size:28px;line-height:1.15;margin:6px 0 4px}
 .hj-ch{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
 .hj-ch .chip{margin:0;padding:10px 16px;font-size:17px;font-weight:700;background:var(--ac);color:var(--acx);border-color:var(--ac)}
+.btn.o.hj-rd{text-align:center;font-weight:700;margin-top:12px}
 .hj-ch .chip.ok{background:transparent;color:var(--ok);border:2px solid var(--ok)}
 .vs{font-family:var(--fe);font-size:17px;line-height:1.6}
 .vs sup{color:var(--act);font:700 11px var(--ft);margin:0 3px 0 4px}
@@ -251,15 +249,9 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 <div id="gate">Carregando…</div>
 <header>
   <h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1>
-  <div class="hc" id="hc">
-    <div class="hc-top"><div class="grow"><h2 id="cn"></h2><div class="sub" id="cs"></div></div><button class="hc-more" id="hcm" aria-label="Mais opções da caravana" hidden>•••</button></div>
-    <div id="jsw"></div>
-    <div id="map"></div>
-    <div id="cd"></div>
-  </div>
+  <div id="pt"><h2 id="cn"></h2><div class="sub" id="cs"></div></div>
   <button class="link" id="edj" style="display:none;margin-top:6px;font-size:14px">✏️ Editar esta jornada</button>
 </header>
-<div class="stats" id="stats"></div>
 <main id="main"></main>
 
 <nav aria-label="Menu principal">
@@ -676,23 +668,18 @@ function progHtml(c,on){
 }
 function hdrHome(){
   S.ch=S.chs.filter(function(c){return c.id===S.cur})[0]||{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5};
-  document.getElementById('jsw').innerHTML=switcher();
   document.getElementById('edj').style.display=tab==='cfg'&&S.canEdit&&S.chs.some(function(x){return x.id===S.cur})?'':'none';
-  document.getElementById('hcm').hidden=!S.grp;
-  var on=S.chs.length>0;
-  document.getElementById('stats').style.display=on?'':'none';
-  if(!S.grp){
-    document.getElementById('cn').textContent=S.me?'Olá, '+nm(S.me).split(' ')[0]+'!':'';
-    document.getElementById('cs').textContent='Cada leitura é um passo rumo à Terra Prometida.';
-    document.getElementById('map').innerHTML='';document.getElementById('cd').innerHTML='';
-    return
-  }
-  var c=S.ch,st=steps(S.me),n=memberCount();
-  document.getElementById('cn').textContent=cvName(S.grp);
-  document.getElementById('cs').textContent=n+(n===1?' peregrino':' peregrinos');
-  document.getElementById('map').innerHTML=progHtml(c,on);
-  document.getElementById('cd').innerHTML=on?'<span>📅 '+(TODAY<c.start?'Partida · '+fdl(c.start):'Chegada prevista · '+fdl(c.end))+'</span><button class="link" data-t="cfg">Ver jornada</button>':'';
-  document.getElementById('stats').innerHTML='<div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+days(S.me).length+'</b><span>dias de leitura</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div>';
+}
+// Cartão da caravana no Início (abaixo da leitura de hoje): nome, peregrinos, jornada, progresso e chegada
+function hcCard(){
+  var on=S.chs.length>0,c=S.ch,n=memberCount();
+  return '<div class="card hc" id="hc"><div class="hc-top"><div class="grow"><h2>'+esc(cvName(S.grp))+'</h2><div class="sub hcs" id="hcs">'+n+(n===1?' peregrino':' peregrinos')+'</div></div><button class="hc-more" id="hcm" aria-label="Mais opções da caravana">•••</button></div>'+
+    '<div id="jsw">'+switcher()+'</div><div id="map">'+progHtml(c,on)+'</div>'+
+    (on?'<div class="hc-ft" id="cd"><span>📅 '+(TODAY<c.start?'Partida · '+fdl(c.start):'Chegada prevista · '+fdl(c.end))+'</span><button class="link" data-t="cfg">Ver jornada</button></div>':'')+'</div>';
+}
+function statsHtml(){
+  var st=steps(S.me);
+  return '<div class="stats" id="stats"><div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+days(S.me).length+'</b><span>dias de leitura</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div></div>';
 }
 function noCh(){if(!S.canNew)return S.grp?'<div class="card sub">Nenhuma jornada traçada ainda. Aguarde o líder traçar a primeira.</div>':'<div class="card"><b>Você ainda não está numa caravana</b><div class="sub">Peça o código de convite a quem te chamou e toque abaixo para entrar.</div><button class="btn" data-o="code">Tenho um código de convite</button></div>';return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
 function today(){
@@ -706,7 +693,7 @@ function today(){
   // Leitura de hoje em destaque: capítulos grandes (✓ quando já lidos); o texto começa no primeiro que falta
   var nx0=R.filter(function(x){return !rd[x.b+':'+x.c]})[0]||R[0];
   var chs=R.map(function(x){var ok=rd[x.b+':'+x.c];return '<button class="chip'+(ok?' ok':'')+'" data-rd="'+x.b+':'+x.c+'">'+(ok?'✓ ':'')+BOOKS[x.b]+' '+x.c+'</button>'}).join('');
-  return '<div class="card hoje"><div class="hj-l">📖 Leitura de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div><div class="hj-ch">'+chs+'</div>'+biBtn(nx0.b)+'<div class="vs vx" data-live="vx'+nx0.b+':'+nx0.c+':'+BIB.ver+'" data-b="'+nx0.b+'" data-c="'+nx0.c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+nx0.b+':'+nx0.c+'">Continuar lendo '+BOOKS[nx0.b]+' '+nx0.c+' ›</button>'+todayBtn(c,R)+'</div>'
+  return '<div class="card hoje"><div class="hj-l">📖 Leitura de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div><div class="hj-ch">'+chs+'</div>'+biBtn(nx0.b)+'<div class="vs vx" data-live="vx'+nx0.b+':'+nx0.c+':'+BIB.ver+'" data-b="'+nx0.b+'" data-c="'+nx0.c+'">Carregando o texto…</div><button class="btn o hj-rd" data-rd="'+nx0.b+':'+nx0.c+'">📖 Continuar lendo '+BOOKS[nx0.b]+' '+nx0.c+'</button>'+todayBtn(c,R)+'</div>'
 }
 // Meta do dia (não obrigatória) e capítulos atrasados: cada capítulo registrado é 1 passo
 function todayBtn(c,R){
@@ -765,9 +752,9 @@ function feed(){
   if(S.pendErr)h+='<div class="card" role="status"><b>⏳ Passo pendente</b><div class="err">'+esc(S.pendErr)+'</div><div class="two"><button class="btn" id="pdgo">Enviar agora</button><button class="btn g" id="pdno">Descartar</button></div></div>';
   if(!loaded)return h+(S.err?'':'<div class="card sub">Carregando…</div>');
   if(!S.grp)return h+noCh();
-  if(!S.chs.length)return h+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>';
-  if(S.cur&&!isMine(S.cur))return h+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}).map(post).join('');
-  h+=today();
+  if(!S.chs.length)return h+hcCard()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>';
+  if(S.cur&&!isMine(S.cur))return h+hcCard()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}).map(post).join('');
+  h+=today()+hcCard()+statsHtml();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
   return h+l.map(post).join('');

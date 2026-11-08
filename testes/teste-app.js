@@ -352,7 +352,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
         alt: Math.max(...rows.map(r => r.getBoundingClientRect().height)), foto: card.querySelector('.av').getBoundingClientRect().width, pw: rows.map(r => Math.round(r.querySelector('.pos').getBoundingClientRect().width)), largura: rows.every(r => r.scrollWidth <= r.clientWidth + 1),
         umaLinha: rows.every(r => { const n = r.querySelector('.nm'); return n.getBoundingClientRect().height < 26 }),
         sub: card.textContent.includes('Terra Prometida'), coroa: !!card.querySelector('.crown'),
-        peers: document.querySelectorAll('#map .peer').length, part: pc.querySelector('b').textContent, lista: pc.querySelectorAll('.rk').length,
+        peers: document.querySelectorAll('#trilha .peer').length, part: pc.querySelector('b').textContent, lista: pc.querySelectorAll('.rk').length,
         sair: !!document.querySelector('[data-leave]'), botao: card.querySelector('[data-rkall]').textContent };
     });
     let v = await ver();
@@ -362,7 +362,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(v.umaLinha, 'nome quebrou em duas linhas');
     exige(!v.sub && !v.coroa, 'ainda tem o subtítulo ou a coroa');
     exige(v.pw.every(w => w === v.pw[0]) && v.largura, 'a coroa alargou a linha: colunas ' + v.pw.join() + ', cabe: ' + v.largura);
-    exige(v.peers <= 5, 'a trilha mostra ' + v.peers + ' pessoas');
+    exige(v.peers >= 1 && v.peers <= 5, 'a trilha (na aba Mapa) mostra ' + v.peers + ' pessoas');
     exige(/Ver ranking completo \(8\)/.test(v.botao), 'botão: ' + v.botao);
     exige(v.part === '👥 Participantes (8)' && v.lista === 0 && !v.sair, 'participantes já aparecem listados');
     // ranking completo numa tela; os filtros funcionam lá; tocar abre a ficha e dá para voltar
@@ -757,7 +757,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await esperar(() => Object.keys(S.DB.checkins).length === 3);
     const k3 = Object.values(S.DB.checkins).find(x => x.ref === '5');
     await esperar(async () => (await pa.evaluate(() => steps(S.me))) === 5);
-    const depois1 = await pa.evaluate(() => steps(S.me)), cab1 = await pa.textContent('#cd'), txt1 = await pa.textContent('.card:has(.ref:text-is("Tiago 5"))');
+    const depois1 = await pa.evaluate(() => steps(S.me)), cab1 = await pa.textContent('#map'), txt1 = await pa.textContent('.card:has(.ref:text-is("Tiago 5"))');
     await pa.click('#add'); await pa.waitForSelector('#chg');
     await pa.setInputFiles('#fgal', { name: 'b.png', mimeType: 'image/png', buffer: Buffer.concat([PNG, Buffer.from([1])]) }); await pa.waitForSelector('.mth');
     await pa.selectOption('#sbk', '59'); await pa.click('[data-sc="59:1"]'); await pa.click('[data-mn="15"]'); await pa.click('#ok');
@@ -769,7 +769,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(marcados === 0 && sel0 === 0, 'vieram ' + marcados + ' capítulos marcados sozinhos');
     exige(sug.join() === '58:5,59:1', 'sugestão ' + sug);
     exige(k3 && k3.chapters === 1 && k3.book === 'Tiago', 'gravou ' + JSON.stringify(k3));
-    exige(depois1 === 5 && /Passo 5 de 21/.test(cab1), 'depois de Tiago 5: ' + depois1 + ' / ' + cab1);
+    exige(depois1 === 5 && /5 de 21 passos/.test(cab1), 'depois de Tiago 5: ' + depois1 + ' / ' + cab1);
     exige(/avançou 1 passo · passo 5/.test(txt1), 'publicação diz: ' + txt1.slice(0, 80));
     exige(depois2 === 6, 'depois de 1 Pedro 1: ' + depois2);
     return '4 → 5 → 6 passos de 21; status: ' + status;

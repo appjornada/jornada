@@ -26,12 +26,39 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 var(--ft);padding-bottom:110px;max-width:560px;margin-inline:auto}
 header{padding:20px 16px 8px}
 h1{font:700 13px var(--ft);letter-spacing:.12em;text-transform:uppercase;color:var(--act);margin:0 0 4px}
-h1.brand{display:flex;align-items:center;gap:10px;font:700 15px var(--fd);letter-spacing:.08em;margin:0 0 10px}
-h1.brand img{width:44px;height:44px;border-radius:50%;flex:none}
-#gate h1.brand{flex-direction:column;align-items:flex-start;gap:12px;font-size:17px}#gate h1.brand img{width:88px;height:88px}
+/* Marca: o JORNADA dourado do logo, sem o círculo */
+h1.brand{text-align:center;margin:0 0 14px;line-height:0}
+h1.brand img{width:150px;height:auto;display:inline-block}
+body[data-tab="feed"] h1.brand img{width:230px}
+#gate h1.brand{margin:4px 0 22px}#gate h1.brand img{width:250px}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) h1.brand img{filter:brightness(.72) saturate(1.3)}}
+:root[data-theme="light"] h1.brand img{filter:brightness(.72) saturate(1.3)}
+/* Cartão da caravana no Início */
+.hc{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:16px;box-shadow:var(--sh)}
+body:not([data-tab="feed"]) .hc{background:none;border:0;padding:0;box-shadow:none;border-radius:0}
+.hc-top{display:flex;align-items:flex-start;gap:8px}
+.hc-more{flex:none;width:44px;height:44px;margin:-8px -10px 0 0;border:0;border-radius:50%;background:none;color:var(--tx);font:700 24px/1 var(--ft);letter-spacing:1px;cursor:pointer}
+body:not([data-tab="feed"]) .hc-more{display:none}
+body[data-tab="feed"] #cs{font-size:17px;margin-top:2px}
+.jpill{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:44px;margin-top:12px;padding:8px 14px;border:1px solid var(--bd);border-radius:12px;background:none;color:var(--tx);font:600 16px var(--ft);cursor:pointer}
+.jpill span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.jpill svg{flex:none}
+.jpill .jb{flex:none;font-size:12px;padding:2px 7px;border-radius:99px;background:var(--ac);color:var(--acx)}
+.hc hr{border:0;border-top:1px solid var(--bd);margin:16px 0 14px}
+.pg-t{display:block;font-size:19px}
+.pg-r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--mut);font-size:16px;margin-top:2px}.pg-r b{color:var(--tx);font-size:17px}
+.pbar{position:relative;height:30px;margin:8px 34px 0 6px}
+.pbar i{position:absolute;display:block}
+.pbar .tk{left:0;right:0;top:13px;height:5px;border-radius:9px;background:color-mix(in srgb,var(--ok) 38%,var(--card))}
+.pbar .fl{left:0;top:13px;height:5px;border-radius:9px;background:var(--ac)}
+.pbar .dt{top:8px;width:15px;height:15px;margin-left:-7px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 25%,transparent)}
+.pbar .tp{position:absolute;right:-34px;top:-3px;font-size:26px;line-height:1}
+.pl{text-align:right;font-size:14px;color:var(--mut);margin-top:2px}
+#cd:not(:empty){display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);color:var(--mut);font-size:15px}
+#cd .link{flex:none;font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:8px 0}
+.jlist .jc{flex:none;width:100%;max-width:none;margin-top:8px}.jlist .jc b{white-space:normal}
 h2{font:700 24px/1.2 var(--ft);margin:0}
 #cn{font:700 25px/1.2 var(--fd);letter-spacing:.02em}
-body[data-tab="feed"] #cn{font:700 24px/1.2 var(--ft);letter-spacing:0}
+body[data-tab="feed"] #cn{font:700 28px/1.15 var(--ft);letter-spacing:0}
 .sub{color:var(--mut);font-size:14px}
 .err{color:var(--err);font-size:14px}
 .trail{width:100%;height:auto;display:block;margin:6px 0 2px}
@@ -223,12 +250,13 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 <body class="gate">
 <div id="gate">Carregando…</div>
 <header>
-  <h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1>
-  <div id="jsw"></div>
-  <h2 id="cn"></h2>
-  <div class="sub" id="cs"></div>
-  <div id="map"></div>
-  <div class="sub" id="cd"></div>
+  <h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1>
+  <div class="hc" id="hc">
+    <div class="hc-top"><div class="grow"><h2 id="cn"></h2><div class="sub" id="cs"></div></div><button class="hc-more" id="hcm" aria-label="Mais opções da caravana" hidden>•••</button></div>
+    <div id="jsw"></div>
+    <div id="map"></div>
+    <div id="cd"></div>
+  </div>
   <button class="link" id="edj" style="display:none;margin-top:6px;font-size:14px">✏️ Editar esta jornada</button>
 </header>
 <div class="stats" id="stats"></div>
@@ -588,24 +616,41 @@ function jStatus(c){
   if(got>=need&&!atr)return['✓ Meta de hoje cumprida','ok'];
   return atr?['👣 '+atr+(atr>1?' capítulos para ler':' capítulo para ler'),'pend']:['✓ Meta de hoje cumprida','ok'];
 }
+// Jornadas de que a pessoa participa, a em andamento primeiro
+function myJs(){return S.all.filter(function(c){return isMine(c.id)}).sort(function(a,b){var x=TODAY>=a.start&&TODAY<=a.end,y=TODAY>=b.start&&TODAY<=b.end;return (y-x)||(a.end<b.end?-1:1)})}
+// Nome curto da jornada: "Tiago + 6 livros" quando o roteiro passa por vários livros
+function jShort(c){var P=plan(c);if(!P)return c.name;var bs=[];P.L.forEach(function(x){if(bs.indexOf(x.b)<0)bs.push(x.b)});return bs.length>1?BOOKS[bs[0]]+' + '+(bs.length-1)+(bs.length>2?' livros':' livro'):c.name}
+var CHEV='<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function switcher(){
-  var items=S.all.filter(function(c){return isMine(c.id)}).sort(function(a,b){var x=TODAY>=a.start&&TODAY<=a.end,y=TODAY>=b.start&&TODAY<=b.end;return (y-x)||(a.end<b.end?-1:1)});
-  var empty=[];
-  if(items.length+empty.length<2)return '';
-  var pend=items.filter(function(c){return jStatus(c)[1]==='pend'}).length;
-  var h='<div class="jhd"><b>Suas jornadas ('+(items.length+empty.length)+')</b><span class="sub">'+(pend?'👣 '+pend+' com capítulos para ler':'toque para trocar')+'</span></div><div class="jsw">';
-  h+=items.map(function(c){
-    var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=steps(S.me,c.id),tot=totalSteps(c);
-    return '<button class="jc'+(on?' on':'')+'" data-js="c:'+c.id+'"'+(on?' aria-current="true"':'')+'><b>'+esc(c.name)+'</b><span class="sub">'+(g&&g.name!==c.name?'Caravana '+esc(g.name):'Passo '+st+' de '+tot)+'</span><span class="bar"><i style="width:'+Math.min(100,Math.round(st*100/tot))+'%"></i></span><span class="js '+js[1]+'">'+js[0]+'</span></button>'
-  }).join('');
-  h+=empty.map(function(g){var on=!S.cur&&S.grp&&S.grp.id===g.id;return '<button class="jc'+(on?' on':'')+'" data-js="g:'+g.id+'"><b>'+esc(g.name)+'</b><span class="sub">Caravana</span><span class="bar"><i style="width:0"></i></span><span class="js">Sem jornada traçada</span></button>'}).join('');
-  return h+'</div>';
+  var items=myJs(),cur=S.chs.some(function(x){return x.id===S.cur});
+  if(!cur&&!items.length)return '';
+  var pend=items.filter(function(c){return c.id!==S.cur&&jStatus(c)[1]==='pend'}).length;
+  return '<button class="jpill" data-jl="1" aria-label="'+(cur?'Jornada: '+esc(S.ch.name)+'. Toque para ver ou trocar':'Escolher jornada')+'"><span>'+esc(cur?jShort(S.ch):'Escolher jornada')+'</span>'+(pend?'<b class="jb" title="Outras jornadas com capítulos para ler">👣 '+pend+'</b>':'')+CHEV+'</button>';
+}
+function jCard(c){
+  var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=steps(S.me,c.id),tot=totalSteps(c);
+  return '<button class="jc'+(on?' on':'')+'" data-js="c:'+c.id+'"'+(on?' aria-current="true"':'')+'><b>'+esc(c.name)+'</b><span class="sub">'+(g?esc(cvName(g))+' · ':'')+'Passo '+st+' de '+tot+'</span><span class="bar"><i style="width:'+Math.min(100,Math.round(st*100/tot))+'%"></i></span><span class="js '+js[1]+'">'+js[0]+'</span></button>'
+}
+function openJ(){
+  var items=myJs();
+  showSheet('<h2>Suas jornadas</h2><div class="sub">'+(items.length>1?'Toque numa jornada para trocar.':'A jornada de que você participa.')+'</div><div class="jlist">'+items.map(jCard).join('')+'</div>'+
+    '<button class="btn o" data-t="cfg" style="text-align:center">🗺️ Todas as jornadas da caravana</button><button class="btn g" id="x">Fechar</button>');
+}
+// Menu ••• do cartão da caravana
+function hcMenu(){
+  var on=S.chs.some(function(x){return x.id===S.cur}),h='<h2>'+esc(cvName(S.grp))+'</h2>';
+  if(S.canEdit&&on)h+='<button class="btn o" data-ed="'+S.cur+'">✏️ <b>Editar esta jornada</b></button>';
+  if(myJs().length>1)h+='<button class="btn o" data-jl="1">🔄 <b>Trocar de jornada</b></button>';
+  h+='<button class="btn o" data-t="cfg">🗺️ <b>Mapa, ranking e participantes</b></button><button class="btn o" data-inv="1">📲 <b>Chamar alguém para a caravana</b></button>';
+  showSheet(h+'<button class="btn g" id="x">Fechar</button>');
+}
+function invSheet(){
+  showSheet('<h2>📲 Chame alguém para a caravana</h2><div class="sub">Quem abrir o link cria a conta e já entra direto nesta jornada.</div>'+waBtn()+'<button class="btn g" id="shi">Outras formas de compartilhar</button><div class="sub" style="margin-top:8px">Código da caravana, para quem já tem o app:</div><div style="font-size:30px;font-weight:800;letter-spacing:.15em;text-align:center;margin:6px 0">'+esc(S.grp.invite_code)+'</div><button class="link" data-copy="1">Copiar código</button><button class="btn g" id="x">Fechar</button>');
 }
 function selJ(k){
   var t=k.slice(0,1),id=k.slice(2);
   if(t==='c')S.cur=id;else{S.cur=null;S.grp=grpOf(id)}
   useCur();S.openC={};render();scrollTo(0,0);
-  var e=document.querySelector('.jc.on');if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest',inline:'center'});
 }
 function hdr(){
   document.body.dataset.tab=tab;
@@ -618,23 +663,35 @@ function pageTitle(){
   var T={bib:['📖 Bíblia','Escolha a versão e o livro para ler.'],chat:['💬 Chat',ctx],cfg:['🗺️ Mapa da jornada',ctx]}[tab]||['',''];
   document.getElementById('cn').textContent=T[0];document.getElementById('cs').textContent=T[1];
 }
+function cvName(g){return /^caravana\b/i.test(g.name)?g.name:'Caravana '+g.name}
+var MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function fdl(d){var p=d.split('-');return (+p[2])+' '+MES[+p[1]-1]+(p[0]!==TODAY.slice(0,4)?' de '+p[0]:'')}
+// Seu progresso: barra até a Terra Prometida
+function progHtml(c,on){
+  if(!on)return '<div class="sub" style="margin-top:10px">Aguardando o líder traçar a jornada</div>';
+  var tot=totalSteps(c),st=Math.min(steps(S.me),tot),pc=tot?Math.round(st*100/tot):0;
+  var t=TODAY<c.start?'A caravana parte em '+fd(c.start):st>=tot?'Você chegou à Terra Prometida! 🏞️':st+' de '+tot+(tot===1?' passo':' passos');
+  return '<hr><b class="pg-t">Seu progresso</b><div class="pg-r"><span>'+t+'</span><b>'+pc+'%</b></div>'+
+    '<div class="pbar" role="progressbar" aria-label="Seu progresso até a Terra Prometida" aria-valuemin="0" aria-valuemax="'+tot+'" aria-valuenow="'+st+'"><i class="tk"></i><i class="fl" style="width:'+pc+'%"></i><i class="dt" style="left:'+pc+'%"></i><span class="tp" aria-hidden="true">🏞️</span></div><div class="pl">Terra Prometida</div>';
+}
 function hdrHome(){
   S.ch=S.chs.filter(function(c){return c.id===S.cur})[0]||{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5};
   document.getElementById('jsw').innerHTML=switcher();
   document.getElementById('edj').style.display=tab==='cfg'&&S.canEdit&&S.chs.some(function(x){return x.id===S.cur})?'':'none';
+  document.getElementById('hcm').hidden=!S.grp;
   var on=S.chs.length>0;
   document.getElementById('stats').style.display=on?'':'none';
-  document.getElementById('map').innerHTML=on?trail():'';
   if(!S.grp){
     document.getElementById('cn').textContent=S.me?'Olá, '+nm(S.me).split(' ')[0]+'!':'';
     document.getElementById('cs').textContent='Cada leitura é um passo rumo à Terra Prometida.';
-    document.getElementById('cd').textContent='';
+    document.getElementById('map').innerHTML='';document.getElementById('cd').innerHTML='';
     return
   }
-  var c=S.ch,tot=totalSteps(c),st=steps(S.me),left=Math.max(0,tot-st),n=memberCount();
-  document.getElementById('cn').textContent=on?c.name:S.grp.name;
-  document.getElementById('cs').textContent='Caravana '+S.grp.name+' · '+n+(n===1?' peregrino':' peregrinos');
-  document.getElementById('cd').textContent=!on?'Aguardando o líder traçar a jornada':TODAY<c.start?'A caravana parte em '+fd(c.start):st>=tot?'Você chegou à Terra Prometida! 🏞️':'Passo '+st+' de '+tot+' · faltam '+left+' até a Terra Prometida · chegada '+fd(c.end);
+  var c=S.ch,st=steps(S.me),n=memberCount();
+  document.getElementById('cn').textContent=cvName(S.grp);
+  document.getElementById('cs').textContent=n+(n===1?' peregrino':' peregrinos');
+  document.getElementById('map').innerHTML=progHtml(c,on);
+  document.getElementById('cd').innerHTML=on?'<span>📅 '+(TODAY<c.start?'Partida · '+fdl(c.start):'Chegada prevista · '+fdl(c.end))+'</span><button class="link" data-t="cfg">Ver jornada</button>':'';
   document.getElementById('stats').innerHTML='<div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+days(S.me).length+'</b><span>dias de leitura</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div>';
 }
 function noCh(){if(!S.canNew)return S.grp?'<div class="card sub">Nenhuma jornada traçada ainda. Aguarde o líder traçar a primeira.</div>':'<div class="card"><b>Você ainda não está numa caravana</b><div class="sub">Peça o código de convite a quem te chamou e toque abaixo para entrar.</div><button class="btn" data-o="code">Tenho um código de convite</button></div>';return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
@@ -822,7 +879,8 @@ function cfg(){
   var tp=canMake()?'<div class="card"><b>Roteiros prontos</b><div class="sub" style="margin-bottom:6px">Toque em Usar para preencher o formulário abaixo.</div>'+TPL.map(function(m,i){return '<div class="rk"><div class="grow"><b>'+m.n+'</b><div class="sub">'+m.d+' · '+m.days+' dias</div></div><button class="link" data-tp="'+i+'">Usar</button></div>'}).join('')+'</div>':'';
   var oth=S.all.filter(function(c){return S.grp&&c.gid!==S.grp.id&&!isMine(c.id)&&c.end>=TODAY});
   var O=oth.length?'<div class="card"><b>Jornadas abertas nas suas outras caravanas</b><div class="sub">Você está nessas caravanas, mas ainda não participa destas jornadas.</div>'+oth.map(function(c){var g=grpOf(c.gid);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">Caravana '+esc(g?g.name:'')+' · '+fd(c.start)+' a '+fd(c.end)+'</div></div><button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button></div>'}).join('')+'</div>':'';
-  return top+(S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+bot+out;
+  var trl=S.chs.length&&S.chs.some(function(x){return x.id===S.cur})?'<div class="card"><b>🗺️ A trilha até a Terra Prometida</b><div id="trilha">'+trail()+'</div><div class="sub">Você e os '+TRAILN+' primeiros da caravana.</div></div>':'';
+  return top+trl+(S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+bot+out;
 }
 // ---- Bíblia: livros → capítulos → leitura (Almeida) ----
 var BIB={v:'books',b:0,c:1,fs:19,last:null,ver:'ALM'};
@@ -1452,8 +1510,8 @@ async function saveCh(id){
 function onb(s){
   var h,er='<div class="err" id="oer" style="margin-top:8px"></div>';
   if(!S.canNew&&(s==='new'||s==='custom'||s==='sum'))s='code';
-  if(s==='ask'&&!S.canNew)h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Para entrar na sua caravana, use o código de convite que te mandaram.</div><button class="btn o" data-o="code"><b>✉️ Tenho um código de convite</b><br><span class="sub">Toque aqui para digitar</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
-  else if(s==='ask')h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Você foi convidado para uma caravana ou quer começar a sua própria jornada rumo à Terra Prometida?</div><button class="btn o" data-o="code"><b>✉️ Fui convidado</b><br><span class="sub">Tenho um código de convite</span></button><button class="btn o" data-o="new"><b>✨ Quero começar minha jornada</b><br><span class="sub">Escolha um roteiro de leitura e chame quem quiser</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
+  if(s==='ask'&&!S.canNew)h='<h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1><h2>Vamos começar a caminhada?</h2><div class="sub">Para entrar na sua caravana, use o código de convite que te mandaram.</div><button class="btn o" data-o="code"><b>✉️ Tenho um código de convite</b><br><span class="sub">Toque aqui para digitar</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
+  else if(s==='ask')h='<h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1><h2>Vamos começar a caminhada?</h2><div class="sub">Você foi convidado para uma caravana ou quer começar a sua própria jornada rumo à Terra Prometida?</div><button class="btn o" data-o="code"><b>✉️ Fui convidado</b><br><span class="sub">Tenho um código de convite</span></button><button class="btn o" data-o="new"><b>✨ Quero começar minha jornada</b><br><span class="sub">Escolha um roteiro de leitura e chame quem quiser</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
   else if(s==='code')h='<h2>Entrar na caravana</h2><div class="sub">Digite o código que você recebeu de quem te convidou.</div><label>Código de convite</label><input id="ocode" placeholder="ex.: A1B2C3" autocapitalize="characters">'+er+'<button class="btn" id="oj">Entrar na caravana</button><button class="btn g" data-o="ask">Voltar</button>';
   else if(s==='new')h='<h2>Escolha o roteiro</h2><div class="sub">Cada dia de leitura é um passo. O último passo é a chegada à Terra Prometida.</div>'+TPL.map(function(m,i){return '<button class="btn o" data-o="t'+i+'"><b>'+m.n+'</b><br><span class="sub">'+m.d+'</span></button>'}).join('')+'<button class="btn o" data-o="custom"><b>✏️ Personalizado</b><br><span class="sub">Escreva o seu, ex.: "Romanos em 16 dias"</span></button><button class="btn g" data-o="ask">Voltar</button>';
   else if(s==='custom')h='<h2>Sua jornada</h2><div class="sub">Escreva o nome com o livro ou parte da Bíblia, que traçamos o roteiro de leitura.</div><label>Nome</label><input id="qn" placeholder="ex.: Romanos em 16 dias"><label>Descrição (opcional)</label><input id="qd" placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="qs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="qe" value="'+addD(TODAY,29)+'"></div></div>'+er+'<button class="btn" id="oq">Continuar</button><button class="btn g" data-o="new">Voltar</button>';
@@ -1537,7 +1595,7 @@ var REG={step:1,name:'',ph:'',email:''};
 function pwBox(id,ac){return '<div class="pw"><input id="'+id+'" type="password" autocomplete="'+ac+'"><button class="link" data-eye="'+id+'">👁️ Mostrar</button></div>'}
 function gate(m,msg){
   document.body.classList.add('gate');gm=m;
-  var er='<div class="err" id="gmsg">'+esc(msg||'')+'</div>',h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1>';
+  var er='<div class="err" id="gmsg">'+esc(msg||'')+'</div>',h='<h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1>';
   var inv=INV?'<div class="card" style="margin-top:12px;border-color:var(--ac)"><b>📩 Você foi chamado para uma caravana!</b><div class="sub">'+(m==='in'?'Entre':'Faça seu cadastro')+' e você já entra direto na jornada.</div></div>':'';
   if(m==='up'){
     var s=REG.step;
@@ -1603,7 +1661,7 @@ function phoneOn(){
 function telGate(msg){
   document.body.classList.add('gate');gm='tel';
   var er='<div class="err" id="gmsg" style="margin-top:8px">'+esc(msg||'')+'</div>';
-  document.getElementById('gate').innerHTML='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Confirme seu telefone</h2><div class="sub">'+(TEL.sent?'Enviamos um código por SMS para '+esc(telMask(TEL.n))+'.':'Vamos enviar um código por SMS para confirmar que o número é seu.')+'</div><div class="card" style="margin-top:14px">'+(TEL.sent?'<label>Código de 6 dígitos</label><input id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:.3em;text-align:center">'+er+'<button class="btn" id="tv">Confirmar</button><button class="btn g" id="ts">Reenviar código</button><button class="btn g" id="tch">Trocar número</button>':'<label>Telefone (WhatsApp)</label><input id="tnum" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" value="'+esc(telMask(TEL.n))+'">'+er+'<button class="btn" id="ts">Enviar código por SMS</button>')+'</div><button class="link" data-out="1">Sair da conta</button>';
+  document.getElementById('gate').innerHTML='<h1 class="brand"><img src="icones/marca.png" alt="Jornada na Palavra: conhecer, praticar, frutificar" width="539" height="235"></h1><h2>Confirme seu telefone</h2><div class="sub">'+(TEL.sent?'Enviamos um código por SMS para '+esc(telMask(TEL.n))+'.':'Vamos enviar um código por SMS para confirmar que o número é seu.')+'</div><div class="card" style="margin-top:14px">'+(TEL.sent?'<label>Código de 6 dígitos</label><input id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:.3em;text-align:center">'+er+'<button class="btn" id="tv">Confirmar</button><button class="btn g" id="ts">Reenviar código</button><button class="btn g" id="tch">Trocar número</button>':'<label>Telefone (WhatsApp)</label><input id="tnum" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" value="'+esc(telMask(TEL.n))+'">'+er+'<button class="btn" id="ts">Enviar código por SMS</button>')+'</div><button class="link" data-out="1">Sair da conta</button>';
 }
 async function telSend(){
   var i=document.getElementById('tnum');if(i)TEL.n=digits(i.value);
@@ -1813,7 +1871,7 @@ async function auth(){
 }
 document.addEventListener('click',function(e){
   var t=e.target.closest('button');if(!t)return;var d=t.dataset;
-  if(d.t){tab=d.t;render();scrollTo(0,0)}
+  if(d.t){closeSheet();tab=d.t;render();scrollTo(0,0)}
   else if(t.id==='add'||t.id==='add2')openSheet();
   else if(t.id==='x')closeSheet();
   else if(d.avp)document.getElementById('favt').click();
@@ -1836,7 +1894,10 @@ document.addEventListener('click',function(e){
   else if(d.rkall||d.rkopen)openRank();
   else if(d.mball){MBALL=!MBALL;render()}
   else if(d.etp!==undefined){var mt=TPL[+d.etp],es0=val('es')||TODAY;document.getElementById('en').value=mt.n;document.getElementById('ed').value=mt.d;document.getElementById('ee').value=addD(es0,mt.days-1);document.querySelectorAll('[data-etp]').forEach(function(x){x.classList.toggle('on',x===t)});eprev()}
-  else if(d.js)selJ(d.js);
+  else if(d.js){closeSheet();selJ(d.js)}
+  else if(d.jl)openJ();
+  else if(t.id==='hcm')hcMenu();
+  else if(d.inv)invSheet();
   else if(d.pj)participate(d.pj);
   else if(d.leave)leaveGroup(d.leave);
   else if(d.bi!==undefined)bookInfo(+d.bi);

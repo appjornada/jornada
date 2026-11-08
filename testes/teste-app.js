@@ -394,6 +394,45 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'empate em 1º: 2 coroas e 2 ouros, o 3º fica com bronze; sem passos: sem coroa; 6 empatados: os 6 aparecem';
   });
 
+  await teste('Sua trilha: miniatura da foto/vídeo no dia; ao tocar, abre em tela cheia', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'Tiago'); S.entrar(B, g);
+    const c = S.jornada(g, 'João em 21 dias', -3, 12);
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    const d1 = dia(-2), d2 = dia(-1), d3 = dia(0);
+    const foto = 'antigo/foto1.jpg', vid = A.id + '/' + 'a'.repeat(40) + '.mp4', capa = A.id + '/' + 'a'.repeat(40) + '.t.jpg';
+    S.DB.objects[vid] = { size: 1 }; S.DB.objects[capa] = { size: 1 };
+    S.publicacao(A, c, { read_date: d1, book: 'João', ref: '1', photo_path: foto, note: 'No princípio era o Verbo' });
+    S.publicacao(A, c, { read_date: d2, book: 'João', ref: '2', photo_path: vid, media_type: 'video' });
+    S.publicacao(B, c, { read_date: d3, book: 'João', ref: '1', photo_path: 'antigo/da-bia.jpg' }); // da Bia: não aparece na trilha da Ana
+    const pg = await abrir(browser, base, S, A);
+    await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('.cal');
+    const cal = await pg.evaluate(() => [...document.querySelectorAll('.cal button')].map(b => ({ dv: b.dataset.dv || '', day: b.dataset.day || '', img: (b.querySelector('img') || {}).src || '', vid: b.classList.contains('vid') })));
+    const c1 = cal.find(x => x.dv === d1 || x.day === d1), c2 = cal.find(x => x.dv === d2 || x.day === d2), c3 = cal.find(x => x.dv === d3 || x.day === d3);
+    exige(c1 && c1.dv && /foto1\.t\.jpg$/.test(c1.img), 'dia com foto sem miniatura: ' + JSON.stringify(c1));
+    exige(c2 && c2.dv && c2.vid && c2.img.endsWith('.t.jpg'), 'dia com vídeo sem a capa: ' + JSON.stringify(c2));
+    exige(c3 && c3.day && !c3.dv && !c3.img, 'dia sem passo da Ana mostrou miniatura (a da Bia?): ' + JSON.stringify(c3));
+    // tocar no dia com foto: abre a foto inteira (não a miniatura) com o texto
+    await pg.click('.cal [data-dv="' + d1 + '"]');
+    await pg.waitForSelector('#lb:not([hidden]) .lbm img');
+    const lb = await pg.evaluate(() => ({ src: document.querySelector('#lb .lbm img').src, txt: document.getElementById('lb').textContent }));
+    exige(/foto1\.jpg$/.test(lb.src) && !/\.t\.jpg$/.test(lb.src), 'abriu a miniatura em vez da foto: ' + lb.src);
+    exige(lb.txt.includes('No princípio era o Verbo') && lb.txt.includes('João 1'), 'faltou o texto/leitura: ' + lb.txt.slice(0, 120));
+    await pg.click('#lb [data-lbx]'); exige(await pg.evaluate(() => document.getElementById('lb').hidden), 'o ✕ não fechou');
+    // dia com vídeo: abre o vídeo com a capa; tocar fora fecha
+    await pg.click('.cal [data-dv="' + d2 + '"]'); await pg.waitForSelector('#lb:not([hidden]) video');
+    exige(await pg.$eval('#lb video', v => !!v.getAttribute('poster') && v.src.endsWith('.mp4')), 'vídeo sem capa ou errado');
+    await pg.keyboard.press('Escape'); exige(await pg.evaluate(() => document.getElementById('lb').hidden), 'Esc não fechou');
+    // registrar mais leitura naquele dia continua possível
+    await pg.click('.cal [data-dv="' + d1 + '"]'); await pg.click('#lb [data-lbday]');
+    await pg.waitForSelector('#sh.show #dt'); exige((await pg.inputValue('#dt')) === d1, 'registrar mais: data errada');
+    exige(await pg.evaluate(() => document.getElementById('lb').hidden && document.body.style.overflow === ''), 'o visualizador ficou aberto por baixo');
+    // dia sem passo: continua abrindo o registro
+    await pg.evaluate(() => closeSheet()); await pg.click('.cal [data-day="' + d3 + '"]'); await pg.waitForSelector('#sh.show #dt');
+    exige((await pg.inputValue('#dt')) === d3, 'dia sem passo não abriu o registro');
+    await pg.context().close();
+    return 'foto e vídeo com miniatura/capa; abre a foto inteira com o texto; vídeo com capa; ✕, Esc; registrar mais no dia; dia vazio abre o registro';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

@@ -98,6 +98,20 @@ nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);colo
 .cal .h{background:var(--ac);color:var(--acx);font-weight:700}
 .cal .t{outline:2px solid var(--tx)}
 .cal .w{background:none;aspect-ratio:auto;font-size:11px;border-radius:0}
+.cal .ph{position:relative;overflow:hidden;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);box-shadow:inset 0 0 0 2px var(--ac)}
+.cal .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.cal .ph::after{content:'';position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.2)}
+.cal .ph span{position:relative;z-index:1;font-weight:700}
+.cal .ph.vid span::after{content:' ▶';font-size:8px}
+.lb{position:fixed;inset:0;z-index:100;background:#000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(12px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom))}
+.lb[hidden]{display:none}
+.lb .top{display:flex;align-items:center;gap:10px;padding:4px 16px 10px;color:#fff}
+.lb .x{margin-left:auto;flex:none;background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer}
+.lb .lbm{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}
+.lb .lbm>*{flex:0 0 100%;width:100%;max-height:72vh;object-fit:contain;background:#000;scroll-snap-align:center}
+.lb .cap{color:#e8e8e8;padding:12px 16px 4px;white-space:pre-wrap;font-size:15px;line-height:1.45}
+.lb audio{display:block;width:calc(100% - 32px);margin:10px 16px 0}
+.lb .more{display:block;width:calc(100% - 32px);margin:14px 16px 0;color:#ddd;text-align:center}
 .sheet{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;z-index:9}
 .sheet.show{display:flex}
 .sheet>div{background:var(--bg);width:100%;max-width:560px;margin:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow:auto}
@@ -191,6 +205,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 
 <div class="sheet" id="sh"><div id="shc"></div></div>
 <input type="file" id="favt" accept="image/*" hidden>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Mídia do dia"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -672,13 +687,33 @@ function rank(){
   var more=L.length>vis?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+vis+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
   return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+rows+more+'</div>';
 }
+// ---- Sua trilha: nos dias com passo, a miniatura da foto/vídeo do dia; ao tocar, abre em tela cheia ----
+function dayPosts(d){return S.posts.filter(function(p){return p.uid===S.me&&p.cid===S.cur&&p.date===d}).sort(function(a,b){return a.ts-b.ts})}
+function dayThumb(d){var P=dayPosts(d);for(var i=P.length-1;i>=0;i--){var M=(P[i].imgs||[]).filter(function(m){return !m.audio});if(M.length)return M[0].video?{url:M[0].poster||'',vid:true}:{url:M[0].thumb||M[0].img,vid:false}}return null}
 function cal(){
-  var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join('');
+  var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join(''),any=false;
   var first=new Date(c.start+'T12:00:00').getDay(),n=diff(c.start,c.end)+1;
   for(var i=0;i<first;i++)h+='<div class="w"></div>';
-  for(var j=0;j<n;j++){var d=addD(c.start,j),cl=(dd.indexOf(d)>=0?'h':'')+(d===TODAY?' t':'');h+=d<=TODAY?'<button class="'+cl+'" data-day="'+d+'">'+(+d.slice(8))+'</button>':'<div class="'+cl+'">'+(+d.slice(8))+'</div>'}
-  return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">Cada pedra colorida é um dia com leitura. Esqueceu de registrar? Toque no dia.</div><div class="cal">'+h+'</div></div>';
+  for(var j=0;j<n;j++){var d=addD(c.start,j),has=dd.indexOf(d)>=0,cl=(has?'h':'')+(d===TODAY?' t':''),tb=has&&d<=TODAY&&dayThumb(d);
+    if(tb){any=true;h+='<button class="'+cl+' ph'+(tb.vid?' vid':'')+'" data-dv="'+d+'" aria-label="Ver o que você postou em '+fd(d)+'">'+(tb.url?'<img src="'+esc(tb.url)+'" alt="" loading="lazy" decoding="async">':'')+'<span>'+(+d.slice(8))+'</span></button>';continue}
+    h+=d<=TODAY?'<button class="'+cl+'" data-day="'+d+'">'+(+d.slice(8))+'</button>':'<div class="'+cl+'">'+(+d.slice(8))+'</div>'}
+  return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">'+(any?'Toque na foto para ver o que você postou no dia. ':'Cada pedra colorida é um dia com leitura. ')+'Esqueceu de registrar? Toque no dia.</div><div class="cal">'+h+'</div></div>';
 }
+var WD=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+function openDay(d){
+  var P=dayPosts(d);if(!P.length)return openSheet({d:d});
+  var M=[],A=[],notes=[],refs=[];
+  P.forEach(function(p){(p.imgs||[]).forEach(function(m){(m.audio?A:M).push(m)});if(p.note)notes.push(p.note);refs.push(((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim())});
+  var lb=document.getElementById('lb');
+  lb.innerHTML='<div class="top"><div><b>'+WD[new Date(d+'T12:00:00').getDay()]+', '+fd(d)+'</b><div style="color:#bbb;font-size:14px">'+esc(refs.filter(Boolean).join(' · '))+'</div></div><button class="x" data-lbx="1" aria-label="Fechar">✕</button></div>'+
+    (M.length?'<div class="lbm">'+M.map(function(m){return m.video?'<video src="'+esc(m.img)+'" controls playsinline preload="metadata"'+(m.poster?' poster="'+esc(m.poster)+'"':'')+'></video>':'<img src="'+esc(m.img)+'" alt="Foto do estudo">'}).join('')+'</div>'+(M.length>1?'<div style="text-align:center;color:#aaa;font-size:13px;margin-top:6px">Deslize para ver as '+M.length+'</div>':''):'')+
+    A.map(function(m){return '<audio src="'+esc(m.img)+'" controls preload="none"></audio>'}).join('')+
+    (notes.length?'<div class="cap">'+esc(notes.join('\n\n'))+'</div>':'')+
+    '<button class="btn g more" data-lbday="'+d+'">➕ Registrar mais leitura neste dia</button>';
+  lb.hidden=false;lb.scrollTop=0;document.body.style.overflow='hidden';
+  var x=lb.querySelector('.x');if(x)x.focus();
+}
+function closeLb(){var lb=document.getElementById('lb');if(!lb||lb.hidden)return;lb.querySelectorAll('video,audio').forEach(function(v){try{v.pause()}catch(e){}});lb.hidden=true;lb.innerHTML='';document.body.style.overflow=''}
 var TPL=[{n:'Bíblia em 1 ano',d:'Gênesis a Apocalipse, cerca de 3 capítulos por dia',days:365,g:7},{n:'Bíblia em 90 dias',d:'Jornada intensa, cerca de 13 capítulos por dia',days:90,g:7},{n:'Novo Testamento em 90 dias',d:'260 capítulos, cerca de 3 por dia',days:90,g:7},{n:'Os 4 Evangelhos em 30 dias',d:'Mateus, Marcos, Lucas e João, cerca de 3 capítulos por dia',days:30,g:7},{n:'Salmos em 30 dias',d:'150 salmos, 5 por dia',days:30,g:7},{n:'Provérbios em 31 dias',d:'1 capítulo por dia, um para cada dia do mês',days:31,g:7},{n:'Evangelho de João em 21 dias',d:'1 capítulo por dia',days:21,g:7},{n:'Gênesis em 50 dias',d:'1 capítulo por dia, do início de tudo ao Egito',days:50,g:7}];
 // Integrantes reais da caravana (vínculos gravados no banco), com o líder primeiro
 function membersCard(){
@@ -1721,6 +1756,9 @@ document.addEventListener('click',function(e){
   else if(d.rd){var q=d.rd.split(':');readCh(+q[0],+q[1])}
   else if(t.id==='shi')shareInv(t);
   else if(d.day)openSheet({d:d.day});
+  else if(d.dv)openDay(d.dv);
+  else if(d.lbx)closeLb();
+  else if(d.lbday){var dl=d.lbday;closeLb();openSheet({d:dl})}
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
   else if(d.cs)sendComment(d.cs);
   else if(t.id==='csend')sendChat();
@@ -1765,6 +1803,8 @@ document.addEventListener('click',function(e){
   else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
 });
 document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});
+document.addEventListener('click',function(e){if(e.target&&e.target.id==='lb')closeLb()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   if(document.body.classList.contains('gate')&&e.target.tagName==='INPUT'){var gb=document.querySelector('#gate .btn:not(.g)');if(gb){e.preventDefault();gb.click()}return}

@@ -105,6 +105,11 @@ nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);colo
 .cal .ph.vid span::after{content:' ▶';font-size:8px}
 .lb{position:fixed;inset:0;z-index:100;background:#000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(12px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom))}
 .lb[hidden]{display:none}
+[data-who]{cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.08)}
+.who-st{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 6px;text-align:center}
+.who-st div{background:var(--bd);border-radius:12px;padding:8px 2px}.who-st b{display:block;font-size:20px}
+.wp{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);width:100%;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.wp .th{width:56px;height:56px;border-radius:10px;flex:none;object-fit:cover;background:var(--bd);display:grid;place-items:center;font-size:22px;overflow:hidden}
 .lb .top{display:flex;align-items:center;gap:10px;padding:4px 16px 10px;color:#fff}
 .lb .x{margin-left:auto;flex:none;background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer}
 .lb .lbm{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}
@@ -652,7 +657,7 @@ function postSteps(p){
 function post(p){
   var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=S.openC[p.id],ps=postSteps(p);
   var what=ps.k?'avançou '+ps.k+(ps.k>1?' passos':' passo')+' · passo '+ps.cum:'registrou capítulos já contados';
-  return '<div class="card"><div class="row">'+av(p.uid,null,'md')+'<div class="grow"><b>'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
+  return '<div class="card"><div class="row"><div data-who="'+p.uid+'" style="flex:none">'+av(p.uid,null,'md')+'</div><div class="grow"><b data-who="'+p.uid+'">'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
     (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
     mediaHtml(p)+
@@ -680,7 +685,7 @@ function rank(){
   var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   // Coroa em quem está em 1º; empatados com o 1º também ganham a coroa e a medalha de ouro
   var top1=L.length?L[0][k]:0,king=function(r){return top1>0&&r[k]===top1},nk=L.filter(king).length;
-  var row=function(r,i){var c=king(r);return '<div class="rk'+(c?' king':'')+'"><div class="pos">'+(c?'🥇':(['🥇','🥈','🥉'][i]||i+1))+'</div>'+(c?'<div class="avw">'+av(r.u)+'<span class="crown" aria-label="em primeiro">👑</span></div>':av(r.u))+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</span>')+'</div></div>'};
+  var row=function(r,i){var c=king(r);return '<div class="rk'+(c?' king':'')+'" data-who="'+r.u+'" role="button" tabindex="0"><div class="pos">'+(c?'🥇':(['🥇','🥈','🥉'][i]||i+1))+'</div>'+(c?'<div class="avw">'+av(r.u)+'<span class="crown" aria-label="em primeiro">👑</span></div>':av(r.u))+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</span>')+'</div></div>'};
   var mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
   var vis=Math.max(TOPN,nk); // se mais de 3 empatarem em 1º, todos aparecem
   var rows=(RKALL?L:L.slice(0,vis)).map(row).join('')+(!RKALL&&mi>=vis?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
@@ -700,8 +705,23 @@ function cal(){
   return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">'+(any?'Toque na foto para ver o que você postou no dia. ':'Cada pedra colorida é um dia com leitura. ')+'Esqueceu de registrar? Toque no dia.</div><div class="cal">'+h+'</div></div>';
 }
 var WD=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-function openDay(d){
-  var P=dayPosts(d);if(!P.length)return openSheet({d:d});
+function openDay(d){var P=dayPosts(d);if(!P.length)return openSheet({d:d});openPosts(P,d,true)}
+function openPost(id){var p=S.posts.filter(function(x){return x.id===id})[0];if(p)openPosts([p],p.date,false)}
+// ---- Ver o que a pessoa fez: toque no nome/foto no mural, no ranking ou na lista de participantes ----
+function openWho(u){
+  var P=S.posts.filter(function(p){return p.uid===u&&p.cid===S.cur}).sort(function(a,b){return b.date<a.date?-1:b.date>a.date?1:b.ts-a.ts});
+  var L=users().map(function(x){return{u:x,d:steps(x)}}).sort(function(a,b){return b.d-a.d}),pos=0;L.forEach(function(r,i){if(r.u===u)pos=i+1});
+  var st=steps(u),dd=days(u).length;
+  var row=function(p){var M=(p.imgs||[]).filter(function(m){return !m.audio})[0],A=(p.imgs||[]).some(function(m){return m.audio});
+    var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
+    var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
+    return '<button class="wp" data-post="'+p.id+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw">'+esc(p.note)+'</div>':'')+'</div></button>'};
+  showSheet('<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
+    '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
+    (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
+    '<button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button>');
+}
+function openPosts(P,d,more){
   var M=[],A=[],notes=[],refs=[];
   P.forEach(function(p){(p.imgs||[]).forEach(function(m){(m.audio?A:M).push(m)});if(p.note)notes.push(p.note);refs.push(((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim())});
   var lb=document.getElementById('lb');
@@ -709,7 +729,7 @@ function openDay(d){
     (M.length?'<div class="lbm">'+M.map(function(m){return m.video?'<video src="'+esc(m.img)+'" controls playsinline preload="metadata"'+(m.poster?' poster="'+esc(m.poster)+'"':'')+'></video>':'<img src="'+esc(m.img)+'" alt="Foto do estudo">'}).join('')+'</div>'+(M.length>1?'<div style="text-align:center;color:#aaa;font-size:13px;margin-top:6px">Deslize para ver as '+M.length+'</div>':''):'')+
     A.map(function(m){return '<audio src="'+esc(m.img)+'" controls preload="none"></audio>'}).join('')+
     (notes.length?'<div class="cap">'+esc(notes.join('\n\n'))+'</div>':'')+
-    '<button class="btn g more" data-lbday="'+d+'">➕ Registrar mais leitura neste dia</button>';
+    (more?'<button class="btn g more" data-lbday="'+d+'">➕ Registrar mais leitura neste dia</button>':'');
   lb.hidden=false;lb.scrollTop=0;document.body.style.overflow='hidden';
   var x=lb.querySelector('.x');if(x)x.focus();
 }
@@ -722,7 +742,7 @@ function membersCard(){
   if(!R){var U=users();return '<div class="card"><b>👥 Participantes ('+U.length+')</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+(MBALL?U.map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join(''):'')+tg(U.length)+'</div>'}
   var me=R.filter(function(m){return m.id===S.me})[0],alone=R.length===1;
   return '<div class="card"><b>👥 Participantes ('+R.length+')</b><div class="sub" style="margin-bottom:4px">Quem está na caravana '+esc(S.grp.name)+'.</div>'+
-    (MBALL?R.map(function(m){return '<div class="rk">'+av(m.id,m.name)+'<div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join(''):'')+tg(R.length)+
+    (MBALL?R.map(function(m){return '<div class="rk" data-who="'+m.id+'" role="button" tabindex="0">'+av(m.id,m.name)+'<div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join(''):'')+tg(R.length)+
     (MBALL&&me&&(me.role!=='leader'||alone)?'<button class="btn g" data-leave="'+S.grp.id+'" style="color:var(--err)">Sair desta caravana</button>':'')+'</div>'
 }
 async function leaveGroup(gid){
@@ -1757,6 +1777,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='shi')shareInv(t);
   else if(d.day)openSheet({d:d.day});
   else if(d.dv)openDay(d.dv);
+  else if(d.post)openPost(d.post);
   else if(d.lbx)closeLb();
   else if(d.lbday){var dl=d.lbday;closeLb();openSheet({d:dl})}
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
@@ -1803,8 +1824,8 @@ document.addEventListener('click',function(e){
   else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
 });
 document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});
-document.addEventListener('click',function(e){if(e.target&&e.target.id==='lb')closeLb()});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});
+document.addEventListener('click',function(e){if(e.target&&e.target.id==='lb'){closeLb();return}var w=e.target.closest&&e.target.closest('[data-who]');if(w&&!e.target.closest('button'))openWho(w.getAttribute('data-who'))});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();else if(e.key==='Enter'&&e.target.getAttribute&&e.target.getAttribute('data-who')&&e.target.tagName==='DIV')openWho(e.target.getAttribute('data-who'))});
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   if(document.body.classList.contains('gate')&&e.target.tagName==='INPUT'){var gb=document.querySelector('#gate .btn:not(.g)');if(gb){e.preventDefault();gb.click()}return}

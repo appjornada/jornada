@@ -433,6 +433,38 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'foto e vídeo com miniatura/capa; abre a foto inteira com o texto; vídeo com capa; ✕, Esc; registrar mais no dia; dia vazio abre o registro';
   });
 
+  await teste('Tocar no nome mostra o que a pessoa fez (mural, ranking e participantes) e abre cada passo', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia Souza'), C = S.usuario('Caio'), g = S.caravana(A, 'Tiago'); S.entrar(B, g); S.entrar(C, g);
+    const c = S.jornada(g, 'João em 21 dias', -3, 12);
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    const vid = B.id + '/' + 'b'.repeat(40) + '.mp4'; S.DB.objects[vid] = { size: 1 }; S.DB.objects[vid.replace('.mp4', '.t.jpg')] = { size: 1 };
+    S.publicacao(B, c, { read_date: dia(-1), book: 'João', ref: '1', photo_path: 'antigo/bia1.jpg', note: 'No princípio era o Verbo', study_minutes: 20 });
+    S.publicacao(B, c, { read_date: dia(0), book: 'João', ref: '2', photo_path: vid, media_type: 'video', study_minutes: 15 });
+    S.publicacao(A, c, { book: 'João', ref: '1' });
+    const pg = await abrir(browser, base, S, A);
+    const ficha = () => pg.evaluate(() => { const h = document.getElementById('shc'); return { aberto: document.getElementById('sh').classList.contains('show'), nome: (h.querySelector('h2') || {}).textContent || '', passos: [...h.querySelectorAll('.wp b')].map(b => b.textContent), txt: h.textContent } });
+    // no mural: toca no nome da Bia
+    await pg.waitForSelector('main b[data-who="' + B.id + '"]'); await pg.click('main b[data-who="' + B.id + '"]');
+    let f = await ficha();
+    exige(f.aberto && f.nome === 'Bia Souza', 'não abriu a ficha da Bia: ' + JSON.stringify(f).slice(0, 120));
+    exige(f.passos.join() === 'João 2,João 1', 'passos da Bia (mais novo primeiro): ' + f.passos.join());
+    exige(/2\s*passos/.test(f.txt) && /35 min/.test(f.txt) && /1º/.test(f.txt), 'números da Bia: ' + f.txt.slice(0, 200));
+    // toca num passo: abre a mídia por cima; ao fechar, a ficha continua
+    await pg.click('#shc .wp:nth-of-type(2)'); await pg.waitForSelector('#lb:not([hidden]) .lbm img');
+    exige((await pg.textContent('#lb')).includes('No princípio era o Verbo'), 'o passo abriu sem o texto');
+    exige(!(await pg.$('#lb [data-lbday]')), 'passo de outra pessoa oferece "registrar neste dia"');
+    await pg.click('#lb [data-lbx]'); exige((await ficha()).aberto, 'fechar a mídia fechou a ficha');
+    await pg.click('#shc #x');
+    // no ranking (aba Mapa) e na lista de participantes
+    await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk[data-who="' + B.id + '"]');
+    await pg.click('main .rk[data-who="' + B.id + '"]'); exige((await ficha()).nome === 'Bia Souza', 'ranking não abre a ficha');
+    await pg.click('#shc #x'); await pg.click('main [data-mball]');
+    await pg.click('main .card:has([data-mball]) .rk[data-who="' + C.id + '"]'); f = await ficha();
+    exige(f.nome === 'Caio' && /Ainda não deu passos/.test(f.txt), 'participante sem passos: ' + f.txt.slice(0, 120));
+    await pg.context().close();
+    return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre a mídia por cima';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

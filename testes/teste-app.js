@@ -368,6 +368,32 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Roger (8º) vê os 5 primeiros + a própria posição; trilha com até 5; ranking completo: 8 e 7 na trilha; participantes: só o número até tocar';
   });
 
+  await teste('Coroa em quem está em 1º; empatados com o 1º também ganham (e nenhum fica escondido)', async () => {
+    const montar = passos => { const S = novoServidor(), U = passos.map((_, i) => S.usuario('P' + i)), g = S.caravana(U[0], 'Tiago'); U.slice(1).forEach(u => S.entrar(u, g));
+      const c = S.jornada(g, 'João em 21 dias'); U.forEach((u, i) => { for (let k = 1; k <= passos[i]; k++) S.publicacao(u, c, { book: 'João', ref: String(k), chapters: 1 }) }); return { S, U } };
+    const ler = pg => pg.evaluate(() => { const card = [...document.querySelectorAll('main .card')].find(x => x.textContent.includes('A caravana'));
+      return [...card.querySelectorAll('.rk')].map(r => ({ n: r.querySelector('.grow b').textContent.replace(' (você)', ''), pos: r.querySelector('.pos').textContent, coroa: !!r.querySelector('.crown') })) });
+    // empate em 1º: P0 e P1 com 8 passos
+    let { S, U } = montar([8, 8, 7, 3, 2, 1, 1]);
+    let pg = await abrir(browser, base, S, U[6]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk');
+    let r = await ler(pg); await pg.context().close();
+    const coroas = r.filter(x => x.coroa).map(x => x.n).sort().join();
+    exige(coroas === 'P0,P1', 'coroas em: ' + coroas);
+    exige(r[0].pos === '🥇' && r[1].pos === '🥇' && r[2].pos === '🥉' && !r[2].coroa, 'posições: ' + r.map(x => x.n + x.pos).join(' '));
+    // ninguém deu passo: sem coroa
+    ({ S, U } = montar([0, 0])); S.publicacao(U[0], Object.values(S.DB.challenges)[0], { book: 'Romanos', ref: '1' });
+    pg = await abrir(browser, base, S, U[1]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk');
+    r = await ler(pg); await pg.context().close();
+    exige(!r.some(x => x.coroa), 'coroa sem ninguém ter dado passo');
+    // 6 empatados em 1º: o ranking fechado mostra os 6
+    ({ S, U } = montar([3, 3, 3, 3, 3, 3, 1, 1]));
+    pg = await abrir(browser, base, S, U[7]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk');
+    r = await ler(pg); const bt = await pg.textContent('main [data-rkall]'); await pg.context().close();
+    exige(r.filter(x => x.coroa).length === 6, 'com 6 empatados, aparecem ' + r.filter(x => x.coroa).length + ' coroas');
+    exige(/Ver ranking completo \(8\)/.test(bt), 'botão: ' + bt);
+    return 'empate em 1º: 2 coroas e 2 ouros, o 3º fica com bronze; sem passos: sem coroa; 6 empatados: os 6 aparecem';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

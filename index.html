@@ -35,6 +35,8 @@ main{padding:8px 16px}
 .av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none;position:relative;overflow:hidden}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av.md{width:54px;height:54px;font-size:22px}
+.avw{position:relative;flex:none}
+.crown{position:absolute;top:-13px;left:50%;transform:translateX(-50%) rotate(-12deg);font-size:19px;line-height:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
 .av.big{width:84px;height:84px;font-size:34px}
 .grow{flex:1;min-width:0}
 .ref{font-weight:700;margin:10px 0 2px}
@@ -661,10 +663,13 @@ function rank(){
   var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
   L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
   var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
-  var row=function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div>'+av(r.u)+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'};
+  // Coroa em quem está em 1º; empatados com o 1º também ganham a coroa e a medalha de ouro
+  var top1=L.length?L[0][k]:0,king=function(r){return top1>0&&r[k]===top1},nk=L.filter(king).length;
+  var row=function(r,i){var c=king(r);return '<div class="rk'+(c?' king':'')+'"><div class="pos">'+(c?'🥇':(['🥇','🥈','🥉'][i]||i+1))+'</div>'+(c?'<div class="avw">'+av(r.u)+'<span class="crown" aria-label="em primeiro">👑</span></div>':av(r.u))+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</span>')+'</div></div>'};
   var mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
-  var rows=(RKALL?L:L.slice(0,TOPN)).map(row).join('')+(!RKALL&&mi>=TOPN?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
-  var more=L.length>TOPN?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+TOPN+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
+  var vis=Math.max(TOPN,nk); // se mais de 5 empatarem em 1º, todos aparecem
+  var rows=(RKALL?L:L.slice(0,vis)).map(row).join('')+(!RKALL&&mi>=vis?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
+  var more=L.length>vis?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+vis+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
   return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+rows+more+'</div>';
 }
 function cal(){

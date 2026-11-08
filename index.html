@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jornada na Palavra – Leitura Bíblica em Caravana</title>
-<meta name="theme-color" content="#b8742a">
+<meta name="theme-color" content="#f2efe1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1705" media="(prefers-color-scheme: dark)">
+<!-- Letra da marca: Cinzel (nome e títulos). O texto usa a letra do próprio celular. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap">
 <!-- Ícone do atalho na tela inicial (iPhone e Android) e nome curto embaixo do ícone -->
 <link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icones/favicon-32.png">
@@ -12,33 +17,39 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icones/icon-192.png">
 <meta name="apple-mobile-web-app-title" content="Jornada">
 <style>
-:root{--bg:#f4ede0;--card:#fffaf2;--tx:#2b2118;--mut:#85766a;--ac:#b8742a;--acx:#fff;--bd:#e7dccb;--ok:#4f7c3a;--err:#c0392b;
+:root{--bg:#f2efe1;--card:#fffdf6;--tx:#1c250f;--mut:#5a6150;--bd:#ddd6bd;--ac:#e6b04a;--acx:#14200a;--act:#8a5a08;--vd:#1b2a07;--vt:#e3e9d0;--ok:#3f6b2a;--err:#b3261e;--sh:0 1px 2px rgba(28,37,15,.06),0 6px 18px rgba(28,37,15,.07);
+--ft:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fd:Cinzel,"Trajan Pro",Georgia,serif;--fe:Georgia,"Times New Roman",serif;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130f;--card:#221c16;--tx:#f3eadf;--mut:#a8998a;--bd:#3a3027;--ac:#d4954a;--ok:#7fae62;--err:#ef7b6b;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#17130f;--card:#221c16;--tx:#f3eadf;--mut:#a8998a;--bd:#3a3027;--ac:#d4954a;--ok:#7fae62;--err:#ef7b6b;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1705;--card:#172309;--tx:#f2ead3;--mut:#b8b298;--bd:#2c3b18;--ac:#e6b04a;--acx:#14200a;--act:#f0c45c;--vd:#34501a;--vt:#22320d;--ok:#93c46e;--err:#ff8f80;--sh:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1705;--card:#172309;--tx:#f2ead3;--mut:#b8b298;--bd:#2c3b18;--ac:#e6b04a;--acx:#14200a;--act:#f0c45c;--vd:#34501a;--vt:#22320d;--ok:#93c46e;--err:#ff8f80;--sh:none;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:110px;max-width:560px;margin-inline:auto}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 var(--ft);padding-bottom:110px;max-width:560px;margin-inline:auto}
 header{padding:20px 16px 8px}
-h1{font:700 13px system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 4px}
-h2{font:700 23px Georgia,"Times New Roman",serif;margin:0}
+h1{font:700 13px var(--ft);letter-spacing:.12em;text-transform:uppercase;color:var(--act);margin:0 0 4px}
+h1.brand{display:flex;align-items:center;gap:10px;font:700 15px var(--fd);letter-spacing:.08em;margin:0 0 10px}
+h1.brand img{width:44px;height:44px;border-radius:50%;flex:none}
+#gate h1.brand{flex-direction:column;align-items:flex-start;gap:12px;font-size:17px}#gate h1.brand img{width:88px;height:88px}
+h2{font:700 24px/1.2 var(--ft);margin:0}
+#cn{font:700 25px/1.2 var(--fd);letter-spacing:.02em}
+body[data-tab="feed"] #cn{font:700 24px/1.2 var(--ft);letter-spacing:0}
 .sub{color:var(--mut);font-size:14px}
 .err{color:var(--err);font-size:14px}
 .trail{width:100%;height:auto;display:block;margin:6px 0 2px}
-.road{fill:none;stroke:var(--ac);stroke-width:4;stroke-dasharray:1 9;stroke-linecap:round}
-.walked{fill:none;stroke:var(--ac);stroke-width:5;stroke-linecap:round}
+.road{fill:none;stroke:var(--act);stroke-width:4;stroke-dasharray:1 9;stroke-linecap:round}
+.walked{fill:none;stroke:var(--act);stroke-width:5;stroke-linecap:round}
 .stone{fill:var(--bd)}
 .peer circle{fill:var(--card);stroke:var(--mut);stroke-width:1.5}
-.peer text{font:700 10px system-ui,sans-serif;fill:var(--tx);text-anchor:middle;dominant-baseline:central}
+.peer text{font:700 10px var(--ft);fill:var(--tx);text-anchor:middle;dominant-baseline:central}
 .me circle{fill:var(--ac)}
-.lbl{font:600 11px system-ui,sans-serif;fill:var(--mut)}
+.lbl{font:600 11px var(--ft);fill:var(--mut)}
 .hill{fill:var(--ok);opacity:.28}
 .stats{display:flex;gap:8px;padding:8px 16px}
-.stat{flex:1;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 4px;text-align:center}
+.stat{flex:1;background:var(--card);border:1px solid var(--bd);box-shadow:var(--sh);border-radius:14px;padding:10px 4px;text-align:center}
 .stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--mut)}
 main{padding:8px 16px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:var(--sh)}
 .row{display:flex;align-items:center;gap:10px}
-.av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none;position:relative;overflow:hidden}
+.av{width:40px;height:40px;border-radius:50%;background:var(--vd);color:var(--ac);display:grid;place-items:center;font-weight:700;flex:none;position:relative;overflow:hidden}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av.md{width:54px;height:54px;font-size:22px}
 .rkc{padding-bottom:10px}.rkc>b{display:block;margin-bottom:8px}
@@ -48,7 +59,7 @@ main{padding:8px 16px}
 .rk2 .av{width:30px;height:30px;font-size:13px}
 .rk2 .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:15px}
 .rk2 .val{flex:none;font-size:15px}.rk2 .val small{color:var(--mut);font-weight:400;font-size:12px}
-.rk2.me{background:color-mix(in srgb,var(--ac) 11%,transparent);border-radius:10px;border-bottom:0;margin:4px -8px 0;padding:0 8px}
+.rk2.me{background:var(--vt);border-radius:10px;border-bottom:0;margin:4px -8px 0;padding:0 8px}
 .rkc .more{display:block;width:100%;margin-top:6px;padding:9px;text-align:center;font-size:14px}
 .av.big{width:84px;height:84px;font-size:34px}
 .grow{flex:1;min-width:0}
@@ -70,15 +81,15 @@ main{padding:8px 16px}
 .mth img,.mth video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#000}
 .mth .mx{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:14px;cursor:pointer;padding:0}
 .mth .mr{position:absolute;left:4px;right:4px;bottom:4px;border:0;border-radius:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:4px;cursor:pointer}
-.tref{font:700 21px Georgia,serif;margin:2px 0 8px}
+.tref{font:700 21px var(--fe);margin:2px 0 8px}
 .card.hoje{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 14%,var(--card)),var(--card) 70%)}
-.hj-l{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ac)}
+.hj-l{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--act)}
 .hoje .tref{font-size:28px;line-height:1.15;margin:6px 0 4px}
 .hj-ch{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
 .hj-ch .chip{margin:0;padding:10px 16px;font-size:17px;font-weight:700;background:var(--ac);color:var(--acx);border-color:var(--ac)}
 .hj-ch .chip.ok{background:transparent;color:var(--ok);border:2px solid var(--ok)}
-.vs{font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:1.6}
-.vs sup{color:var(--ac);font:700 11px system-ui,sans-serif;margin:0 3px 0 4px}
+.vs{font-family:var(--fe);font-size:17px;line-height:1.6}
+.vs sup{color:var(--act);font:700 11px var(--ft);margin:0 3px 0 4px}
 .chip{display:inline-block;margin:8px 6px 0 0;padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:14px;cursor:pointer}
 .chip.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}
 .act{display:flex;gap:18px;margin-top:6px}
@@ -93,21 +104,22 @@ textarea.grow{resize:none;min-height:48px;max-height:180px;overflow-y:auto;line-
 .vbtn{font-size:15px;text-decoration:underline;margin-top:4px}
 .row.send{align-items:flex-end}
 .msg{align-self:flex-start;max-width:82%;background:var(--bg);border:1px solid var(--bd);border-radius:14px 14px 14px 4px;padding:7px 12px;font-size:15px;overflow-wrap:anywhere}
-.msg b{display:block;font-size:12px;color:var(--ac)}
+.msg b{display:block;font-size:12px;color:var(--act)}
 .msg.me{align-self:flex-end;background:var(--ac);color:var(--acx);border-color:transparent;border-radius:14px 14px 4px 14px}
 .msg small{display:block;font-size:11px;opacity:.65;text-align:right}
-.land{background:linear-gradient(135deg,#6e9a4f,#3f6a2c);color:#fff;border:0;text-align:center}
-.land .sub{color:#e8f3df}
+.land{background:radial-gradient(120% 90% at 50% 0%,#4a6b26,#1b2a07);color:#f2ead3;border:2px solid var(--ac);text-align:center}
+.land .sub{color:#e4dcbf}
+.land h2{color:#f8dd68}
 nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--card);border-top:1px solid var(--bd);padding:6px 4px calc(8px + env(safe-area-inset-bottom,0px));max-width:560px;margin-inline:auto;z-index:5;box-shadow:0 -2px 12px #0001}
-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--mut);font:600 14px system-ui,-apple-system,sans-serif;padding:4px 0;min-height:62px;justify-content:flex-end;cursor:pointer;-webkit-tap-highlight-color:transparent}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--mut);font:600 14px var(--ft);padding:4px 0;min-height:62px;justify-content:flex-end;cursor:pointer;-webkit-tap-highlight-color:transparent}
 nav button span{display:grid;place-items:center;width:56px;height:34px;border-radius:17px;font-size:24px;line-height:1}
-nav button.on{color:var(--ac);font-weight:800}
+nav button.on{color:var(--act);font-weight:700}
 nav button.on span{background:var(--bg);box-shadow:inset 0 0 0 2px var(--ac)}
-nav .fab{color:var(--ac);font-weight:800}
+nav .fab{color:var(--act);font-weight:700}
 nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);color:var(--acx);font-size:30px;margin-top:-34px;box-shadow:0 4px 14px #0004;border:4px solid var(--card)}
-.seg{display:flex;background:var(--bd);border-radius:10px;padding:3px;margin-bottom:12px}
+.seg{display:flex;background:var(--vt);border-radius:10px;padding:3px;margin-bottom:12px}
 .seg button{flex:1;border:0;background:none;padding:8px 2px;border-radius:8px;color:var(--tx);font-size:13px;cursor:pointer}
-.seg button.on{background:var(--card);font-weight:700}
+.seg button.on{background:var(--ac);color:var(--acx);font-weight:700}
 .rk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
 .rk:last-child{border:0}.pos{width:24px;text-align:center;font-weight:700;color:var(--mut)}
 .val{font-weight:700;font-size:18px;white-space:nowrap}
@@ -143,7 +155,7 @@ nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);colo
 .sheet>div{background:var(--bg);width:100%;max-width:560px;margin:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow:auto}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
 input,select,textarea{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
-.btn{width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;background:var(--ac);color:var(--acx);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn{width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;background:var(--ac);color:var(--acx);font-size:17px;font-weight:700;cursor:pointer;font-family:inherit}
 .btn:disabled{opacity:.5}
 .btn.g{background:none;color:var(--mut);margin-top:4px}
 .btn.o{background:var(--card);color:var(--tx);border:1px solid var(--bd);text-align:left;font-weight:400;margin-top:10px}
@@ -155,12 +167,12 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .wa{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 14px;border-radius:99px;background:#25D366;color:#fff;font-weight:700;font-size:14px;text-decoration:none}
 .two{display:flex;gap:8px}.two>*{flex:1;min-width:0}
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
-.bk{padding:14px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:600 16px system-ui,sans-serif;cursor:pointer;text-align:left}
+.bk{padding:14px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:600 16px var(--ft);cursor:pointer;text-align:left}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px;margin-top:12px}
 .cgrid .chip{margin:0;padding:13px 0;text-align:center;font-size:17px}
-.tst{font:700 13px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);margin:18px 0 0}
+.tst{font:700 13px var(--ft);letter-spacing:.1em;text-transform:uppercase;color:var(--act);margin:18px 0 0}
 #bibx{line-height:1.75;margin-top:10px}
-.link{background:none;border:0;color:var(--ac);font-size:13px;cursor:pointer;padding:0}
+.link{background:none;border:0;color:var(--act);font-size:13px;cursor:pointer;padding:0}
 .gate header,.gate #stats,.gate main,.gate nav{display:none}
 #gate{display:none;padding:24px 18px 40px;font-size:18px}.gate #gate{display:block}
 #gate h2{font-size:27px;margin:12px 0 6px}
@@ -180,7 +192,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .jc.on{border:2px solid var(--ac);padding:9px 11px;box-shadow:0 2px 10px #0002}
 .jc b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jc .sub{font-size:12px}
 .jc .bar{display:block;height:6px;border-radius:9px;background:var(--bd);margin:6px 0 4px;overflow:hidden}.jc .bar i{display:block;height:100%;background:var(--ac)}
-.jc .js{font-size:12px;color:var(--mut)}.jc .js.pend{color:var(--ac);font-weight:700}.jc .js.ok{color:var(--ok);font-weight:700}
+.jc .js{font-size:12px;color:var(--mut)}.jc .js.pend{color:var(--act);font-weight:700}.jc .js.ok{color:var(--ok);font-weight:700}
 .jtag{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--bd);font-size:14px}
 .ecard{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-top:12px}
 .pray{border-color:var(--ac)}
@@ -191,7 +203,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .pcmp hr{border:0;border-top:1px solid var(--bd);margin:10px 0 8px}
 .pcmp textarea{padding:8px 10px;font-size:15px}.pcmp .sbtn{padding:8px 12px;font-size:14px}
 .preq{background:var(--bg);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:10px;padding:8px 12px;font-size:15px;white-space:pre-wrap}
-.preq b{display:block;font-size:12px;color:var(--ac)}
+.preq b{display:block;font-size:12px;color:var(--act)}
 .preq small{display:block;font-size:11px;opacity:.65}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:none;margin:0}
 body:not([data-tab="feed"]) #jsw,body:not([data-tab="feed"]) #map,body:not([data-tab="feed"]) #cd,body:not([data-tab="feed"]) #stats{display:none!important}
@@ -203,7 +215,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 .aud{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:6px 10px}.aud audio{flex:1;min-width:0;height:40px}
 .recing{display:flex;align-items:center;gap:8px;font-size:17px;padding:10px 0}.recing .dot{width:12px;height:12px;border-radius:50%;background:#e0455a;animation:pisca 1s infinite}
 @keyframes pisca{50%{opacity:.25}}
-.chip.sug{border:2px dashed var(--ac);color:var(--ac);font-weight:700}
+.chip.sug{border:2px dashed var(--ac);color:var(--act);font-weight:700}
 .chip.lk{opacity:.4;border-style:dashed;cursor:not-allowed}
 .howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
 </style>
@@ -211,7 +223,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 <body class="gate">
 <div id="gate">Carregando…</div>
 <header>
-  <h1>🧭 Jornada na Palavra</h1>
+  <h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1>
   <div id="jsw"></div>
   <h2 id="cn"></h2>
   <div class="sub" id="cs"></div>
@@ -1440,8 +1452,8 @@ async function saveCh(id){
 function onb(s){
   var h,er='<div class="err" id="oer" style="margin-top:8px"></div>';
   if(!S.canNew&&(s==='new'||s==='custom'||s==='sum'))s='code';
-  if(s==='ask'&&!S.canNew)h='<h1>🧭 Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Para entrar na sua caravana, use o código de convite que te mandaram.</div><button class="btn o" data-o="code"><b>✉️ Tenho um código de convite</b><br><span class="sub">Toque aqui para digitar</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
-  else if(s==='ask')h='<h1>🧭 Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Você foi convidado para uma caravana ou quer começar a sua própria jornada rumo à Terra Prometida?</div><button class="btn o" data-o="code"><b>✉️ Fui convidado</b><br><span class="sub">Tenho um código de convite</span></button><button class="btn o" data-o="new"><b>✨ Quero começar minha jornada</b><br><span class="sub">Escolha um roteiro de leitura e chame quem quiser</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
+  if(s==='ask'&&!S.canNew)h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Para entrar na sua caravana, use o código de convite que te mandaram.</div><button class="btn o" data-o="code"><b>✉️ Tenho um código de convite</b><br><span class="sub">Toque aqui para digitar</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
+  else if(s==='ask')h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Vamos começar a caminhada?</h2><div class="sub">Você foi convidado para uma caravana ou quer começar a sua própria jornada rumo à Terra Prometida?</div><button class="btn o" data-o="code"><b>✉️ Fui convidado</b><br><span class="sub">Tenho um código de convite</span></button><button class="btn o" data-o="new"><b>✨ Quero começar minha jornada</b><br><span class="sub">Escolha um roteiro de leitura e chame quem quiser</span></button><button class="btn g" id="x">Agora não, só quero ler</button>';
   else if(s==='code')h='<h2>Entrar na caravana</h2><div class="sub">Digite o código que você recebeu de quem te convidou.</div><label>Código de convite</label><input id="ocode" placeholder="ex.: A1B2C3" autocapitalize="characters">'+er+'<button class="btn" id="oj">Entrar na caravana</button><button class="btn g" data-o="ask">Voltar</button>';
   else if(s==='new')h='<h2>Escolha o roteiro</h2><div class="sub">Cada dia de leitura é um passo. O último passo é a chegada à Terra Prometida.</div>'+TPL.map(function(m,i){return '<button class="btn o" data-o="t'+i+'"><b>'+m.n+'</b><br><span class="sub">'+m.d+'</span></button>'}).join('')+'<button class="btn o" data-o="custom"><b>✏️ Personalizado</b><br><span class="sub">Escreva o seu, ex.: "Romanos em 16 dias"</span></button><button class="btn g" data-o="ask">Voltar</button>';
   else if(s==='custom')h='<h2>Sua jornada</h2><div class="sub">Escreva o nome com o livro ou parte da Bíblia, que traçamos o roteiro de leitura.</div><label>Nome</label><input id="qn" placeholder="ex.: Romanos em 16 dias"><label>Descrição (opcional)</label><input id="qd" placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="qs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="qe" value="'+addD(TODAY,29)+'"></div></div>'+er+'<button class="btn" id="oq">Continuar</button><button class="btn g" data-o="new">Voltar</button>';
@@ -1525,7 +1537,7 @@ var REG={step:1,name:'',ph:'',email:''};
 function pwBox(id,ac){return '<div class="pw"><input id="'+id+'" type="password" autocomplete="'+ac+'"><button class="link" data-eye="'+id+'">👁️ Mostrar</button></div>'}
 function gate(m,msg){
   document.body.classList.add('gate');gm=m;
-  var er='<div class="err" id="gmsg">'+esc(msg||'')+'</div>',h='<h1>🧭 Jornada na Palavra</h1>';
+  var er='<div class="err" id="gmsg">'+esc(msg||'')+'</div>',h='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1>';
   var inv=INV?'<div class="card" style="margin-top:12px;border-color:var(--ac)"><b>📩 Você foi chamado para uma caravana!</b><div class="sub">'+(m==='in'?'Entre':'Faça seu cadastro')+' e você já entra direto na jornada.</div></div>':'';
   if(m==='up'){
     var s=REG.step;
@@ -1591,7 +1603,7 @@ function phoneOn(){
 function telGate(msg){
   document.body.classList.add('gate');gm='tel';
   var er='<div class="err" id="gmsg" style="margin-top:8px">'+esc(msg||'')+'</div>';
-  document.getElementById('gate').innerHTML='<h1>🧭 Jornada na Palavra</h1><h2>Confirme seu telefone</h2><div class="sub">'+(TEL.sent?'Enviamos um código por SMS para '+esc(telMask(TEL.n))+'.':'Vamos enviar um código por SMS para confirmar que o número é seu.')+'</div><div class="card" style="margin-top:14px">'+(TEL.sent?'<label>Código de 6 dígitos</label><input id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:.3em;text-align:center">'+er+'<button class="btn" id="tv">Confirmar</button><button class="btn g" id="ts">Reenviar código</button><button class="btn g" id="tch">Trocar número</button>':'<label>Telefone (WhatsApp)</label><input id="tnum" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" value="'+esc(telMask(TEL.n))+'">'+er+'<button class="btn" id="ts">Enviar código por SMS</button>')+'</div><button class="link" data-out="1">Sair da conta</button>';
+  document.getElementById('gate').innerHTML='<h1 class="brand"><img src="icones/logo-240.png" alt="" width="44" height="44">Jornada na Palavra</h1><h2>Confirme seu telefone</h2><div class="sub">'+(TEL.sent?'Enviamos um código por SMS para '+esc(telMask(TEL.n))+'.':'Vamos enviar um código por SMS para confirmar que o número é seu.')+'</div><div class="card" style="margin-top:14px">'+(TEL.sent?'<label>Código de 6 dígitos</label><input id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:.3em;text-align:center">'+er+'<button class="btn" id="tv">Confirmar</button><button class="btn g" id="ts">Reenviar código</button><button class="btn g" id="tch">Trocar número</button>':'<label>Telefone (WhatsApp)</label><input id="tnum" class="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" value="'+esc(telMask(TEL.n))+'">'+er+'<button class="btn" id="ts">Enviar código por SMS</button>')+'</div><button class="link" data-out="1">Sair da conta</button>';
 }
 async function telSend(){
   var i=document.getElementById('tnum');if(i)TEL.n=digits(i.value);

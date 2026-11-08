@@ -47,12 +47,18 @@ const recarregar = pg => pg.evaluate(() => loadData());
 const contaPosts = pg => pg.evaluate(() => S.posts.filter(p => p.cid === S.cur).length);
 
 // Abre o "Passo", põe uma foto, escolhe 15 min e publica
+// Marca os capítulos sugeridos (nada vem marcado sozinho); sem sugestão, marca o primeiro livre
+async function marcar(pg) {
+  if (await pg.$('#selsug')) return pg.click('#selsug');
+  const c = await pg.$('#chg .chip:not([disabled]):not(.on)'); if (c) await c.click();
+}
 async function darPasso(pg, opts = {}) {
   await pg.evaluate(() => { closeSheet(); tab = 'feed'; render() });
   await pg.click('#add');
   await pg.waitForSelector('#fgal', { state: 'attached' });
   await pg.setInputFiles('#fgal', { name: (opts.foto || 'foto') + '.png', mimeType: 'image/png', buffer: opts.buffer || PNG });
   await pg.waitForSelector('.mth');
+  await marcar(pg);
   await pg.click('[data-mn="15"]');
   await pg.click('#ok');
 }
@@ -282,7 +288,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const pa = await abrir(browser, base, S, A);
     await pa.click('#add'); exige(await pa.$('[data-mn="5"]'), 'sem opção de 5 minutos');
     await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
-    await pa.click('[data-mn="5"]'); await pa.click('#ok');
+    await marcar(pa); await pa.click('[data-mn="5"]'); await pa.click('#ok');
     await esperar(() => Object.keys(S.DB.checkins).length === 1);
     const k = Object.values(S.DB.checkins)[0];
     exige(k.study_minutes === 5, 'gravou ' + k.study_minutes + ' min');
@@ -305,6 +311,65 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(local === esperado, 'TODAY=' + local + ' esperado ' + esperado);
     exige(k && k.read_date === esperado, 'gravou ' + (k && k.read_date) + ', esperado ' + esperado);
     return 'UTC ' + utc.toISOString().slice(0, 16) + ' → data gravada ' + k.read_date;
+  });
+
+  const JT = 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS';
+  await teste('Exemplo: meta de hoje Tiago 5 e 1 Pedro 1 — registra só Tiago 5 (1 passo), depois 1 Pedro 1 (+1 passo); nada vem marcado sozinho', async () => {
+    const S = novoServidor();
+    const A = S.usuario('Mayara'); const g = S.caravana(A, 'Tiago'); const c = S.jornada(g, JT, -2, 8); c.description = '2 capítulos por dia';
+    S.publicacao(A, c, { book: 'Tiago', read_date: c.start_date, ref: '1–2', chapters: 2 }); const ontem = new Date(Date.now() - 864e5); S.publicacao(A, c, { book: 'Tiago', read_date: new Date(ontem - ontem.getTimezoneOffset() * 6e4).toISOString().slice(0, 10), ref: '3–4', chapters: 2 });
+    const pa = await abrir(browser, base, S, A);
+    const antes = await pa.evaluate(() => [steps(S.me), totalSteps(S.ch)]);
+    await pa.click('#add'); await pa.waitForSelector('#chg');
+    const marcados = await pa.$$eval('#chg .chip.on', e => e.length), sel0 = await pa.evaluate(() => S.sel.length);
+    const sug = await pa.evaluate(() => S.sug);
+    await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    await pa.selectOption('#sbk', '58'); await pa.click('[data-sc="58:5"]'); await pa.click('[data-mn="15"]'); await pa.click('#ok');
+    await esperar(() => Object.keys(S.DB.checkins).length === 3);
+    const k3 = Object.values(S.DB.checkins).find(x => x.ref === '5');
+    await esperar(async () => (await pa.evaluate(() => steps(S.me))) === 5);
+    const depois1 = await pa.evaluate(() => steps(S.me)), cab1 = await pa.textContent('#cd'), txt1 = await pa.textContent('.card:has(.ref:text-is("Tiago 5"))');
+    await pa.click('#add'); await pa.waitForSelector('#chg');
+    await pa.setInputFiles('#fgal', { name: 'b.png', mimeType: 'image/png', buffer: Buffer.concat([PNG, Buffer.from([1])]) }); await pa.waitForSelector('.mth');
+    await pa.selectOption('#sbk', '59'); await pa.click('[data-sc="59:1"]'); await pa.click('[data-mn="15"]'); await pa.click('#ok');
+    await esperar(() => Object.keys(S.DB.checkins).length === 4);
+    await esperar(async () => (await pa.evaluate(() => steps(S.me))) === 6);
+    const depois2 = await pa.evaluate(() => steps(S.me)), status = await pa.evaluate(() => jStatus(S.ch)[0]);
+    await pa.context().close();
+    exige(antes[0] === 4 && antes[1] === 21, 'antes: ' + antes);
+    exige(marcados === 0 && sel0 === 0, 'vieram ' + marcados + ' capítulos marcados sozinhos');
+    exige(sug.join() === '58:5,59:1', 'sugestão ' + sug);
+    exige(k3 && k3.chapters === 1 && k3.book === 'Tiago', 'gravou ' + JSON.stringify(k3));
+    exige(depois1 === 5 && /Passo 5 de 21/.test(cab1), 'depois de Tiago 5: ' + depois1 + ' / ' + cab1);
+    exige(/avançou 1 passo · passo 5/.test(txt1), 'publicação diz: ' + txt1.slice(0, 80));
+    exige(depois2 === 6, 'depois de 1 Pedro 1: ' + depois2);
+    return '4 → 5 → 6 passos de 21; status: ' + status;
+  });
+
+  await teste('Atrasados, capítulo repetido e constância: cada capítulo conta 1 vez; dia com 1 capítulo conta na sequência', async () => {
+    const S = novoServidor();
+    const A = S.usuario('Ana'), B = S.usuario('Bia'); const g = S.caravana(A, 'Tiago'); S.entrar(B, g); const c = S.jornada(g, JT, -2, 8);
+    const d = n => { const x = new Date(Date.now() + n * 864e5); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    // Bia: Tiago 1 registrado duas vezes (dados antigos) + 1 capítulo ontem + 1 hoje
+    S.publicacao(B, c, { book: 'Tiago', read_date: d(-2), ref: '1', chapters: 1 }); S.publicacao(B, c, { book: 'Tiago', read_date: d(-1), ref: '1–2', chapters: 2 }); S.publicacao(B, c, { book: 'Tiago', read_date: d(0), ref: '3', chapters: 1 });
+    const pa = await abrir(browser, base, S, A);
+    const sugA = await pa.evaluate(() => { S.edit = null; return null });
+    await pa.click('#add'); await pa.waitForSelector('#selsug');
+    const nsug = await pa.evaluate(() => S.sug.length);
+    await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    await pa.click('#selsug'); await pa.click('[data-mn="30"]'); await pa.click('#ok');
+    await esperar(() => Object.values(S.DB.checkins).some(x => x.user_id === A.id));
+    await esperar(async () => (await pa.evaluate(() => steps(S.me))) === 6);
+    const r = await pa.evaluate(id => ({ a: steps(S.me), b: steps(id), seqB: streak(id), diasB: days(id).length }), B.id);
+    await pa.click('nav [data-t="cfg"]');
+    const rk = await pa.$$eval('.rk .grow b', e => e.map(x => x.textContent));
+    await pa.context().close();
+    exige(nsug === 6, 'sugestão com ' + nsug + ' capítulos (esperado: 4 atrasados + 2 de hoje)');
+    exige(r.a === 6, 'Ana recuperou e ficou com ' + r.a);
+    exige(r.b === 3, 'Bia (Tiago 1 repetido) ficou com ' + r.b + ' passos; esperado 3');
+    exige(r.seqB === 3 && r.diasB === 3, 'constância da Bia: ' + r.seqB + ' seguidos, ' + r.diasB + ' dias');
+    exige(/Ana/.test(rk[0]), 'ranking: ' + rk.slice(0, 2));
+    return 'Ana 6 passos (atrasados recuperados), Bia 3 passos com 3 dias seguidos';
   });
 
   // ---------- 4. Bíblia ----------
@@ -398,7 +463,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await esperar(() => Object.keys(S.DB.comments).length === 2);
     const novoCm = Object.values(S.DB.comments).find(x => x.id !== 'c1').body;
     await pa.click('#add'); await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
-    await pa.click('[data-mn="15"]'); await pa.fill('#t', '  Deus é fiel.\nEle cuida.\n\n\nAmém.\n');
+    await marcar(pa); await pa.click('[data-mn="15"]'); await pa.fill('#t', '  Deus é fiel.\nEle cuida.\n\n\nAmém.\n');
     await pa.click('#ok'); await esperar(() => Object.values(S.DB.checkins).some(x => x.user_id === A.id));
     const nova = Object.values(S.DB.checkins).find(x => x.user_id === A.id).note;
     await recarregar(pa);
@@ -418,7 +483,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.click('#rgo'); await pa.waitForSelector('#rstop'); await new Promise(r => setTimeout(r, 2300));
     const relogio = await pa.textContent('#rect');
     await pa.click('#rstop'); await pa.waitForSelector('#mprev .aud audio');
-    await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
     await esperar(() => Object.keys(S.DB.checkins).length === 1);
     const k = Object.values(S.DB.checkins)[0], partes = (k && k.photo_path || '').split('|');
     const aud = partes.find(x => /\.(weba|m4a|ogg)$/.test(x));
@@ -439,7 +504,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.evaluate(() => { vidDur = () => Promise.resolve(127) }); // 2:07, como o do celular
     await pa.setInputFiles('#faud', { name: 'Gravação.m4a', mimeType: 'audio/x-m4a', buffer: Buffer.alloc(40000, 7) });
     await pa.waitForSelector('#mprev .aud');
-    await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
     const ok = await esperar(() => Object.keys(S.DB.checkins).length === 1, 8000);
     const er = await pa.textContent('#er').catch(() => '');
     const k = Object.values(S.DB.checkins)[0], aud = k && k.photo_path.split('|').find(isA => /\.m4a$/.test(isA));
@@ -458,7 +523,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.click('#add'); await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
     await pa.evaluate(() => { vidDur = () => Promise.resolve(60) });
     await pa.setInputFiles('#faud', { name: 'voz.m4a', mimeType: 'audio/mp4', buffer: Buffer.alloc(20000, 3) });
-    await pa.waitForSelector('#mprev .aud'); await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    await pa.waitForSelector('#mprev .aud'); await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
     const ok = await esperar(() => Object.keys(S.DB.checkins).length === 1, 8000);
     await pa.context().close();
     exige(ok, 'não publicou');
@@ -486,7 +551,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.evaluate(() => { vidDur = () => Promise.resolve(95) });
     await pa.setInputFiles('#faud', { name: 'curto.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(3000) });
     await pa.waitForSelector('#mprev .aud');
-    await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
     const m2 = await pa.textContent('#er');
     await pa.context().close();
     exige(/3:20/.test(m1) && n1 === 0, 'aceitou o longo: ' + m1);

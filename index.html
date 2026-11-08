@@ -158,6 +158,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 .aud{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:6px 10px}.aud audio{flex:1;min-width:0;height:40px}
 .recing{display:flex;align-items:center;gap:8px;font-size:17px;padding:10px 0}.recing .dot{width:12px;height:12px;border-radius:50%;background:#e0455a;animation:pisca 1s infinite}
 @keyframes pisca{50%{opacity:.25}}
+.chip.sug{border:2px dashed var(--ac);color:var(--ac);font-weight:700}
 .howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
 </style>
 </head>
@@ -214,8 +215,9 @@ function roster(){return S.grp&&S.roster[S.grp.id]||null}
 function users(){var o={},R=roster();if(R)R.forEach(function(m){o[m.id]=1});S.posts.forEach(function(p){if(p.cid===S.cur)o[p.uid]=1});if(S.me)o[S.me]=1;return Object.keys(o)}
 function memberCount(){var R=roster();return R?R.length:users().length}
 function mine(u){return S.posts.filter(function(p){return p.uid===u&&p.cid===S.cur})}
+// Dias com leitura (qualquer quantidade de capítulos): usados na constância e no calendário
 function days(u){return daysIn(u,S.cur)}
-function chap(u){return mine(u).reduce(function(a,p){return a+(+p.ch||0)},0)}
+function chap(u){return steps(u,S.cur)}
 function mins(u){return mine(u).reduce(function(a,p){return a+(+p.min||0)},0)}
 function streak(u){var d=days(u),s=0,c=d.indexOf(TODAY)>=0?TODAY:addD(TODAY,-1);while(d.indexOf(c)>=0){s++;c=addD(c,-1)}return s}
 function fmin(m){m=+m||0;if(m<60)return m+' min';var h=Math.floor(m/60),r=m%60;return h+'h'+(r?String(r).padStart(2,'0'):'')}
@@ -289,7 +291,8 @@ function plan(c){
 // Capítulos do dia i (0 = primeiro dia), distribuídos por igual ao longo do prazo
 function dayRead(c,i){var P=plan(c);if(!P)return[];var m=P.L.length,n=P.n;return P.L.filter(function(x,j){return Math.floor(j*n/m)===i})}
 // Total de passos até a Terra Prometida
-function totalSteps(c){var P=plan(c);return P?Math.min(P.n,P.L.length):diff(c.start,c.end)+1}
+// Total de passos até a Terra Prometida: 1 passo por capítulo do roteiro
+function totalSteps(c){var P=plan(c);return P?P.L.length:diff(c.start,c.end)+1}
 // "Salmos 1, 3–5; Provérbios 2"
 function refOf(R){
   var by=[];R.forEach(function(x){var g=by[by.length-1];if(!g||g.b!==x.b){g={b:x.b,r:[]};by.push(g)}var l=g.r[g.r.length-1];if(l&&l[1]===x.c-1)l[1]=x.c;else g.r.push([x.c,x.c])});
@@ -401,17 +404,17 @@ function trail(){
   var c=S.ch,tot=totalSteps(c),W=520,H=136,x0=24,x1=W-104;
   function pt(f){return[x0+f*(x1-x0),H/2-4+28*Math.sin(f*Math.PI*2.5)]}
   function path(f){var d='';for(var i=0;i<=60;i++){if(i/60>f+1e-9)break;var p=pt(i/60);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}var q=pt(f);return d+'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)}
-  var fm=Math.min(1,days(S.me).length/tot),m=pt(fm),ms='',k=Math.min(tot,14);
+  var fm=Math.min(1,steps(S.me)/tot),m=pt(fm),ms='',k=Math.min(tot,14);
   for(var j=1;j<k;j++){var q=pt(j/k);ms+='<circle class="stone" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/>'}
-  var peers=users().filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,days(u).length/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+days(u).length+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
+  var peers=users().filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,steps(u)/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+steps(u)+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
   var lx=W-54,ly=H/2;
-  return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+days(S.me).length+' de '+tot+' passos até a Terra Prometida">'+
+  return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+steps(S.me)+' de '+tot+' passos até a Terra Prometida">'+
     '<path class="road" d="'+path(1)+'"/>'+(fm>0?'<path class="walked" d="'+path(fm)+'"/>':'')+ms+
     '<text class="lbl" x="'+x0+'" y="'+(H-6)+'">Partida</text>'+
     '<path class="hill" d="M'+(lx-38)+' '+(ly+22)+' Q'+lx+' '+(ly-38)+' '+(lx+38)+' '+(ly+22)+' Z"/>'+
     '<text x="'+lx+'" y="'+(ly+4)+'" text-anchor="middle" font-size="28">🏞️</text>'+
     '<text class="lbl" x="'+lx+'" y="'+(ly+40)+'" text-anchor="middle">Terra Prometida</text>'+
-    peers+'<g class="me"><title>Você: '+days(S.me).length+' passos</title><circle cx="'+m[0].toFixed(1)+'" cy="'+m[1].toFixed(1)+'" r="14"/><text x="'+m[0].toFixed(1)+'" y="'+(m[1]+6).toFixed(1)+'" text-anchor="middle" font-size="16">🚶</text></g></svg>'
+    peers+'<g class="me"><title>Você: '+steps(S.me)+' passos</title><circle cx="'+m[0].toFixed(1)+'" cy="'+m[1].toFixed(1)+'" r="14"/><text x="'+m[0].toFixed(1)+'" y="'+(m[1]+6).toFixed(1)+'" text-anchor="middle" font-size="16">🚶</text></g></svg>'
 }
 
 // ---- Várias jornadas: cartões no topo para trocar com um toque ----
@@ -436,29 +439,42 @@ function needOn(c,d){var P=c&&plan(c);if(!P)return 1;return Math.max(1,dayRead(c
 // Capítulos registrados por data: {"2026-11-06":1}
 function chOn(u,cid,except){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.id!==except)o[p.date]=(o[p.date]||0)+(+p.ch||1)});return o}
 function jOf(cid){return S.all.filter(function(x){return x.id===cid})[0]||(S.ch&&S.ch.id===cid?S.ch:null)}
-// Dias com o passo concluído: todos os capítulos do dia registrados (em uma ou mais publicações)
-function daysIn(u,cid){
-  var o=chOn(u,cid),k=Object.keys(o),c=jOf(cid),P=c&&plan(c);if(!P)return k;
-  var fin=k.reduce(function(a,d){return a+o[d]},0)>=P.L.length;
-  return k.filter(function(d){return fin||o[d]>=needOn(c,d)})
+// ---- Progresso: cada capítulo concluído é 1 passo e só conta uma vez ----
+// Capítulos únicos que a pessoa registrou na jornada (só os do roteiro, quando há roteiro), com a data em que contou
+function doneCh(u,cid){
+  var c=jOf(cid),P=c&&plan(c),ok=null,o={},extra=0;
+  if(P){ok={};P.L.forEach(function(x){ok[x.b+':'+x.c]=1})}
+  S.posts.filter(function(p){return p.uid===u&&p.cid===cid}).sort(function(a,b){return a.ts-b.ts}).forEach(function(p){
+    var ks=chOfPost(p);
+    if(!ks.length){if(!P)extra+=(+p.ch||1);return}
+    ks.forEach(function(k){if((!ok||ok[k])&&!o[k])o[k]=p.date});
+  });
+  return{set:o,n:Object.keys(o).length+extra}
 }
+function steps(u,cid){return doneCh(u,cid||S.cur).n}
+// Dias com leitura (qualquer quantidade de capítulos)
+function daysIn(u,cid){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid)o[p.date]=1});return Object.keys(o)}
+// Capítulos do roteiro que já deveriam ter sido lidos até o dia d e ainda não foram
+function behind(u,c,d){var P=plan(c);if(!P)return[];var i=diff(c.start,d),m=P.L.length,n=P.n,set=doneCh(u,c.id).set;return P.L.filter(function(x,j){return Math.floor(j*n/m)<=i&&!set[x.b+':'+x.c]})}
+// Capítulos registrados no dia (para a meta do dia, que não é obrigatória)
+function chDay(u,cid,d){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.date===d)chOfPost(p).forEach(function(k){o[k]=1})});return Object.keys(o).length}
 function jStatus(c){
-  var d=daysIn(S.me,c.id),tot=totalSteps(c),st=d.length;
+  var tot=totalSteps(c),st=steps(S.me,c.id);
   if(st>=tot)return['🏞️ Chegou à Terra Prometida','ok'];
   if(TODAY<c.start)return['Começa em '+fd(c.start),''];
   if(TODAY>c.end)return['Encerrada · '+st+' de '+tot+' passos',''];
-  if(d.indexOf(TODAY)>=0)return['✓ Passo de hoje dado','ok'];
-  var got=chOn(S.me,c.id)[TODAY]||0,rest=needOn(c,TODAY)-got;
-  return got&&rest>0?['👣 Falta '+rest+(rest>1?' capítulos':' capítulo')+' hoje','pend']:['👣 Falta o passo de hoje','pend'];
+  var got=chDay(S.me,c.id,TODAY),need=needOn(c,TODAY),atr=behind(S.me,c,TODAY).length;
+  if(got>=need&&!atr)return['✓ Meta de hoje cumprida','ok'];
+  return atr?['👣 '+atr+(atr>1?' capítulos para ler':' capítulo para ler'),'pend']:['✓ Meta de hoje cumprida','ok'];
 }
 function switcher(){
   var items=S.all.filter(function(c){return isMine(c.id)}).sort(function(a,b){var x=TODAY>=a.start&&TODAY<=a.end,y=TODAY>=b.start&&TODAY<=b.end;return (y-x)||(a.end<b.end?-1:1)});
   var empty=[];
   if(items.length+empty.length<2)return '';
   var pend=items.filter(function(c){return jStatus(c)[1]==='pend'}).length;
-  var h='<div class="jhd"><b>Suas jornadas ('+(items.length+empty.length)+')</b><span class="sub">'+(pend?'👣 '+pend+' esperando o passo de hoje':'toque para trocar')+'</span></div><div class="jsw">';
+  var h='<div class="jhd"><b>Suas jornadas ('+(items.length+empty.length)+')</b><span class="sub">'+(pend?'👣 '+pend+' com capítulos para ler':'toque para trocar')+'</span></div><div class="jsw">';
   h+=items.map(function(c){
-    var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=daysIn(S.me,c.id).length,tot=totalSteps(c);
+    var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=steps(S.me,c.id),tot=totalSteps(c);
     return '<button class="jc'+(on?' on':'')+'" data-js="c:'+c.id+'"'+(on?' aria-current="true"':'')+'><b>'+esc(c.name)+'</b><span class="sub">'+(g&&g.name!==c.name?'Caravana '+esc(g.name):'Passo '+st+' de '+tot)+'</span><span class="bar"><i style="width:'+Math.min(100,Math.round(st*100/tot))+'%"></i></span><span class="js '+js[1]+'">'+js[0]+'</span></button>'
   }).join('');
   h+=empty.map(function(g){var on=!S.cur&&S.grp&&S.grp.id===g.id;return '<button class="jc'+(on?' on':'')+'" data-js="g:'+g.id+'"><b>'+esc(g.name)+'</b><span class="sub">Caravana</span><span class="bar"><i style="width:0"></i></span><span class="js">Sem jornada traçada</span></button>'}).join('');
@@ -494,27 +510,29 @@ function hdrHome(){
     document.getElementById('cd').textContent='';
     return
   }
-  var c=S.ch,tot=totalSteps(c),st=days(S.me).length,left=Math.max(0,tot-st),n=memberCount();
+  var c=S.ch,tot=totalSteps(c),st=steps(S.me),left=Math.max(0,tot-st),n=memberCount();
   document.getElementById('cn').textContent=on?c.name:S.grp.name;
   document.getElementById('cs').textContent='Caravana '+S.grp.name+' · '+n+(n===1?' peregrino':' peregrinos');
   document.getElementById('cd').textContent=!on?'Aguardando o líder traçar a jornada':TODAY<c.start?'A caravana parte em '+fd(c.start):st>=tot?'Você chegou à Terra Prometida! 🏞️':'Passo '+st+' de '+tot+' · faltam '+left+' até a Terra Prometida · chegada '+fd(c.end);
-  document.getElementById('stats').innerHTML='<div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+chap(S.me)+'</b><span>capítulos</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div>';
+  document.getElementById('stats').innerHTML='<div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+days(S.me).length+'</b><span>dias de leitura</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div>';
 }
 function noCh(){return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
 function today(){
-  var c=S.ch,P=plan(c),i=diff(c.start,TODAY),done=days(S.me).indexOf(TODAY)>=0,tot=totalSteps(c);
-  if(days(S.me).length>=tot)return '<div class="card land"><div style="font-size:44px">🏞️</div><h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
+  var c=S.ch,P=plan(c),i=diff(c.start,TODAY),tot=totalSteps(c),done=P?chDay(S.me,S.cur,TODAY)>=needOn(c,TODAY):days(S.me).indexOf(TODAY)>=0;
+  if(steps(S.me)>=tot)return '<div class="card land"><div style="font-size:44px">🏞️</div><h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
   if(!P)return done?'':'<div class="card"><b>Passo de hoje</b><div class="sub">Registre o que você leu hoje para avançar na trilha.</div><button class="btn" id="add2">👣 Dar o passo de hoje</button></div>';
   if(i<0){var R0=dayRead(c,0);return '<div class="card"><div class="sub">Primeiro passo · a caravana parte em '+fd(c.start)+'</div><div class="tref">'+refOf(R0)+'</div>'+biBtn(R0[0].b)+R0.map(chip).join('')+'</div>'}
   if(i>=P.n)return '';
   var R=dayRead(c,i),rd=readSet(S.me);
   if(!R.length){var nx=P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0];if(!nx)return '';R=[nx]}
-  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-live="vx'+R[0].b+':'+R[0].c+':'+BIB.ver+'" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+(done?'<div class="sub" style="color:var(--ok);margin-top:12px">✓ Passo de hoje dado. Siga firme!</div>':todayBtn(c))+'</div>'
+  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-live="vx'+R[0].b+':'+R[0].c+':'+BIB.ver+'" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+todayBtn(c)+'</div>'
 }
+// Meta do dia (não obrigatória) e capítulos atrasados: cada capítulo registrado é 1 passo
 function todayBtn(c){
-  var got=chOn(S.me,S.cur)[TODAY]||0,need=needOn(c,TODAY),rest=need-got;
-  if(!got||rest<=0)return '<button class="btn" id="add2">👣 Dar o passo de hoje</button>';
-  return '<div class="sub" style="color:var(--ok);margin-top:12px">✓ '+got+' de '+need+' capítulos de hoje registrados</div><button class="btn" id="add2">👣 Registrar '+(rest>1?'os outros '+rest+' capítulos':'o outro capítulo')+'</button>'
+  var got=chDay(S.me,S.cur,TODAY),need=needOn(c,TODAY),atr=behind(S.me,c,TODAY),h='';
+  if(got)h+='<div class="sub" style="color:var(--ok);margin-top:12px">✓ Hoje: '+got+(got>1?' capítulos registrados':' capítulo registrado')+(got>=need?' · meta do dia cumprida':' de '+need+' da meta')+'</div>';
+  if(atr.length)h+='<div class="sub" style="margin-top:8px">Para ler: <b>'+refOf(atr)+'</b> ('+atr.length+(atr.length>1?' capítulos':' capítulo')+')</div>';
+  return h+(atr.length?'<button class="btn" id="add2">👣 Registrar capítulos</button>':'<div class="sub" style="color:var(--ok);margin-top:12px">Tudo em dia. Siga firme!</div>');
 }
 function mediaHtml(p){
   var A=(p.imgs||[]).filter(function(m){return m.audio}),L=(p.imgs||[]).filter(function(m){return !m.audio});
@@ -534,10 +552,24 @@ document.addEventListener('scroll',function(e){
   c.querySelector('.carc').textContent=(i+1)+'/'+n;
   c.querySelectorAll('.dots button').forEach(function(b,j){b.classList.toggle('on',j===i)});
 },true);
+// Passos que cada publicação deu (capítulos novos) e o total até ela, na ordem em que foram feitas
+var PSC={k:'',m:{}};
+function postSteps(p){
+  var key=S.posts.length+':'+(S.posts[0]&&S.posts[0].id)+':'+S.posts.reduce(function(a,x){return a+x.ts},0);
+  if(PSC.k!==key){PSC={k:key,m:{}};var by={};
+    S.posts.slice().sort(function(a,b){return a.ts-b.ts}).forEach(function(x){
+      var g=x.uid+'|'+x.cid,st=by[g]||(by[g]={set:{},n:0,ok:null});
+      if(st.ok===null){var c=jOf(x.cid),P=c&&plan(c);st.ok=P?P.L.reduce(function(o,y){o[y.b+':'+y.c]=1;return o},{}):false}
+      var ks=chOfPost(x),k=0;
+      if(!ks.length&&!st.ok)k=+x.ch||1;
+      ks.forEach(function(q){if((!st.ok||st.ok[q])&&!st.set[q]){st.set[q]=1;k++}});
+      st.n+=k;PSC.m[x.id]={k:k,cum:st.n};
+    })}
+  return PSC.m[p.id]||{k:0,cum:0}
+}
 function post(p){
-  var lk=p.likes||[],on=lk.indexOf(S.me)>=0,dd=daysIn(p.uid,p.cid),n=dd.filter(function(x){return x<=p.date}).length,open=S.openC[p.id];
-  var sd=S.posts.filter(function(x){return x.uid===p.uid&&x.cid===p.cid&&x.date===p.date}),later=sd.some(function(x){return x.ts>p.ts}),cum=sd.reduce(function(a,x){return a+(x.ts<=p.ts?(+x.ch||1):0)},0),need=needOn(jOf(p.cid),p.date);
-  var what=dd.indexOf(p.date)>=0&&!later?'deu o passo '+n:'registrou '+cum+' de '+need+' capítulos do dia';
+  var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=S.openC[p.id],ps=postSteps(p);
+  var what=ps.k?'avançou '+ps.k+(ps.k>1?' passos':' passo')+' · passo '+ps.cum:'registrou capítulos já contados';
   return '<div class="card"><div class="row"><div class="av">'+esc(nm(p.uid)[0])+'</div><div class="grow"><b>'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
     (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
@@ -560,18 +592,18 @@ function feed(){
 }
 function rank(){
   if(!S.chs.length)return noCh();
-  var L=users().map(function(u){return{u:u,d:days(u).length,c:chap(u),s:streak(u),m:mins(u)}});
+  var L=users().map(function(u){return{u:u,d:steps(u),c:days(u).length,s:streak(u),m:mins(u)}});
   var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
   L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
-  var seg='<div class="seg">'+[['dias','Passos'],['caps','Capítulos'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
-  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div><div class="av">'+esc(nm(r.u)[0])+'</div><div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'caps',s:'dias'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
+  var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div><div class="av">'+esc(nm(r.u)[0])+'</div><div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
 }
 function cal(){
   var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join('');
   var first=new Date(c.start+'T12:00:00').getDay(),n=diff(c.start,c.end)+1;
   for(var i=0;i<first;i++)h+='<div class="w"></div>';
   for(var j=0;j<n;j++){var d=addD(c.start,j),cl=(dd.indexOf(d)>=0?'h':'')+(d===TODAY?' t':'');h+=d<=TODAY?'<button class="'+cl+'" data-day="'+d+'">'+(+d.slice(8))+'</button>':'<div class="'+cl+'">'+(+d.slice(8))+'</div>'}
-  return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">Cada pedra colorida é um passo dado. Esqueceu de marcar? Toque no dia para dar o passo atrasado.</div><div class="cal">'+h+'</div></div>';
+  return '<div class="card"><b>👣 Sua trilha</b><div class="sub" style="margin-bottom:10px">Cada pedra colorida é um dia com leitura. Esqueceu de registrar? Toque no dia.</div><div class="cal">'+h+'</div></div>';
 }
 var TPL=[{n:'Bíblia em 1 ano',d:'Gênesis a Apocalipse, cerca de 3 capítulos por dia',days:365,g:7},{n:'Bíblia em 90 dias',d:'Jornada intensa, cerca de 13 capítulos por dia',days:90,g:7},{n:'Novo Testamento em 90 dias',d:'260 capítulos, cerca de 3 por dia',days:90,g:7},{n:'Os 4 Evangelhos em 30 dias',d:'Mateus, Marcos, Lucas e João, cerca de 3 capítulos por dia',days:30,g:7},{n:'Salmos em 30 dias',d:'150 salmos, 5 por dia',days:30,g:7},{n:'Provérbios em 31 dias',d:'1 capítulo por dia, um para cada dia do mês',days:31,g:7},{n:'Evangelho de João em 21 dias',d:'1 capítulo por dia',days:21,g:7},{n:'Gênesis em 50 dias',d:'1 capítulo por dia, do início de tudo ao Egito',days:50,g:7}];
 // Integrantes reais da caravana (vínculos gravados no banco), com o líder primeiro
@@ -821,59 +853,55 @@ function openSheet(pre){
   drawMedia();drawRec();
   stepFor(dt);
 }
-// Escolha dos capítulos: um único lugar, já marcado com a sugestão do roteiro;
-// capítulos já registrados ficam travados para não contarem duas vezes
-var MAXFREE=10;
+// Escolha dos capítulos: nada vem marcado; a pessoa toca nos capítulos que leu.
+// Cada capítulo marcado é 1 passo. Os do dia (e os atrasados) aparecem destacados como sugestão.
+// Capítulos já registrados ficam travados para não contarem duas vezes.
+var MAXSEL=30;
 function stepFor(d){
-  var e=document.getElementById('stepr'),ok=document.getElementById('ok'),P=plan(S.ch),done=!S.edit&&days(S.me).indexOf(d)>=0,block='',h='<div class="sub" style="margin-top:4px">'+(d===TODAY?'Hoje':'Passo atrasado de '+fd(d))+'</div>';
-  var ex=S.edit&&S.edit.id,rd=readSet(S.me,ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.got=chOn(S.me,S.cur,ex)[d]||0;
+  var e=document.getElementById('stepr'),ok=document.getElementById('ok'),P=plan(S.ch),block='',h='<div class="sub" style="margin-top:4px">'+(d===TODAY?'Hoje':'Leitura de '+fd(d))+'</div>';
+  var ex=S.edit&&S.edit.id,rd=readSet(S.me,ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.sug=[];
   if(P){
-    var R=dayRead(S.ch,diff(S.ch.start,d)),avail=P.L.filter(function(x){return !rd[x.b+':'+x.c]});
+    var i=diff(S.ch.start,d),R=dayRead(S.ch,i),m=P.L.length,n=P.n,avail=P.L.filter(function(x){return !rd[x.b+':'+x.c]});
     S.pbs={};P.L.forEach(function(x){S.pbs[x.b]=1});
-    // todo dia tem passo: se o roteiro não marca capítulo, vale o próximo ainda não lido
-    // o que falta do dia: dá para registrar um capítulo agora e o outro depois
-    S.need=Math.min(Math.max(1,Math.max(1,R.length)-S.got),avail.length);
-    if(S.got&&!S.edit)h+='<div class="sub" style="color:var(--ok)">✓ Você já registrou '+S.got+' de '+(S.got+S.need)+' capítulos deste dia. Falta'+(S.need>1?'m ':' ')+S.need+'.</div>';
-    if(!avail.length)block='Você já leu todos os capítulos desta jornada. 🏞️';
-    // sugestão do dia (sem os já lidos), completada com os próximos não lidos
-    if(S.edit)S.sel=chOfPost(S.edit).slice(0,S.need);
-    else R.forEach(function(x){if(!rd[x.b+':'+x.c])S.sel.push(x.b+':'+x.c)});
-    for(var i=0;!S.edit&&S.sel.length<S.need&&i<avail.length;i++){var k=avail[i].b+':'+avail[i].c;if(S.sel.indexOf(k)<0)S.sel.push(k)}
+    // sugestão: o que o roteiro pede até esse dia e ainda não foi lido (atrasados + os do dia)
+    S.sug=P.L.filter(function(x,j){return Math.floor(j*n/m)<=i&&!rd[x.b+':'+x.c]}).map(function(x){return x.b+':'+x.c});
+    if(R.length)h+='<div class="sub">Meta do dia: <b>'+refOf(R)+'</b> ('+R.length+(R.length>1?' capítulos':' capítulo')+'). A meta não é obrigatória: cada capítulo que você marcar é 1 passo.</div>';
+    var atr=S.sug.filter(function(k){return !R.some(function(x){return x.b+':'+x.c===k})});
+    if(atr.length&&!S.edit)h+='<div class="sub" style="margin-top:4px">Atrasados para recuperar: <b>'+refOf(atr.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}))+'</b></div>';
+    if(!avail.length&&!S.edit)block='Você já leu todos os capítulos desta jornada. 🏞️';
   }
-  if(S.edit&&!P)S.sel=chOfPost(S.edit).slice(0,MAXFREE);
-  // veio da Bíblia com "Li este capítulo": ele entra primeiro na seleção
+  if(S.edit)S.sel=chOfPost(S.edit).slice(0,MAXSEL);
+  // veio da Bíblia com "Li este capítulo": só esse capítulo vem marcado (foi a pessoa que escolheu)
   if(S.preSel){
     var pk=S.preSel,pq=pk.split(':'),pb=+pq[0],pc=+pq[1];S.preSel=null;
-    if(!rd[pk]&&(!P||P.L.some(function(x){return x.b===pb&&x.c===pc}))){
-      var pi=S.sel.indexOf(pk);if(pi>=0)S.sel.splice(pi,1);
-      S.sel.unshift(pk);if(S.need&&S.sel.length>S.need)S.sel.length=S.need;
-    }
+    if(!rd[pk]&&(!P||P.L.some(function(x){return x.b===pb&&x.c===pc}))&&S.sel.indexOf(pk)<0)S.sel.unshift(pk);
   }
-  S.bk=S.sel.length?+S.sel[0].split(':')[0]:(P?P.L[0].b:Math.max(0,BOOKS.indexOf((mine(S.me)[0]||{}).book)));
+  var first=S.sel[0]||S.sug[0];
+  S.bk=first?+first.split(':')[0]:(P?(P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0]||P.L[0]).b:Math.max(0,BOOKS.indexOf((mine(S.me)[0]||{}).book)));
   var bks=P?Object.keys(S.pbs).map(Number):rg(0,65);
-  h+='<label>Qual capítulo você leu?</label><select id="sbk">'+bks.map(function(b){return '<option value="'+b+'"'+(b===S.bk?' selected':'')+'>'+BOOKS[b]+'</option>'}).join('')+'</select><div id="chg" style="margin-top:4px"></div><div class="sub" id="selc" style="margin-top:8px"></div>';
-  if(done)block='Você já deu o passo deste dia. Escolha outra data.';
+  h+='<label>Quais capítulos você leu?</label>'+(S.sug.length&&!S.edit?'<button class="btn o" id="selsug" style="margin-top:0;text-align:center">✔️ Marcar '+(S.sug.length>1?'os '+S.sug.length+' capítulos sugeridos':'o capítulo sugerido')+'</button>':'')+
+    '<select id="sbk" style="margin-top:8px">'+bks.map(function(b){return '<option value="'+b+'"'+(b===S.bk?' selected':'')+'>'+BOOKS[b]+'</option>'}).join('')+'</select><div id="chg" style="margin-top:4px"></div><div class="sub" id="selc" style="margin-top:8px"></div>';
   e.innerHTML=h+(block?'<div class="err" style="margin-top:8px">'+block+'</div>':'');
   ok.disabled=!!block;
   if(!block)drawChaps();else{document.getElementById('sbk').disabled=true}
 }
 function drawChaps(){
   var P=plan(S.ch),b=S.bk,cs=P?P.L.filter(function(x){return x.b===b}).map(function(x){return x.c}):rg(1,NC[b]);
-  document.getElementById('chg').innerHTML=cs.map(function(c){var k=b+':'+c,r=S.read[k],on=S.sel.indexOf(k)>=0;return '<button class="chip'+(on?' on':'')+'" data-sc="'+k+'"'+(r?' disabled title="Você já leu este capítulo" style="opacity:.45"':'')+'>'+(r?'✓ ':'')+c+'</button>'}).join('');
-  var n=S.sel.length;
-  document.getElementById('selc').textContent=S.need>1?'Marque 1 ou '+S.need+' capítulos · '+n+' marcado'+(n===1?'':'s')+'. Pode registrar um agora e o outro depois.':S.need?'Escolha 1 capítulo · '+n+' de 1 marcado':n?n+(n>1?' capítulos marcados':' capítulo marcado'):'Toque no capítulo que você leu.';
+  document.getElementById('chg').innerHTML=cs.map(function(c){var k=b+':'+c,r=S.read[k],on=S.sel.indexOf(k)>=0,sg=!r&&!on&&S.sug.indexOf(k)>=0;
+    return '<button class="chip'+(on?' on':'')+(sg?' sug':'')+'" data-sc="'+k+'"'+(r?' disabled title="Você já leu este capítulo" style="opacity:.45"':'')+(sg?' title="Sugerido para ler"':'')+'>'+(r?'✓ ':on?'✔ ':'')+c+'</button>'}).join('');
+  var n=S.sel.length,sel=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
+  document.getElementById('selc').innerHTML=n?'Marcado: <b>'+refOf(sel)+'</b> = '+n+(n>1?' passos':' passo'):'Toque nos capítulos que você leu. Cada capítulo é 1 passo.'+(S.sug.length?' Os destacados são os sugeridos.':'');
   var ok=document.getElementById('ok');if(ok&&!ok.disabled)ok.textContent=okLbl();
 }
-function okLbl(){var n=S.sel.length;if(S.edit)return '💾 Salvar alterações';return S.need&&n&&n<S.need?'📖 Registrar '+(n>1?n+' capítulos':'1 capítulo'):'👣 Dar o passo'}
+function okLbl(){var n=S.sel.length;if(S.edit)return '💾 Salvar alterações';return n?'👣 Registrar '+n+(n>1?' capítulos ('+n+' passos)':' capítulo (1 passo)'):'👣 Registrar leitura'}
 function pickChap(k){
   var i=S.sel.indexOf(k),er=document.getElementById('er');er.textContent='';
   if(i>=0)S.sel.splice(i,1);
-  else if(S.need===1)S.sel=[k];
-  else if(S.need&&S.sel.length>=S.need){er.textContent='Você já marcou '+S.need+' capítulos. Desmarque um para trocar.';return}
-  else if(!S.need&&S.sel.length>=MAXFREE){er.textContent='Marque no máximo '+MAXFREE+' capítulos por passo.';return}
+  else if(S.sel.length>=MAXSEL){er.textContent='Marque no máximo '+MAXSEL+' capítulos por registro.';return}
   else S.sel.push(k);
   drawChaps();
 }
+function selSug(){S.sug.forEach(function(k){if(S.sel.indexOf(k)<0&&!S.read[k]&&S.sel.length<MAXSEL)S.sel.push(k)});drawChaps()}
 // Duração do vídeo (em segundos); null se o aparelho não conseguir ler
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
@@ -991,9 +1019,7 @@ async function publish(){
   er.textContent='';
   if(!dt||dt<c.start||dt>mx){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
   if(S.edit)dt=S.edit.date;
-  else if(daysIn(S.me,cid).indexOf(dt)>=0){er.textContent='Você já deu o passo deste dia.';return}
-  if(!S.sel.length){er.textContent='Toque no capítulo que você leu.';return}
-  if(S.need&&S.sel.length>S.need){er.textContent='Marque no máximo '+S.need+(S.need>1?' capítulos':' capítulo')+' para este dia.';return}
+  if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
   var R=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
   if(R.some(function(x){return readSet(S.me,S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
   var st=stepOf(R);
@@ -1491,6 +1517,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='pdno'){if(confirm('Descartar este passo pendente? Ele não será publicado.')){pendClear();render()}}
   else if(d.mn){document.getElementById('mn').value=d.mn;document.querySelectorAll('[data-mn]').forEach(function(b){b.classList.toggle('on',b===t)})}
   else if(d.sc)pickChap(d.sc);
+  else if(t.id==='selsug')selSug();
   else if(d.bb!==undefined){closeSheet();bibGo('chaps',+d.bb)}
   else if(d.bgo){var g2=d.bgo.split(':');closeSheet();BIB.goV=d.bv2?+d.bv2:null;bibGo('read',+g2[0],+g2[1]);if(BIB.goV&&BIB.last)BIB.last.v=BIB.goV}
   else if(t.id==='boff')saveOffline(t);

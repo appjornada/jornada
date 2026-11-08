@@ -450,7 +450,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(f.passos.join() === 'João 2,João 1', 'passos da Bia (mais novo primeiro): ' + f.passos.join());
     exige(/2\s*passos/.test(f.txt) && /35 min/.test(f.txt) && /1º/.test(f.txt), 'números da Bia: ' + f.txt.slice(0, 200));
     // toca num passo: abre a mídia por cima; ao fechar, a ficha continua
-    await pg.click('#shc .wp:nth-of-type(2)'); await pg.waitForSelector('#lb:not([hidden]) .lbm img');
+    await pg.locator('#shc .wp').nth(1).click(); await pg.waitForSelector('#lb:not([hidden]) .lbm img');
     exige((await pg.textContent('#lb')).includes('No princípio era o Verbo'), 'o passo abriu sem o texto');
     exige(!(await pg.$('#lb [data-lbday]')), 'passo de outra pessoa oferece "registrar neste dia"');
     await pg.click('#lb [data-lbx]'); exige((await ficha()).aberto, 'fechar a mídia fechou a ficha');
@@ -461,8 +461,42 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pg.click('#shc #x'); await pg.click('main [data-mball]');
     await pg.click('main .card:has([data-mball]) .rk[data-who="' + C.id + '"]'); f = await ficha();
     exige(f.nome === 'Caio' && /Ainda não deu passos/.test(f.txt), 'participante sem passos: ' + f.txt.slice(0, 120));
+    await pg.click('#shc #x');
+    // a líder (Ana) vê 🗑️ e apaga o passo de João 2 da Bia; os Amém dele vão junto
+    const k2 = Object.values(S.DB.checkins).find(k => k.user_id === B.id && k.ref === '2'); S.DB.likes.push({ checkin_id: k2.id, user_id: C.id });
+    await pg.click('main .rk[data-who="' + B.id + '"]'); await pg.waitForSelector('#shc [data-delpost]');
+    exige((await pg.$$('#shc [data-delpost]')).length === 2, 'a líder não vê o 🗑️ em cada passo');
+    pg.once('dialog', d => { exige(/Bia Souza: João 2/.test(d.message()), 'aviso: ' + d.message()); d.accept() });
+    await pg.click('#shc [data-delpost="' + k2.id + '"]');
+    exige(await esperar(() => !S.DB.checkins[k2.id]), 'a líder não conseguiu apagar');
+    exige(!S.DB.likes.some(l => l.checkin_id === k2.id), 'o Amém do passo apagado ficou');
+    exige(await esperar(() => pg.evaluate(() => [...document.querySelectorAll('#shc .wp b')].map(b => b.textContent).join() === 'João 1')), 'a ficha não atualizou depois de apagar');
     await pg.context().close();
-    return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre a mídia por cima';
+    // participante comum: não vê o 🗑️ na ficha dos outros
+    const pc = await abrir(browser, base, S, C); await pc.click('nav [data-t="cfg"]');
+    await pc.waitForSelector('main .rk[data-who="' + B.id + '"]'); await pc.click('main .rk[data-who="' + B.id + '"]'); await pc.waitForSelector('#shc .wp');
+    const lixo = await pc.$$('#shc [data-delpost]'); await pc.context().close();
+    exige(lixo.length === 0, 'participante comum vê o 🗑️');
+    return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre a mídia por cima; a líder apaga (com Amém), os outros não veem o 🗑️';
+  });
+
+  await teste('Início: leitura de hoje em destaque (capítulos grandes, ✓ quando lidos, atrasados à parte)', async () => {
+    const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Tiago'); S.entrar(R, g);
+    const c = S.jornada(g, 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS', -2, 8); // hoje é o dia 3 de 11
+    R.md = { jornadas: [c.id] };
+    const pg = await abrir(browser, base, S, R);
+    const ver = () => pg.evaluate(() => { const h = document.querySelector('main .card.hoje'); return h ? { l: h.querySelector('.hj-l').textContent, t: h.querySelector('.tref').textContent,
+      ch: [...h.querySelectorAll('.hj-ch .chip')].map(b => b.textContent + (b.classList.contains('ok') ? '[ok]' : '')), txt: h.textContent, primeiro: document.querySelector('main .card') === h } : null });
+    let v = await ver();
+    exige(v && v.primeiro, 'o destaque não é o primeiro cartão do Início');
+    exige(/Leitura de hoje · dia 3 de 11/.test(v.l) && v.t === 'Tiago 5; 1 Pedro 1', 'leitura de hoje: ' + JSON.stringify(v).slice(0, 160));
+    exige(v.ch.join() === 'Tiago 5,1 Pedro 1', 'capítulos: ' + v.ch.join());
+    exige(/Atrasados: Tiago 1–4 \(4 capítulos\)/.test(v.txt) && !/Para ler/.test(v.txt), 'atrasados misturados com os de hoje: ' + v.txt.slice(0, 300));
+    S.publicacao(R, c, { book: 'Tiago', ref: '5', chapters: 1 }); await recarregar(pg); v = await ver();
+    exige(v.ch.join() === '✓ Tiago 5[ok],1 Pedro 1', 'depois de ler Tiago 5: ' + v.ch.join());
+    exige(/Continuar lendo 1 Pedro 1/.test(v.txt), 'o texto não passou para o capítulo que falta');
+    await pg.context().close();
+    return 'dia 3 de 11: Tiago 5; 1 Pedro 1 em destaque, atrasados à parte; ✓ no lido e o texto pula para o que falta';
   });
 
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {

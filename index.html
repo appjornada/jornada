@@ -58,6 +58,12 @@ main{padding:8px 16px}
 .mth .mx{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:14px;cursor:pointer;padding:0}
 .mth .mr{position:absolute;left:4px;right:4px;bottom:4px;border:0;border-radius:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:4px;cursor:pointer}
 .tref{font:700 21px Georgia,serif;margin:2px 0 8px}
+.card.hoje{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 14%,var(--card)),var(--card) 70%)}
+.hj-l{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ac)}
+.hoje .tref{font-size:28px;line-height:1.15;margin:6px 0 4px}
+.hj-ch{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.hj-ch .chip{margin:0;padding:10px 16px;font-size:17px;font-weight:700;background:var(--ac);color:var(--acx);border-color:var(--ac)}
+.hj-ch .chip.ok{background:transparent;color:var(--ok);border:2px solid var(--ok)}
 .vs{font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:1.6}
 .vs sup{color:var(--ac);font:700 11px system-ui,sans-serif;margin:0 3px 0 4px}
 .chip{display:inline-block;margin:8px 6px 0 0;padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:14px;cursor:pointer}
@@ -109,6 +115,8 @@ nav .fab span{width:66px;height:66px;border-radius:50%;background:var(--ac);colo
 .who-st{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 6px;text-align:center}
 .who-st div{background:var(--bd);border-radius:12px;padding:8px 2px}.who-st b{display:block;font-size:20px}
 .wp{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);width:100%;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.wpr{display:flex;align-items:center;border-bottom:1px solid var(--bd)}.wpr .wp{border-bottom:0}
+.wdel{flex:none;background:none;border:0;font-size:20px;padding:10px 4px 10px 10px;cursor:pointer}
 .wp .th{width:56px;height:56px;border-radius:10px;flex:none;object-fit:cover;background:var(--bd);display:grid;place-items:center;font-size:22px;overflow:hidden}
 .lb .top{display:flex;align-items:center;gap:10px;padding:4px 16px 10px;color:#fff}
 .lb .x{margin-left:auto;flex:none;background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer}
@@ -608,18 +616,22 @@ function today(){
   var c=S.ch,P=plan(c),i=diff(c.start,TODAY),tot=totalSteps(c),done=P?chDay(S.me,S.cur,TODAY)>=needOn(c,TODAY):days(S.me).indexOf(TODAY)>=0;
   if(steps(S.me)>=tot)return '<div class="card land"><div style="font-size:44px">🏞️</div><h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
   if(!P)return done?'':'<div class="card"><b>Passo de hoje</b><div class="sub">Registre o que você leu hoje para avançar na trilha.</div><button class="btn" id="add2">👣 Dar o passo de hoje</button></div>';
-  if(i<0){var R0=dayRead(c,0);return '<div class="card"><div class="sub">Primeiro passo · a caravana parte em '+fd(c.start)+'</div><div class="tref">'+refOf(R0)+'</div>'+biBtn(R0[0].b)+R0.map(chip).join('')+'</div>'}
+  if(i<0){var R0=dayRead(c,0);return '<div class="card hoje"><div class="hj-l">📖 Primeira leitura · a caravana parte em '+fd(c.start)+'</div><div class="tref">'+refOf(R0)+'</div><div class="hj-ch">'+R0.map(chip).join('')+'</div>'+biBtn(R0[0].b)+'</div>'}
   if(i>=P.n)return '';
   var R=dayRead(c,i),rd=readSet(S.me);
   if(!R.length){var nx=P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0];if(!nx)return '';R=[nx]}
-  return '<div class="card"><div class="sub">Passo de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div>'+biBtn(R[0].b)+'<div class="vs vx" data-live="vx'+R[0].b+':'+R[0].c+':'+BIB.ver+'" data-b="'+R[0].b+'" data-c="'+R[0].c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+R[0].b+':'+R[0].c+'">Continuar lendo '+BOOKS[R[0].b]+' '+R[0].c+' ›</button><div>'+(R.length>1?R.map(chip).join(''):'')+'</div>'+todayBtn(c)+'</div>'
+  // Leitura de hoje em destaque: capítulos grandes (✓ quando já lidos); o texto começa no primeiro que falta
+  var nx0=R.filter(function(x){return !rd[x.b+':'+x.c]})[0]||R[0];
+  var chs=R.map(function(x){var ok=rd[x.b+':'+x.c];return '<button class="chip'+(ok?' ok':'')+'" data-rd="'+x.b+':'+x.c+'">'+(ok?'✓ ':'')+BOOKS[x.b]+' '+x.c+'</button>'}).join('');
+  return '<div class="card hoje"><div class="hj-l">📖 Leitura de hoje · dia '+(i+1)+' de '+P.n+'</div><div class="tref">'+refOf(R)+'</div><div class="hj-ch">'+chs+'</div>'+biBtn(nx0.b)+'<div class="vs vx" data-live="vx'+nx0.b+':'+nx0.c+':'+BIB.ver+'" data-b="'+nx0.b+'" data-c="'+nx0.c+'">Carregando o texto…</div><button class="link" style="margin-top:6px" data-rd="'+nx0.b+':'+nx0.c+'">Continuar lendo '+BOOKS[nx0.b]+' '+nx0.c+' ›</button>'+todayBtn(c,R)+'</div>'
 }
 // Meta do dia (não obrigatória) e capítulos atrasados: cada capítulo registrado é 1 passo
-function todayBtn(c){
-  var got=chDay(S.me,S.cur,TODAY),need=needOn(c,TODAY),atr=behind(S.me,c,TODAY),h='';
+function todayBtn(c,R){
+  var got=chDay(S.me,S.cur,TODAY),need=needOn(c,TODAY),all=behind(S.me,c,TODAY),h='',hk={};(R||[]).forEach(function(x){hk[x.b+':'+x.c]=1});
+  var atr=all.filter(function(x){return !hk[x.b+':'+x.c]});
   if(got)h+='<div class="sub" style="color:var(--ok);margin-top:12px">✓ Hoje: '+got+(got>1?' capítulos registrados':' capítulo registrado')+(got>=need?' · meta do dia cumprida':' de '+need+' da meta')+'</div>';
-  if(atr.length)h+='<div class="sub" style="margin-top:8px">Para ler: <b>'+refOf(atr)+'</b> ('+atr.length+(atr.length>1?' capítulos':' capítulo')+')</div>';
-  return h+(atr.length?'<button class="btn" id="add2">👣 Registrar capítulos</button>':'<div class="sub" style="color:var(--ok);margin-top:12px">Tudo em dia. Siga firme!</div>');
+  if(atr.length)h+='<div class="sub" style="margin-top:8px">Atrasados: <b>'+refOf(atr)+'</b> ('+atr.length+(atr.length>1?' capítulos':' capítulo')+')</div>';
+  return h+(all.length?'<button class="btn" id="add2">👣 Registrar capítulos</button>':'<div class="sub" style="color:var(--ok);margin-top:12px">Tudo em dia. Siga firme!</div>');
 }
 function mediaHtml(p){
   var A=(p.imgs||[]).filter(function(m){return m.audio}),L=(p.imgs||[]).filter(function(m){return !m.audio});
@@ -715,11 +727,22 @@ function openWho(u){
   var row=function(p){var M=(p.imgs||[]).filter(function(m){return !m.audio})[0],A=(p.imgs||[]).some(function(m){return m.audio});
     var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
     var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
-    return '<button class="wp" data-post="'+p.id+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw">'+esc(p.note)+'</div>':'')+'</div></button>'};
+    var del=S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'';
+    return '<div class="wpr"><button class="wp" data-post="'+p.id+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
   showSheet('<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
     '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
     (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
     '<button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button>');
+}
+// A líder apaga o passo de alguém da caravana (supabase/9-lider-apaga-passo.sql); os Amém e comentários vão junto
+async function delPost(id){
+  var p=S.posts.filter(function(x){return x.id===id})[0];if(!p)return;
+  var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
+  if(!confirm('Apagar o passo de '+nm(p.uid)+': '+ref+' ('+fd(p.date)+')?\n\nOs Amém e comentários dele também somem. Não dá para desfazer.'))return;
+  var r=await sb.from('checkins').delete().eq('id',id).select('id');
+  if(r.error||!r.data||!r.data.length){alert('Não foi possível apagar. '+(r.error?why(r.error):'Só a líder da caravana pode apagar o passo de outra pessoa.'));return}
+  if(p.uid===S.me)dropUnused((p.imgs||[]).map(function(m){return m.path}));
+  toast('Passo apagado');await loadData();openWho(p.uid);
 }
 function openPosts(P,d,more){
   var M=[],A=[],notes=[],refs=[];
@@ -1778,6 +1801,7 @@ document.addEventListener('click',function(e){
   else if(d.day)openSheet({d:d.day});
   else if(d.dv)openDay(d.dv);
   else if(d.post)openPost(d.post);
+  else if(d.delpost)delPost(d.delpost);
   else if(d.lbx)closeLb();
   else if(d.lbday){var dl=d.lbday;closeLb();openSheet({d:dl})}
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}

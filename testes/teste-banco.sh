@@ -113,4 +113,17 @@ as ${U[2]} "delete from public.likes where checkin_id='$K'" >/dev/null; [ "$(V $
 if $P -At -c "set role anon; select public.feed_version(array['$C']::uuid[], array['$G']::uuid[])" >/dev/null 2>&1; then echo "  ✘ anônimo usou a função"; exit 1; else ok "quem não entrou no app não consegue usar"; fi
 $P -f supabase/8b-desfazer-atualizacao-leve.sql >/dev/null && fails ${U[0]} "select public.feed_version(array['$C']::uuid[], array['$G']::uuid[])" "desfazer tira a função"
 $P -f supabase/8-atualizacao-leve.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+echo "10) A líder apaga passo de qualquer pessoa da caravana (9-lider-apaga-passo.sql)"
+$P -f supabase/9-lider-apaga-passo.sql >/dev/null && $P -f supabase/9-lider-apaga-passo.sql >/dev/null && ok "script roda (2x)"
+K1=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5) returning id")
+as ${U[2]} "insert into public.likes(checkin_id) values('$K1')" >/dev/null; as ${U[3]} "insert into public.comments(checkin_id,body) values('$K1','Amém!')" >/dev/null
+[ -z "$(as ${U[2]} "delete from public.checkins where id='$K1' returning 1")" ] && ok "participante não apaga o passo de outra pessoa"
+[ -z "$(as $FORA "delete from public.checkins where id='$K1' returning 1")" ] && ok "líder de outra caravana não apaga"
+[ "$(as $L "delete from public.checkins where id='$K1' returning 1")" = 1 ] && ok "a líder apaga o passo de alguém da caravana dela"
+[ "$($P -At -c "select (select count(*) from public.likes where checkin_id='$K1')+(select count(*) from public.comments where checkin_id='$K1')")" = 0 ] && ok "os Amém e comentários do passo vão junto"
+K2=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5) returning id")
+[ "$(as ${U[1]} "delete from public.checkins where id='$K2' returning 1")" = 1 ] && ok "cada pessoa continua apagando o próprio passo"
+K3=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5) returning id")
+$P -f supabase/9b-desfazer-lider-apaga-passo.sql >/dev/null && [ -z "$(as $L "delete from public.checkins where id='$K3' returning 1")" ] && ok "desfazer: a líder volta a não apagar"
+$P -f supabase/9-lider-apaga-passo.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

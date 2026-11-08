@@ -103,6 +103,12 @@ function novoServidor(opts = {}) {
     if (q.op === 'delete') {
       if (t === 'group_members') { const gid = (q.filters.find(f => f[1] === 'group_id') || [])[2], uid = (q.filters.find(f => f[1] === 'user_id') || [])[2]; const m = DB.gm.find(x => x.group_id === gid && x.user_id === uid && (uid === me || DB.gm.some(l => l.group_id === gid && l.user_id === me && l.role === 'leader'))); if (m) DB.gm = DB.gm.filter(x => x !== m); return { data: m ? [{ user_id: m.user_id }] : [], error: null } } // gm_delete
       if (t === 'likes') { DB.likes = DB.likes.filter(l => !(l.user_id === me && q.filters.some(f => f[1] === 'checkin_id' && f[2] === l.checkin_id))); return { data: null, error: null } }
+      if (t === 'checkins') { // ck_delete (a própria) + ck_delete_leader (a líder da caravana; supabase/9-lider-apaga-passo.sql)
+        const lider = k => { const c = DB.challenges[k.challenge_id]; return !O.semLiderApaga && c && DB.gm.some(m => m.group_id === c.group_id && m.user_id === me && m.role === 'leader') };
+        const rows = applyFilters(Object.values(DB.checkins), q.filters).filter(k => k.user_id === me || lider(k));
+        rows.forEach(k => { delete DB.checkins[k.id]; DB.likes = DB.likes.filter(l => l.checkin_id !== k.id); Object.values(DB.comments).forEach(c => { if (c.checkin_id === k.id) delete DB.comments[c.id] }) });
+        return { data: q.returning ? rows.map(k => ({ id: k.id })) : null, error: null };
+      }
       return { data: null, error: null };
     }
     return err('operação desconhecida');

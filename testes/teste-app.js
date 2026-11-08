@@ -129,6 +129,43 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(vl.edita && vl.papel === 'leader', 'líder com papel ' + vl.papel);
   });
 
+  await teste('Só quem está na lista cria caravana ou jornada; os outros entram só com o código', async () => {
+    const S = novoServidor();
+    const M = S.usuario('Mayara'), V = S.usuario('Vó Andrea'), Gi = S.usuario('Gizela');
+    S.criador(M);
+    const g = S.caravana(M, 'Tiago'); S.jornada(g, 'Tiago em 5 dias');
+    const g2 = S.caravana(Gi, 'Bíblia'); S.jornada(g2, 'Romanos em 16 dias'); // líder que criou antes da regra
+    // pessoa sem caravana: boas-vindas só com o código
+    const pv = await abrir(browser, base, S, V);
+    await pv.waitForSelector('#shc [data-o="code"]');
+    exige(!(await pv.$('#shc [data-o="new"]')), 'boas-vindas ainda oferece começar a própria jornada');
+    exige(/código de convite/.test(await pv.textContent('#shc')), 'boas-vindas não fala do código');
+    await pv.evaluate(() => onb('new')); exige(await pv.$('#ocode'), 'tela de roteiros abriu mesmo sem permissão');
+    await pv.evaluate(() => { closeSheet(); tab = 'cfg'; render() });
+    exige(!(await pv.$('main [data-o="new"]')), 'Mapa ainda oferece começar jornada');
+    exige((await S.handle(V.id, { rpc: 'create_group', args: { p_name: 'Sem querer' } })).error, 'servidor deixou criar caravana');
+    await pv.evaluate(() => onb('code')); await pv.fill('#ocode', g.invite_code); await pv.click('#oj');
+    exige(await esperar(() => S.member(V.id, g.id)), 'não entrou com o código');
+    await esperar(() => pv.evaluate(() => S.chs.length === 1));
+    // líder fora da lista: edita a jornada que já tem, mas não cria outra
+    const pg = await abrir(browser, base, S, Gi);
+    await pg.click('nav [data-t="cfg"]');
+    exige(!(await pg.$('#fc')) && !(await pg.$('main [data-o="new"]')), 'líder fora da lista vê como criar');
+    exige(await pg.$('[data-ed]'), 'líder perdeu o Editar da jornada');
+    // Mayara: vê tudo para criar
+    const pm = await abrir(browser, base, S, M);
+    await pm.click('nav [data-t="cfg"]');
+    exige(await pm.$('#fc') && await pm.$('main [data-o="new"]'), 'Mayara não vê como criar');
+    await Promise.all([pv, pg, pm].map(p => p.context().close()));
+    // banco sem a regra (desfeita): volta como antes, todos podem começar
+    const S2 = novoServidor({ semListaCriadores: true }), A = S2.usuario('Ana');
+    const pa = await abrir(browser, base, S2, A);
+    await pa.waitForSelector('#shc [data-o="new"]', { timeout: 4000 }).catch(() => {});
+    const livre = !!(await pa.$('#shc [data-o="new"]')); await pa.context().close();
+    exige(livre, 'sem a regra no banco, ninguém consegue começar');
+    return 'sem caravana: só código (e entrou); líder antiga: só edita; Mayara: cria';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

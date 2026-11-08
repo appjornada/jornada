@@ -9,7 +9,8 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function novoServidor(opts = {}) {
   const O = Object.assign({ rosterRpc: true, maxRows: 1000, falhas: {}, atrasos: {} }, opts);
-  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, objects: {} };
+  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
+  const SO_LIDER = o => err('Por enquanto, só a líder pode criar ' + o + '. Peça o código de convite a ela.', '42501');
   const log = [];
   const member = (u, g) => DB.gm.some(m => m.user_id === u && m.group_id === g);
   const chGroup = c => (DB.challenges[c] || {}).group_id;
@@ -79,7 +80,7 @@ function novoServidor(opts = {}) {
         if (O.falhas['checkins:insert:depois'] > 0) { O.falhas['checkins:insert:depois']--; return new Promise(() => {}) } // gravou, mas a resposta se perdeu
         return { data: q.returning ? (q.single ? b : [b]) : null, error: null };
       }
-      if (t === 'challenges') { if (!DB.gm.some(m => m.user_id === me && m.group_id === b.group_id && m.role === 'leader')) return err('rls', '42501'); b.id = id(); DB.challenges[b.id] = b; return { data: q.single ? b : [b], error: null } }
+      if (t === 'challenges') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('jornadas'); if (!DB.gm.some(m => m.user_id === me && m.group_id === b.group_id && m.role === 'leader')) return err('rls', '42501'); b.id = id(); DB.challenges[b.id] = b; return { data: q.single ? b : [b], error: null } }
       if (t === 'messages') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.messages[b.id] = b; return { data: null, error: null } }
       if (t === 'comments') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.comments[b.id] = b; return { data: null, error: null } }
       if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); return { data: null, error: null } }
@@ -99,7 +100,8 @@ function novoServidor(opts = {}) {
     return err('operação desconhecida');
   }
   function rpc(me, name, a) {
-    if (name === 'create_group') { const g = { id: id(), name: a.p_name, invite_code: crypto.randomBytes(3).toString('hex').toUpperCase() }; DB.groups[g.id] = g; DB.gm.push({ group_id: g.id, user_id: me, role: 'leader' }); return { data: g.id, error: null } }
+    if (name === 'can_create') return O.semListaCriadores ? err('Could not find the function public.can_create without parameters in the schema cache', 'PGRST202') : { data: DB.criadores.has(me), error: null };
+    if (name === 'create_group') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('caravanas'); const g = { id: id(), name: a.p_name, invite_code: crypto.randomBytes(3).toString('hex').toUpperCase() }; DB.groups[g.id] = g; DB.gm.push({ group_id: g.id, user_id: me, role: 'leader' }); return { data: g.id, error: null } }
     if (name === 'join_group') { const g = Object.values(DB.groups).find(x => x.invite_code === String(a.p_code).trim().toUpperCase()); if (!g) return err('Código inválido'); if (!member(me, g.id)) DB.gm.push({ group_id: g.id, user_id: me, role: 'member' }); return { data: g.id, error: null } }
     if (name === 'group_roster') {
       if (!O.rosterRpc) return err('Could not find the function public.group_roster(p_group) in the schema cache', 'PGRST202');
@@ -121,11 +123,12 @@ function novoServidor(opts = {}) {
   }
   // dados prontos
   function usuario(nome, semPerfil) { const u = { id: id(), name: nome, email: nome.toLowerCase().replace(/\W/g, '') + '@t' }; DB.users[u.id] = u; if (!semPerfil) DB.profiles[u.id] = { id: u.id, name: nome }; return u }
-  function caravana(lider, nome) { const r = rpc(lider.id, 'create_group', { p_name: nome }); return DB.groups[r.data] }
+  function caravana(lider, nome) { const g = { id: id(), name: nome, invite_code: crypto.randomBytes(3).toString('hex').toUpperCase() }; DB.groups[g.id] = g; DB.gm.push({ group_id: g.id, user_id: lider.id, role: 'leader' }); return g } // criada pelo SQL Editor
+  function criador(u) { DB.criadores.add(u.id) }
   function entrar(u, g) { return rpc(u.id, 'join_group', { p_code: g.invite_code }) }
   function jornada(g, nome, ini = -3, fim = 12) { const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) }; const c = { id: id(), group_id: g.id, name: nome, description: '', start_date: d(ini), end_date: d(fim), goal_per_week: 7 }; DB.challenges[c.id] = c; return c }
   function publicacao(u, c, extra = {}) { const k = Object.assign({ id: id(), user_id: u.id, challenge_id: c.id, read_date: today(), book: 'Romanos', ref: '1', chapters: 1, study_minutes: 10, photo_path: 'antigo/' + id() + '.jpg', media_type: 'image', created_at: new Date().toISOString() }, extra); DB.checkins[k.id] = k; return k }
-  return { O, DB, log, handle, usuario, caravana, entrar, jornada, publicacao, member };
+  return { O, DB, log, handle, usuario, caravana, criador, entrar, jornada, publicacao, member };
 }
 
 // Código que roda DENTRO do navegador: imita a biblioteca supabase-js e manda tudo para o servidor falso.

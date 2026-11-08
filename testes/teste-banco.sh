@@ -60,4 +60,22 @@ $P -f supabase/5-onde-estao-as-publicacoes.sql >/dev/null; ok "consulta de inves
 N=$($P -At -c "select count(*) from public.checkins")
 $P -f supabase/4-desfazer.sql >/dev/null && [ "$($P -At -c "select count(*) from public.checkins")" = "$N" ] && ok "desfazer não apaga publicações ($N)"
 $P -f supabase/3-correcoes.sql >/dev/null && ok "correções aplicadas de novo"
+
+echo "7) Só a líder cria caravanas e jornadas (6-so-a-lider-cria.sql)"
+$P -f supabase/6-so-a-lider-cria.sql >/dev/null && $P -f supabase/6-so-a-lider-cria.sql >/dev/null && ok "script roda (2x)"
+fails ${U[0]} "select public.create_group('Sem querer')" "participante não cria caravana"
+fails $L "select public.create_group('Outra do líder')" "líder fora da lista também não cria caravana"
+fails $L "insert into public.challenges(group_id,name,start_date,end_date) values('$G','Nova',current_date,current_date+5)" "líder fora da lista não cria jornada"
+[ "$($P -At -c "select count(*) from public.groups where name in ('Sem querer','Outra do líder')")" = 0 ] && ok "nada ficou pela metade"
+[ "$(as ${U[0]} "select public.can_create()")" = f ] && ok "app fica sabendo que a pessoa não pode criar"
+$P -c "insert into private.criadores(user_id,nome) values('$L','Líder')" >/dev/null
+[ "$(as $L "select public.can_create()")" = t ] && ok "pessoa da lista: app mostra os botões"
+G3=$(as $L "select public.create_group('Caravana da líder')") && [ -n "$G3" ] && ok "pessoa da lista cria caravana"
+as $L "insert into public.challenges(group_id,name,start_date,end_date) values('$G','Nova',current_date,current_date+5)" >/dev/null && ok "pessoa da lista cria jornada"
+as ${U[4]} "select public.join_group('$COD')" >/dev/null && ok "entrar com código continua funcionando"
+as ${U[0]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5)" >/dev/null && ok "publicar continua funcionando"
+as $L "update public.challenges set name='Romanos!' where id='$C' returning 1" | grep -q 1 && ok "líder continua editando a jornada"
+$P -c "insert into public.groups(name) values('Pelo SQL Editor')" >/dev/null && ok "pelo SQL Editor (sem login) continua criando"
+fails ${U[0]} "select * from private.criadores" "ninguém lê a lista pelo app"
+$P -f supabase/6b-desfazer-so-a-lider-cria.sql >/dev/null && as ${U[0]} "select public.create_group('Liberado')" >/dev/null && ok "desfazer libera de novo para todos"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

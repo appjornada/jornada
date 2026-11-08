@@ -216,7 +216,7 @@ function val(id){var e=document.getElementById(id);return e?e.value:''}
 function nm(u){return S.names[u]||'Peregrino'}
 // ---- Foto de perfil (supabase/7-foto-de-perfil.sql) ----
 // Círculo com a foto da pessoa; sem foto (ou se ela não carregar) fica a letra do nome, como antes
-function av(u,n,c){var url=S.avu[u];return '<div class="av'+(c?' '+c:'')+'">'+esc(((n||nm(u))||'?')[0])+(url?'<img src="'+esc(url)+'" alt="">':'')+'</div>'}
+function av(u,n,c){var url=S.avu[u];return '<div class="av'+(c?' '+c:'')+'">'+esc(((n||nm(u))||'?')[0])+(url?'<img src="'+esc(url)+'" alt="" loading="lazy" decoding="async">':'')+'</div>'}
 // Nomes e fotos dos perfis. Se o banco ainda não tiver o campo da foto, busca só os nomes (como antes)
 var NOAV=false;
 async function profs(ids){
@@ -253,7 +253,7 @@ async function setAvatar(file){
   var hx=Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(8)),function(x){return ('0'+x.toString(16)).slice(-2)}).join('');
   var path=S.me+'/avatar-'+hx+'.jpg',old=S.avp[S.me];
   try{
-    var up=await withTimeout(sb.storage.from('photos').upload(path,bl,{contentType:'image/jpeg',upsert:false}),120000);
+    var up=await withTimeout(sb.storage.from('photos').upload(path,bl,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),120000);
     if(up.error)throw up.error;
     var r=await sb.from('profiles').update({avatar_path:path}).eq('id',S.me).select('id');
     if(r.error||!r.data||!r.data.length){try{await sb.storage.from('photos').remove([path])}catch(x){}throw r.error||new Error('Tente de novo.')}
@@ -602,7 +602,7 @@ function mediaHtml(p){
   return mediaVis(p,L)+au;
 }
 function mediaVis(p,L){
-  function one(m,i){return m.video?'<video class="media" src="'+esc(m.img)+'" controls playsinline preload="metadata"></video>':'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
+  function one(m,i){return m.video?'<video class="media" src="'+esc(m.img)+'" controls playsinline '+(m.poster?'preload="none" poster="'+esc(m.poster)+'"':'preload="metadata"')+'></video>':'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
   if(!L.length)return '';if(L.length===1)return one(L[0],0);
   return '<div class="car"><div class="cart" data-car>'+L.map(function(m,i){return '<div class="cars">'+one(m,i)+'</div>'}).join('')+'</div><span class="carc">1/'+L.length+'</span>'+
     '<div class="dots">'+L.map(function(m,i){return '<button'+(i?'':' class="on"')+' data-cdot="'+i+'" aria-label="Foto '+(i+1)+'"></button>'}).join('')+'</div></div>'
@@ -798,13 +798,19 @@ function chat(){
   if(!S.chs.length)return noCh();
   return prayCard()+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs" data-live="msgs'+S.cur+'"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
 }
+// Chat: a cada 5 s busca só as mensagens novas (antes eram as últimas 200 toda vez); a cada 2 min, a lista toda
+var CHT={cid:null,list:[],at:0};
 async function loadChat(force){
   var e=document.getElementById('msgs');if(tab!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
   try{
-    var r=await sb.from('messages').select('id,user_id,body,created_at').eq('challenge_id',S.cur).order('created_at',{ascending:false}).limit(200);
+    var cid=S.cur,inc=CHT.cid===cid&&CHT.list.length&&Date.now()-CHT.at<120000,q=sb.from('messages').select('id,user_id,body,created_at').eq('challenge_id',cid);
+    var r=inc?await q.gte('created_at',CHT.list[CHT.list.length-1].created_at).order('created_at',{ascending:true}).limit(200):await q.order('created_at',{ascending:false}).limit(200);
     e=document.getElementById('msgs');if(!e)return;
     if(r.error){e.innerHTML='<div class="err">Não foi possível abrir a conversa. '+esc(why(r.error))+'</div>';return}
-    var A=(r.data||[]).slice().reverse(),key=A.length+':'+(A.length?A[A.length-1].id:'');
+    if(S.cur!==cid)return;
+    if(inc){var ids={};CHT.list.forEach(function(m){ids[m.id]=1});(r.data||[]).forEach(function(m){if(!ids[m.id])CHT.list.push(m)});CHT.list=CHT.list.slice(-200)}
+    else CHT={cid:cid,list:(r.data||[]).slice().reverse(),at:Date.now()};
+    var A=CHT.list.slice(),key=A.length+':'+(A.length?A[A.length-1].id:'');
     var miss=A.map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
     if(miss.length){await profs(miss);e=document.getElementById('msgs');if(!e)return}
     if(!force&&e.dataset.k===key)return;e.dataset.k=key;
@@ -1050,7 +1056,19 @@ async function shrinkP(file){
 }
 // Miniatura (até 720 px, ~60 KB) para o mural; a foto inteira só abre ao tocar
 function hasThumb(x){return /\/[0-9a-f]{40}\.jpg$/.test(x)}
-function thumbOf(x){return x.replace(/\.jpg$/,'.t.jpg')}
+// Miniatura de foto ou capa de vídeo: abc.jpg / abc.mp4 → abc.t.jpg (fotos antigas também podem ter)
+function thumbOf(x){return x.replace(/\.[^.\/]+$/,'.t.jpg')}
+function canThumb(x){return !!x&&!isAudPath(x)&&!/\.t\.jpg$/.test(x)}
+// Capa do vídeo: um quadro do começo, até 720 px
+function vidPoster(file){return new Promise(function(res){
+  var u=URL.createObjectURL(file),v=document.createElement('video'),fim=false;
+  var done=function(b){if(fim)return;fim=true;try{v.pause();v.removeAttribute('src');v.load()}catch(e){}URL.revokeObjectURL(u);res(b||null)};
+  var grab=function(){if(fim||!v.videoWidth)return;try{v.pause();var W=v.videoWidth,H=v.videoHeight,k=Math.min(1,720/Math.max(W,H)),cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);
+    cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);toJpg(cv,.72).then(done,function(){done()})}catch(e){done()}};
+  v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';
+  v.onloadeddata=function(){var q=v.play();if(q&&q.catch)q.catch(function(){try{v.currentTime=Math.min(.3,(v.duration||1)/2)}catch(e){}})};
+  v.ontimeupdate=function(){if(v.currentTime>.25)grab()};v.onseeked=grab;v.onended=grab;v.onerror=function(){done()};
+  setTimeout(function(){done()},10000);v.src=u})}
 async function makeThumb(blob){
   try{var im=await loadImg(blob),big=Math.max(im.naturalWidth,im.naturalHeight),k=Math.min(1,720/big),cv=document.createElement('canvas');
     cv.width=Math.round(im.naturalWidth*k);cv.height=Math.round(im.naturalHeight*k);var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,cv.width,cv.height);
@@ -1072,7 +1090,7 @@ async function dropUnused(paths){
       gone.push(p);
     }catch(e){}
   }
-  gone=gone.concat(gone.filter(hasThumb).map(thumbOf));
+  gone=gone.concat(gone.filter(canThumb).map(thumbOf));
   if(gone.length)try{await sb.storage.from('photos').remove(gone)}catch(e){}
 }
 // ---- Publicar: só conta como feito quando o servidor confirma ----
@@ -1209,17 +1227,19 @@ async function upMedia(){
     else{var sb2=await shrinkP(m.file);if(sb2){blob=sb2;ct='image/jpeg';ext='jpg'}else ext=((m.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg'}
     var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
     if(paths.indexOf(path)<0){
-      var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false}),m.video||m.audio?300000:120000);
+      var up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:ct,upsert:false,cacheControl:KEEP}),m.video||m.audio?300000:120000);
       // armazenamento que só aceita fotos e vídeos: o áudio vai marcado como vídeo do mesmo formato
       // (m4a = mp4, weba = webm); o arquivo continua tocando como áudio na publicação
       if(m.audio&&up.error&&/mime|not supported|invalid_mime|415/i.test((up.error.message||'')+(up.error.statusCode||'')+(up.error.error||''))){
         var alts=audioAsVideo(ct);
         for(var ai=0;ai<alts.length&&up.error&&/mime|not supported|invalid_mime|415/i.test((up.error.message||'')+(up.error.statusCode||'')+(up.error.error||''));ai++)
-          up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:alts[ai],upsert:false}),300000);
+          up=await withTimeout(sb.storage.from('photos').upload(path,blob,{contentType:alts[ai],upsert:false,cacheControl:KEEP}),300000);
       }
       if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))throw up.error;
       if(!up.error)S.fresh.push(path);
-      if(ext==='jpg'&&hasThumb(path)){var th=await makeThumb(blob);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),th,{contentType:'image/jpeg',upsert:false}),60000)}catch(x){}}
+      if(ext==='jpg'&&hasThumb(path)){var th=await makeThumb(blob);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),th,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),60000)}catch(x){}}
+      // capa do vídeo: com ela, o vídeo só é baixado quando alguém toca para assistir
+      if(m.video){if(m.cover===undefined)m.cover=await vidPoster(m.file)||false;if(m.cover)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(path),m.cover,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),60000)}catch(x){}}
     }
     m.path=path;if(paths.indexOf(path)<0)paths.push(path);
   }
@@ -1526,16 +1546,21 @@ async function boot(){
 //   antes, acima disso as mais antigas sumiam e a contagem de passos ficava errada).
 // • Links das fotos são reaproveitados até perto de vencer (antes eram trocados a cada 30 s e
 //   o celular baixava todas as fotos de novo).
-var LD=0,SU={},FIRST=true;
+var LD=0,SU={},FIRST=true,KEEP='31536000',SUDAY=864e5;
+// Links das fotos: valem 7 dias e ficam guardados no aparelho. Assim, ao abrir o app de novo, o link é o
+// mesmo e o celular usa a foto que já tem, em vez de baixar outra vez
+(function(){try{var o=JSON.parse(localStorage.getItem('pd_su')||'{}'),n=Date.now();for(var k in o)if(o[k]&&o[k].url&&o[k].exp-n>SUDAY)SU[k]=o[k]}catch(e){}})();
+var SUT=null;function suSave(){clearTimeout(SUT);SUT=setTimeout(function(){try{var o={},n=Date.now();for(var k in SU)if(SU[k].url&&SU[k].exp-n>SUDAY)o[k]=SU[k];localStorage.setItem('pd_su',JSON.stringify(o))}catch(e){}},500)}
 async function signed(paths){
-  var now=Date.now(),need=paths.filter(function(x){var c=SU[x];return !c||c.exp-now<15*6e4});
+  var now=Date.now(),need=paths.filter(function(x){var c=SU[x];return !c||c.exp-now<(c.url?SUDAY:0)});
   for(var i=0;i<need.length;i+=200){
     var part=need.slice(i,i+200);
     try{
-      var su=await sb.storage.from('photos').createSignedUrls(part,21600);
-      (su.data||[]).forEach(function(u){if(u.path)SU[u.path]={url:u.signedUrl||'',exp:now+(u.signedUrl?21000e3:30*6e4)}});
+      var su=await sb.storage.from('photos').createSignedUrls(part,604800);
+      (su.data||[]).forEach(function(u){if(u.path)SU[u.path]={url:u.signedUrl||'',exp:now+(u.signedUrl?604000e3:30*6e4)}});
     }catch(e){}
   }
+  if(need.length)suSave();
   var o={};paths.forEach(function(x){o[x]=SU[x]&&SU[x].url||''});return o
 }
 // Integrantes: as regras do banco já deixam cada integrante ler os vínculos e os nomes da própria caravana
@@ -1551,9 +1576,36 @@ async function loadRosters(){
     gids.forEach(function(g){S.roster[g]=by[g].map(function(m){return{id:m.id,role:m.role,name:nm(m.id)}}).sort(function(a,b){return (b.role==='leader')-(a.role==='leader')||a.name.localeCompare(b.name,'pt')})});
   }catch(e){}
 }
+// Fotos antigas sem miniatura eram baixadas inteiras (3–4 MB) por todo mundo. O app da dona cria a miniatura
+// uma vez, em segundo plano (até 20 por vez); os outros passam a ver a miniatura quando abrirem o app
+var TBF=false;
+async function thumbFill(){
+  if(TBF||!S.me)return;TBF=true;var n=0;
+  var L=[];S.posts.forEach(function(p){if(p.uid===S.me&&!p.local)(p.imgs||[]).forEach(function(m){var t=thumbOf(m.path);if(!m.video&&!m.audio&&canThumb(m.path)&&m.path.indexOf(S.me+'/')===0&&SU[t]&&!SU[t].url&&SU[m.path]&&SU[m.path].url&&L.indexOf(m.path)<0)L.push(m.path)})});
+  for(var i=0;i<L.length&&n<20;i++){
+    try{var r=await fetch(SU[L[i]].url);if(!r.ok)continue;var th=await makeThumb(await r.blob());if(!th)continue;
+      var up=await withTimeout(sb.storage.from('photos').upload(thumbOf(L[i]),th,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),60000);
+      if(!up.error||/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||'')){delete SU[thumbOf(L[i])];n++}
+    }catch(e){}
+  }
+}
+// ---- Atualização leve (supabase/8-atualizacao-leve.sql) ----
+// A cada 30 s o app só pergunta ao banco se algo mudou (32 letras); baixa tudo só quando mudou.
+// Sem a função no banco, baixa tudo a cada 30 s, como antes
+var FV=null,NOFV=false;
+function feedVer(){
+  if(NOFV||!S.groups.length)return Promise.resolve(null);
+  return withTimeout(sb.rpc('feed_version',{p_challenges:S.all.map(function(x){return x.id}),p_groups:S.groups.map(function(g){return g.id})}),15000)
+    .then(function(r){if(r.error){if(r.error.code==='PGRST202'||/feed_version/.test(r.error.message||''))NOFV=true;return null}return r.data||null},function(){return null});
+}
+async function poll(){
+  if(!S.grp)return;
+  if(FV&&!NOFV){var v=await feedVer();if(v&&v===FV)return}
+  return loadData();
+}
 async function loadData(){
   if(!S.grp)return;
-  var my=++LD,stale=function(){return my!==LD};
+  var my=++LD,stale=function(){return my!==LD},fv=null;
   try{
     var gids=S.groups.map(function(g){return g.id});
     var c=await withTimeout(sb.from('challenges').select('*').in('group_id',gids).order('start_date',{ascending:false}),30000);
@@ -1568,7 +1620,7 @@ async function loadData(){
       var ch=S.all.filter(function(x){return x.id===sv})[0]||myL.filter(act)[0]||myL[0]||inG.filter(act)[0]||inG[0];
       S.cur=ch?ch.id:null;
     }
-    useCur();
+    useCur();fv=feedVer(); // depois de saber as jornadas e antes de baixar as publicações
     var ids=S.all.map(function(x){return x.id}),rows=[];
     if(ids.length){
       for(var from=0;from<20000;from+=1000){
@@ -1585,14 +1637,14 @@ async function loadData(){
     var miss=Object.keys(want).filter(function(u){return !S.names[u]});
     if(miss.length)await profs(miss);
     var paths=[].concat.apply([],rows.filter(function(p){return p.photo_path}).map(function(p){return p.photo_path.split(PSEP)}));
-    var urls=await signed(paths.concat(paths.filter(hasThumb).map(thumbOf)));if(stale())return;
+    var urls=await signed(paths.concat(paths.filter(canThumb).map(thumbOf)));if(stale())return;
     var pend=S.posts.filter(function(p){return p.local&&!rows.some(function(r){return r.id===p.id})});
     S.posts=pend.concat(rows.map(function(p){return toPost(p,urls)}));
     // escolhe automaticamente uma jornada sua só ao abrir o app (antes isso acontecia a cada 30 s
     // e tirava a pessoa da jornada que ela estava olhando)
     if(FIRST){FIRST=false;var mineL=S.all.filter(function(x){return isMine(x.id)});
       if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}}
-    loaded=true;S.err='';
+    loaded=true;S.err='';setTimeout(thumbFill,3000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
   }catch(e){
     if(stale())return;
     S.err='Não foi possível atualizar agora. '+why(e)+' Tentaremos de novo em instantes.';
@@ -1601,7 +1653,7 @@ async function loadData(){
 }
 function toPost(p,urls){
   var pl=p.photo_path?p.photo_path.split(PSEP):[];
-  return{imgs:pl.map(function(x){var aud=isAudPath(x),vid=!aud&&(pl.length===1?p.media_type==='video':isVidPath(x)),t=!vid&&hasThumb(x)&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:t||urls[x]||'',video:vid,audio:aud}}).filter(function(m){return m.img}),
+  return{imgs:pl.map(function(x){var aud=isAudPath(x),vid=!aud&&(pl.length===1?p.media_type==='video':isVidPath(x)),t=!aud&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:(!vid&&t)||urls[x]||'',poster:vid&&t||'',video:vid,audio:aud}}).filter(function(m){return m.img}),
     id:p.id,uid:p.user_id,cid:p.challenge_id,date:p.read_date,book:p.book,ref:p.ref||'—',ch:p.chapters,note:p.note||'',mt:p.media_type||'image',ms:p.media_source||'',min:p.study_minutes||0,
     likes:(p.likes||[]).map(function(l){return l.user_id}),cm:(p.comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1}),ts:Date.parse(p.created_at)}
 }
@@ -1694,7 +1746,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='ts')telSend();
   else if(t.id==='tv')telVerify();
   else if(t.id==='tch'){TEL.sent=false;telGate()}
-  else if(d.out){sb.auth.signOut().then(function(){S.me=null;S.grp=null;S.groups=[];S.chs=[];S.all=[];S.myJ=[];S.posts=[];S.cur=null;S.asked=false;TEL={n:'',sent:false};loaded=false;closeSheet();gate('in')})}
+  else if(d.out){try{localStorage.removeItem('pd_su')}catch(e){}SU={};sb.auth.signOut().then(function(){S.me=null;S.grp=null;S.groups=[];S.chs=[];S.all=[];S.myJ=[];S.posts=[];S.cur=null;S.asked=false;TEL={n:'',sent:false};loaded=false;closeSheet();gate('in')})}
   else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
 });
 document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});
@@ -1733,7 +1785,7 @@ function init(){
   sb.auth.onAuthStateChange(function(ev){if(ev==='PASSWORD_RECOVERY'){S.recovery=true;gate('newpw')}});
   readInv();
   boot().then(function(){if(INV&&!S.me&&!S.linkErr&&gm==='in'){REG.step=1;gate('up')}});
-  setInterval(function(){TODAY=iso(new Date());if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show'))loadData()},30000);
+  setInterval(function(){var t=iso(new Date()),nd=t!==TODAY;TODAY=t;if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show')){if(nd)loadData();else poll()}},30000);
   setInterval(function(){if(!document.hidden)loadChat()},5000);
 }
 init();

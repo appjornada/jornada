@@ -95,4 +95,22 @@ fails ${U[0]} "update public.profiles set avatar_path='${U[0]}/../x.jpg' where i
 [ "$(as ${U[0]} "update public.profiles set avatar_path=null where id=auth.uid() returning 1")" = 1 ] && ok "remove a foto"
 $P -f supabase/7b-desfazer-foto-de-perfil.sql >/dev/null && [ "$(as ${U[0]} "select name from public.profiles where id=auth.uid()")" = "Pessoa 1" ] && ok "desfazer tira o campo e o resto continua"
 $P -f supabase/7-foto-de-perfil.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+
+echo "9) Atualização leve: impressão digital dos dados (8-atualizacao-leve.sql)"
+$P -f supabase/8-atualizacao-leve.sql >/dev/null && $P -f supabase/8-atualizacao-leve.sql >/dev/null && ok "script roda (2x)"
+V(){ as "$1" "select public.feed_version(array['$C']::uuid[], array['$G']::uuid[])"; }
+V1=$(V ${U[0]}); [ ${#V1} = 32 ] && ok "devolve só 32 letras"
+[ "$(V ${U[0]})" = "$V1" ] && ok "sem mudança, a mesma impressão"
+[ "$(V ${U[1]})" = "$V1" ] && ok "todos da caravana veem a mesma"
+[ "$(V $FORA)" != "$V1" ] && ok "quem é de fora não enxerga os dados (impressão diferente)"
+K=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5) returning id")
+V2=$(V ${U[0]}); [ "$V2" != "$V1" ] && ok "muda com publicação nova"
+as ${U[2]} "insert into public.likes(checkin_id) values('$K')" >/dev/null; V3=$(V ${U[0]}); [ "$V3" != "$V2" ] && ok "muda com Amém"
+as ${U[3]} "insert into public.comments(checkin_id,body) values('$K','Glória!')" >/dev/null; V4=$(V ${U[0]}); [ "$V4" != "$V3" ] && ok "muda com comentário"
+as ${U[1]} "update public.checkins set note='editei' where id='$K'" >/dev/null; V5=$(V ${U[0]}); [ "$V5" != "$V4" ] && ok "muda com publicação editada"
+as ${U[4]} "update public.profiles set name='Pessoa Cinco' where id=auth.uid()" >/dev/null; V6=$(V ${U[0]}); [ "$V6" != "$V5" ] && ok "muda com nome ou foto de perfil"
+as ${U[2]} "delete from public.likes where checkin_id='$K'" >/dev/null; [ "$(V ${U[0]})" != "$V6" ] && ok "muda quando tira o Amém"
+if $P -At -c "set role anon; select public.feed_version(array['$C']::uuid[], array['$G']::uuid[])" >/dev/null 2>&1; then echo "  ✘ anônimo usou a função"; exit 1; else ok "quem não entrou no app não consegue usar"; fi
+$P -f supabase/8b-desfazer-atualizacao-leve.sql >/dev/null && fails ${U[0]} "select public.feed_version(array['$C']::uuid[], array['$G']::uuid[])" "desfazer tira a função"
+$P -f supabase/8-atualizacao-leve.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

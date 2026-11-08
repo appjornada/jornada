@@ -35,6 +35,8 @@ function novoServidor(opts = {}) {
       else if (op === 'in') rows = rows.filter(r => v.map(String).includes(String(r[col])));
       else if (op === 'is') rows = rows.filter(r => r[col] == null);
       else if (op === 'like') { const s = v.replace(/%/g, ''); rows = rows.filter(r => String(r[col] || '').includes(s)) }
+      else if (op === 'gte') rows = rows.filter(r => String(r[col]) >= String(v));
+      else if (op === 'gt') rows = rows.filter(r => String(r[col]) > String(v));
     }
     return rows;
   }
@@ -49,7 +51,7 @@ function novoServidor(opts = {}) {
     return r;
   }
   async function handle2(me, q) {
-    log.push({ me, t: q.table || q.rpc || q.storage, op: q.op });
+    log.push({ me, t: q.table || q.rpc || q.storage, op: q.op || (q.rpc ? 'rpc' : ''), f: (q.filters || []).map(f => f[0]).join(',') });
     const falha = O.falhas[q.table + ':' + q.op];
     if (falha && falha.length) { const f = falha.shift(); if (f === 'antes') return err('Failed to fetch'); if (f === 'travar') return new Promise(() => {}) /* app fechado: o pedido nunca chega */ }
     if (!me) return err('JWT expired');
@@ -106,6 +108,13 @@ function novoServidor(opts = {}) {
     return err('operação desconhecida');
   }
   function rpc(me, name, a) {
+    if (name === 'feed_version') {
+      if (O.semVersao) return err('Could not find the function public.feed_version(p_challenges, p_groups) in the schema cache', 'PGRST202');
+      const cs = (a.p_challenges || []).map(String), gs = (a.p_groups || []).map(String);
+      const ks = visible('checkins', me).filter(k => cs.includes(String(k.challenge_id))).sort((x, y) => x.id.localeCompare(y.id));
+      const dados = JSON.stringify([ks, visible('challenges', me).filter(c => gs.includes(String(c.group_id))), DB.gm.filter(m => gs.includes(String(m.group_id)) && member(me, m.group_id)), visible('profiles', me)]);
+      return { data: crypto.createHash('md5').update(dados).digest('hex'), error: null };
+    }
     if (name === 'can_create') return O.semListaCriadores ? err('Could not find the function public.can_create without parameters in the schema cache', 'PGRST202') : { data: DB.criadores.has(me), error: null };
     if (name === 'create_group') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('caravanas'); const g = { id: id(), name: a.p_name, invite_code: crypto.randomBytes(3).toString('hex').toUpperCase() }; DB.groups[g.id] = g; DB.gm.push({ group_id: g.id, user_id: me, role: 'leader' }); return { data: g.id, error: null } }
     if (name === 'join_group') { const g = Object.values(DB.groups).find(x => x.invite_code === String(a.p_code).trim().toUpperCase()); if (!g) return err('Código inválido'); if (!member(me, g.id)) DB.gm.push({ group_id: g.id, user_id: me, role: 'member' }); return { data: g.id, error: null } }
@@ -122,7 +131,7 @@ function novoServidor(opts = {}) {
     return err('Could not find the function', 'PGRST202');
   }
   function storage(me, q) {
-    if (q.op === 'upload') { if (!q.path.startsWith(me + '/')) return err('rls', '42501'); if (O.tipos && !O.tipos.some(t => t.endsWith('/*') ? (q.ct || '').startsWith(t.slice(0, -1)) : t === q.ct)) return { data: null, error: { message: 'mime type ' + q.ct + ' is not supported', statusCode: '415' } }; if (DB.objects[q.path]) return err('The resource already exists', '409'); DB.objects[q.path] = { size: q.size, owner: me }; return { data: { path: q.path }, error: null } }
+    if (q.op === 'upload') { if (!q.path.startsWith(me + '/')) return err('rls', '42501'); if (O.tipos && !O.tipos.some(t => t.endsWith('/*') ? (q.ct || '').startsWith(t.slice(0, -1)) : t === q.ct)) return { data: null, error: { message: 'mime type ' + q.ct + ' is not supported', statusCode: '415' } }; if (DB.objects[q.path]) return err('The resource already exists', '409'); DB.objects[q.path] = { size: q.size, owner: me, cache: q.cache }; return { data: { path: q.path }, error: null } }
     if (q.op === 'remove') { const gone = q.paths.filter(p => p.startsWith(me + '/') && DB.objects[p]); gone.forEach(p => delete DB.objects[p]); return { data: gone.map(name => ({ name })), error: null } }
     if (q.op === 'sign' && O.imgBase) return { data: q.paths.map(p => ({ path: p, signedUrl: DB.objects[p] ? O.imgBase + encodeURIComponent(p) : null, error: DB.objects[p] ? null : 'not found' })), error: null }; // fotos servidas com atraso, como na internet
     if (q.op === 'sign') return { data: q.paths.map(p => ({ path: p, signedUrl: DB.objects[p] || p.startsWith('antigo/') ? 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#c96"/></svg>') + '#' + p : null, error: DB.objects[p] ? null : 'not found' })), error: null };
@@ -143,7 +152,7 @@ const cliente = `(function(){
   function call(q){return window.__api(me,JSON.stringify(q)).then(function(r){return JSON.parse(r)})}
   function Q(table){this.q={table:table,op:'select',filters:[],order:[]}}
   Q.prototype.select=function(c){if(this.q.op!=='select')this.q.returning=true;else this.q.cols=c;return this};
-  ['eq','in','is','like'].forEach(function(k){Q.prototype[k]=function(c,v){this.q.filters.push([k,c,v]);return this}});
+  ['eq','in','is','like','gte','gt'].forEach(function(k){Q.prototype[k]=function(c,v){this.q.filters.push([k,c,v]);return this}});
   Q.prototype.order=function(c,o){this.q.order.push({col:c,asc:!o||o.ascending!==false});return this};
   Q.prototype.range=function(a,b){this.q.range=[a,b];return this};
   Q.prototype.limit=function(n){this.q.limit=n;return this};
@@ -160,7 +169,7 @@ const cliente = `(function(){
       updateUser:function(d){if(d&&d.data)localStorage.setItem('fake_md',JSON.stringify(d.data));return Promise.resolve({data:{},error:null})},
       onAuthStateChange:function(){},signOut:function(){return Promise.resolve({})}},
     storage:{from:function(){return{
-      upload:function(p,b,o){return call({storage:1,op:'upload',path:p,size:b.size,ct:(o&&o.contentType)||b.type})},
+      upload:function(p,b,o){return call({storage:1,op:'upload',path:p,size:b.size,ct:(o&&o.contentType)||b.type,cache:o&&o.cacheControl})},
       remove:function(ps){return call({storage:1,op:'remove',paths:ps})},
       createSignedUrls:function(ps){return call({storage:1,op:'sign',paths:ps})}}}}
   }}};

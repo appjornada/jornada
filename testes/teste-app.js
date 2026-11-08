@@ -225,7 +225,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }) } catch (e) { return 'pulado: este computador não tem ffmpeg' }
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vid-')), ff = (...a) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...a]);
     // vídeo em pé de 15 s com som, pesado como o do celular (o Chromium dos testes só lê WebM)
-    ff('-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30:duration=15', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=15', '-c:v', 'libvpx', '-b:v', '9M', '-deadline', 'realtime', '-cpu-used', '8', '-c:a', 'libopus', path.join(dir, 'celular.webm'));
+    ff('-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30:duration=15,noise=alls=12:allf=t', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=15', '-c:v', 'libvpx', '-b:v', '9M', '-deadline', 'realtime', '-cpu-used', '8', '-c:a', 'libopus', path.join(dir, 'celular.webm'));
     const orig = fs.readFileSync(path.join(dir, 'celular.webm'));
     const S = novoServidor(), U = S.usuario('Ana'), g = S.caravana(U, 'Tiago'); S.jornada(g, 'Tiago em 5 dias');
     const postar = async (pg, tipos) => {
@@ -243,6 +243,13 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(await esperar(() => Object.values(S.DB.checkins).some(k => /\.webm$/.test(k.photo_path || '')), 40000), 'a publicação com vídeo não foi salva');
     const k = Object.values(S.DB.checkins).find(x => /\.webm$/.test(x.photo_path || '')), env = S.DB.objects[k.photo_path].size;
     exige(env < orig.length * 0.4, 'o vídeo não diminuiu: ' + orig.length + ' → ' + env + ' bytes');
+    // capa do vídeo e arquivos marcados para o celular guardar
+    const capa = k.photo_path.replace(/\.[^.\/]+$/, '.t.jpg');
+    exige(await esperar(() => S.DB.objects[capa]), 'o vídeo ficou sem capa');
+    exige(S.DB.objects[k.photo_path].cache === '31536000' && S.DB.objects[capa].cache === '31536000', 'arquivos sem a marca de guardar no celular');
+    await recarregar(pg); await pg.evaluate(() => { tab = 'feed'; render() });
+    const vat = await pg.$eval('main video.media', v => ({ pre: v.getAttribute('preload'), capa: !!v.getAttribute('poster') }));
+    exige(vat.capa && vat.pre === 'none', 'o vídeo no mural não usa a capa (baixaria o vídeo sem ninguém tocar): ' + JSON.stringify(vat));
     const b64 = await pg.evaluate(async () => { const b = new Uint8Array(await window.__vid.arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode.apply(null, b.subarray(i, i + 8192)); return btoa(s) });
     const out = path.join(dir, 'enviado.webm'); fs.writeFileSync(out, Buffer.from(b64, 'base64'));
     // o MediaRecorder não grava a duração no WebM: o ffmpeg conta os quadros
@@ -271,6 +278,62 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(res['h264-fragmentado'] && res['h264-normal'], 'recusou um MP4 H.264/AAC: ' + JSON.stringify(res));
     exige(!res['vp9-opus'] && !res.webm, 'aceitou um formato que o iPhone não toca: ' + JSON.stringify(res));
     return (orig.length / 1048576).toFixed(1) + ' MB → ' + (env / 1048576).toFixed(1) + ' MB, ' + seg.toFixed(1) + ' s, ' + tam[1] + 'x' + tam[2] + ', som ' + vol[1] + ' dB; sem suporte: original; formatos: ' + JSON.stringify(res);
+  });
+
+  await teste('Economia de dados: miniaturas das fotos antigas, links guardados, atualização só do que mudou e chat incremental', async () => {
+    const S = novoServidor();
+    const A = S.usuario('Ana'), B = S.usuario('Bia');
+    const g = S.caravana(A, 'Tiago'); S.entrar(B, g); const c = S.jornada(g, 'Tiago em 5 dias');
+    // fotos antigas (nome sem impressão digital) sem miniatura: uma da Ana, uma da Bia
+    const fa = A.id + '/1794067783651-1wp5b1.jpg', fb = B.id + '/1794012953806-4fnany.jpg';
+    S.DB.objects[fa] = { size: 4000000 }; S.DB.objects[fb] = { size: 4000000 };
+    S.publicacao(A, c, { photo_path: fa }); S.publicacao(B, c, { photo_path: fb });
+    const tA = fa.replace('.jpg', '.t.jpg'), tB = fb.replace('.jpg', '.t.jpg');
+    // 1) o app da Ana cria a miniatura só da foto dela
+    const pa = await abrir(browser, base, S, A);
+    exige(await esperar(() => S.DB.objects[tA], 10000), 'o app da dona não criou a miniatura');
+    exige(S.DB.objects[tA].cache === '31536000' && S.DB.objects[tA].size < 200000, 'miniatura grande ou sem a marca de guardar: ' + JSON.stringify(S.DB.objects[tA]));
+    exige(!S.DB.objects[tB], 'o app da Ana mexeu na foto da Bia');
+    // 2) a Bia vê a miniatura da Ana (não a foto inteira) e o app dela cria a da própria foto
+    const pb = await abrir(browser, base, S, B);
+    exige(await esperar(() => S.DB.objects[tB], 10000), 'o app da Bia não criou a miniatura dela');
+    const srcA = await pb.evaluate(n => { const c = [...document.querySelectorAll('main .card')].find(x => x.querySelector('b') && x.querySelector('b').textContent === n); const i = c && c.querySelector('img.media'); return i ? i.getAttribute('src') : '' }, 'Ana');
+    exige(srcA.endsWith(tA), 'a Bia baixa a foto inteira da Ana em vez da miniatura: ' + srcA.slice(-60));
+    // 3) links guardados: ao abrir o app de novo, não pede links novos para o que já tem
+    await recarregar(pb); // pega o link da miniatura que o app da Bia acabou de criar
+    await pb.evaluate(() => new Promise(r => setTimeout(r, 700))); // links salvos no aparelho
+    const n0 = S.log.length; await pb.reload();
+    await pb.waitForFunction(() => typeof loaded !== 'undefined' && loaded, null, { timeout: 15000 });
+    await pb.evaluate(() => new Promise(r => setTimeout(r, 300)));
+    const pedidos = S.log.slice(n0).filter(x => x.me === B.id && x.op === 'sign').length;
+    exige(pedidos === 0, 'ao reabrir, pediu ' + pedidos + ' vez(es) links de fotos que já tinha');
+    // 4) atualização leve: sem novidade, não baixa as publicações; com novidade, baixa e mostra
+    exige(await esperar(() => pb.evaluate(() => !!FV)), 'não guardou a impressão digital');
+    const n1 = S.log.length; await pb.evaluate(() => poll()); await pb.evaluate(() => poll());
+    const baixou = S.log.slice(n1).filter(x => x.me === B.id && x.t === 'checkins' && x.op === 'select').length;
+    const perguntou = S.log.slice(n1).filter(x => x.me === B.id && x.t === 'feed_version').length;
+    exige(baixou === 0 && perguntou === 2, 'sem novidade, baixou as publicações ' + baixou + ' vez(es) (perguntou ' + perguntou + ')');
+    S.publicacao(A, c, { book: 'Tiago', ref: '4', note: 'Novidade da Ana', photo_path: null, media_type: null });
+    await pb.evaluate(() => poll());
+    exige(await esperar(() => pb.evaluate(() => document.querySelector('main').textContent.includes('Novidade da Ana'))), 'a novidade não apareceu');
+    // 5) chat: depois da primeira vez, só pede as mensagens novas
+    const msg = (u, body, s) => { const m = { id: require('crypto').randomUUID(), challenge_id: c.id, user_id: u.id, body, created_at: new Date(Date.now() - s * 1000).toISOString() }; S.DB.messages[m.id] = m };
+    msg(A, 'Bom dia, caravana!', 60); msg(B, 'Bom dia!', 30);
+    await pb.click('nav [data-t="chat"]');
+    exige(await esperar(() => pb.evaluate(() => (document.getElementById('msgs') || {}).textContent.includes('Bom dia, caravana!'))), 'o chat não abriu');
+    const n2 = S.log.length; msg(A, 'Vamos orar às 20h', 0); await pb.evaluate(() => loadChat());
+    exige(await esperar(() => pb.evaluate(() => document.getElementById('msgs').textContent.includes('Vamos orar às 20h'))), 'a mensagem nova não apareceu');
+    const cq = S.log.slice(n2).filter(x => x.t === 'messages' && x.op === 'select');
+    exige(cq.length && cq.every(x => /gte/.test(x.f)), 'o chat baixou a conversa toda de novo: ' + JSON.stringify(cq));
+    exige((await pb.evaluate(() => document.getElementById('msgs').textContent.split('Bom dia, caravana!').length - 1)) === 1, 'mensagem repetida no chat');
+    await Promise.all([pa, pb].map(p => p.context().close()));
+    // 6) banco sem a função: baixa tudo a cada vez, como antes
+    const S2 = novoServidor({ semVersao: true }), C1 = S2.usuario('Caio'), g2 = S2.caravana(C1, 'X'); S2.publicacao(C1, S2.jornada(g2, 'J'));
+    const pc = await abrir(browser, base, S2, C1); const n3 = S2.log.length;
+    await pc.evaluate(() => poll()); await pc.evaluate(() => poll());
+    const tudo = S2.log.slice(n3).filter(x => x.t === 'checkins' && x.op === 'select').length; await pc.context().close();
+    exige(tudo >= 2, 'sem a função no banco, parou de atualizar');
+    return 'miniaturas criadas pelas donas; Bia vê a miniatura; reabrir: 0 links novos; sem novidade: só a pergunta; chat: só as novas; sem a função: como antes';
   });
 
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {

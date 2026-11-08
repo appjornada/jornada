@@ -220,6 +220,59 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Ana pôs, Bia viu no mural e no ranking, trocou (antiga apagada), tirou (voltou a letra); sem o campo: como antes';
   });
 
+  await teste('Vídeo grande fica menor antes de enviar (com som e na duração certa); se não der, vai o original', async () => {
+    const { execFileSync } = require('child_process'), os = require('os');
+    try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }) } catch (e) { return 'pulado: este computador não tem ffmpeg' }
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vid-')), ff = (...a) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...a]);
+    // vídeo em pé de 15 s com som, pesado como o do celular (o Chromium dos testes só lê WebM)
+    ff('-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30:duration=15', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=15', '-c:v', 'libvpx', '-b:v', '9M', '-deadline', 'realtime', '-cpu-used', '8', '-c:a', 'libopus', path.join(dir, 'celular.webm'));
+    const orig = fs.readFileSync(path.join(dir, 'celular.webm'));
+    const S = novoServidor(), U = S.usuario('Ana'), g = S.caravana(U, 'Tiago'); S.jornada(g, 'Tiago em 5 dias');
+    const postar = async (pg, tipos) => {
+      await pg.evaluate(t => { VZ.types = t; VZ.mp4only = false; VZ.min = 1048576; // o Chromium dos testes não grava H.264: aqui vale WebM; converte a partir de 1 MB
+        const of = sb.storage.from.bind(sb.storage); sb.storage.from = b => { const o = of(b), up = o.upload; o.upload = (p, bl, op) => { if (/\.(webm|mp4)$/.test(p)) window.__vid = bl; return up(p, bl, op) }; return o } }, tipos);
+      await pg.evaluate(() => { closeSheet(); tab = 'feed'; render() }); await pg.click('#add');
+      await pg.waitForSelector('#fgal', { state: 'attached' });
+      await pg.setInputFiles('#fgal', { name: 'celular.webm', mimeType: 'video/webm', buffer: orig });
+      await pg.waitForSelector('.mth'); await marcar(pg); await pg.click('[data-mn="15"]'); await pg.click('#ok');
+    };
+    // 1) converte: mostra o andamento e envia um arquivo bem menor
+    const pg = await abrir(browser, base, S, U);
+    await postar(pg, ['video/webm;codecs=vp8,opus']);
+    exige(await esperar(() => pg.evaluate(() => /Preparando o vídeo… \d+%/.test((document.getElementById('ok') || {}).textContent || '')), 8000), 'não mostrou "Preparando o vídeo…"');
+    exige(await esperar(() => Object.values(S.DB.checkins).some(k => /\.webm$/.test(k.photo_path || '')), 40000), 'a publicação com vídeo não foi salva');
+    const k = Object.values(S.DB.checkins).find(x => /\.webm$/.test(x.photo_path || '')), env = S.DB.objects[k.photo_path].size;
+    exige(env < orig.length * 0.4, 'o vídeo não diminuiu: ' + orig.length + ' → ' + env + ' bytes');
+    const b64 = await pg.evaluate(async () => { const b = new Uint8Array(await window.__vid.arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode.apply(null, b.subarray(i, i + 8192)); return btoa(s) });
+    const out = path.join(dir, 'enviado.webm'); fs.writeFileSync(out, Buffer.from(b64, 'base64'));
+    // o MediaRecorder não grava a duração no WebM: o ffmpeg conta os quadros
+    const r = require('child_process').spawnSync('ffmpeg', ['-hide_banner', '-i', out, '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+    const tempo = [...r.matchAll(/time=(\d+):(\d+):([\d.]+)/g)].pop(), seg = tempo ? +tempo[1] * 3600 + +tempo[2] * 60 + +tempo[3] : 0;
+    const tam = r.match(/Video: \w+.*?, (\d+)x(\d+)/), vol = r.match(/mean_volume: (-?[\d.]+) dB/);
+    exige(seg > 13.5 && seg < 17, 'duração errada: ' + seg + ' s');
+    exige(tam && +tam[1] <= 720 && +tam[2] <= 1280 && +tam[2] > +tam[1], 'tamanho da imagem errado: ' + (tam && tam[0]));
+    exige(vol && +vol[1] > -40, 'o som não foi gravado: ' + (vol ? vol[1] + ' dB' : 'sem faixa de áudio'));
+    await pg.context().close();
+    // 2) aparelho que não consegue converter: vai o original, como antes
+    const S2 = novoServidor(), U2 = S2.usuario('Bia'), g2 = S2.caravana(U2, 'Tiago'); S2.jornada(g2, 'Tiago em 5 dias');
+    const p2 = await abrir(browser, base, S2, U2);
+    await postar(p2, ['video/x-nenhum']);
+    exige(await esperar(() => Object.values(S2.DB.checkins).some(k => /\.webm$/.test(k.photo_path || '')), 15000), 'sem conversão, a publicação não foi salva');
+    const k2 = Object.values(S2.DB.checkins).find(x => /\.webm$/.test(x.photo_path || ''));
+    exige(S2.DB.objects[k2.photo_path].size === orig.length, 'sem conversão, não foi o original');
+    // 3) a conferência de formato: só passa MP4 com H.264 e AAC (o que o iPhone toca)
+    const amostra = (nome, ...a) => { ff('-f', 'lavfi', '-i', 'testsrc2=size=360x640:rate=30:duration=2', ...a, path.join(dir, nome)); return fs.readFileSync(path.join(dir, nome)).toString('base64') };
+    const sine = ['-f', 'lavfi', '-i', 'sine=duration=2'];
+    const casos = { 'h264-fragmentado': amostra('a.mp4', ...sine, '-c:v', 'libx264', '-c:a', 'aac', '-movflags', 'frag_keyframe+empty_moov'),
+      'h264-normal': amostra('b.mp4', ...sine, '-c:v', 'libx264', '-c:a', 'aac'), 'vp9-opus': amostra('c.mp4', ...sine, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-c:a', 'libopus', '-movflags', 'frag_keyframe+empty_moov'),
+      'webm': amostra('d.webm', ...sine, '-c:v', 'libvpx', '-deadline', 'realtime', '-c:a', 'libopus') };
+    const res = await p2.evaluate(async c => { const o = {}; for (const [n, b] of Object.entries(c)) { const x = await vzCodecs(new Blob([Uint8Array.from(atob(b), ch => ch.charCodeAt(0))])); o[n] = x.mp4 && x.v && x.a && !x.bad } return o }, casos);
+    await p2.context().close(); fs.rmSync(dir, { recursive: true, force: true });
+    exige(res['h264-fragmentado'] && res['h264-normal'], 'recusou um MP4 H.264/AAC: ' + JSON.stringify(res));
+    exige(!res['vp9-opus'] && !res.webm, 'aceitou um formato que o iPhone não toca: ' + JSON.stringify(res));
+    return (orig.length / 1048576).toFixed(1) + ' MB → ' + (env / 1048576).toFixed(1) + ' MB, ' + seg.toFixed(1) + ' s, ' + tam[1] + 'x' + tam[2] + ', som ' + vol[1] + ' dB; sem suporte: original; formatos: ' + JSON.stringify(res);
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

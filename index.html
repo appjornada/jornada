@@ -1088,6 +1088,7 @@ async function publish(){
   var st=stepOf(R);
   if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
   if(!S.media.some(function(x){return !x.audio})){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}
+  if(S.media.some(function(x){return x.video&&!x.path}))vzUnlock();
   if(S.edit)return saveEdit(st,mn,m,btn,er);
   btn.disabled=true;btn.textContent='Enviando… não feche o app';
   try{
@@ -1149,6 +1150,52 @@ async function saveCheckin(row,key){
   if(!r.data){var f3=await find();if(f3)return f3;throw new Error('o servidor não confirmou a gravação')}
   return r.data
 }
+// ---- Vídeo menor antes de enviar: até 720p e ~1,5 Mbps (um vídeo de 15 s cai de ~25 MB para ~3 MB) ----
+// O celular regrava o vídeo enquanto ele toca escondido (leva o tempo do vídeo). O som é lido à parte.
+// Se qualquer coisa falhar (aparelho sem suporte, app fechado no meio, som não gravado), vai o original, como antes.
+var VZ={ac:null,min:6*1048576,mp4only:true,types:['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1.4D401F,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4']};
+// Só vale MP4 com H.264 e AAC, que todo celular toca (alguns aparelhos gravam VP9/Opus, que o iPhone não toca).
+// Procura as etiquetas dos formatos no começo e no fim do arquivo
+async function vzCodecs(blob){var n=524288,ps=[blob.slice(0,n)];if(blob.size>n)ps.push(blob.slice(Math.max(n,blob.size-n)));var s='';
+  for(var j=0;j<ps.length;j++){var b=new Uint8Array(await ps[j].arrayBuffer());for(var i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192))}
+  return{mp4:/ftyp/.test(s.slice(0,64)),v:/avc1|avc3/.test(s),a:/mp4a/.test(s),bad:/vp09|vp08|av01|Opus|hvc1|hev1/.test(s)}}
+// No iPhone o som só pode ser preparado no toque do botão
+function vzUnlock(){try{if(!VZ.ac){var A=window.AudioContext||window.webkitAudioContext;if(A)VZ.ac=new A()}if(VZ.ac&&VZ.ac.state!=='running')VZ.ac.resume()}catch(e){}}
+async function shrinkV(file,onp){
+  var u=null,v=null,src=null,rec=null,hid=false,onv=function(){if(document.hidden)hid=true};
+  try{
+    if(!file||file.size<VZ.min||typeof MediaRecorder==='undefined'||!VZ.ac||!HTMLCanvasElement.prototype.captureStream)return null;
+    var mt=VZ.types.filter(function(t){try{return MediaRecorder.isTypeSupported(t)}catch(e){return false}})[0];if(!mt)return null;
+    if(VZ.ac.state!=='running'){try{await withTimeout(VZ.ac.resume(),1500)}catch(e){}if(VZ.ac.state!=='running')return null}
+    u=URL.createObjectURL(file);v=document.createElement('video');v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';v.src=u;
+    await new Promise(function(res,rej){v.onloadeddata=res;v.onerror=rej;setTimeout(rej,10000)});
+    var dur=v.duration,W=v.videoWidth,H=v.videoHeight;if(!(dur>0&&dur<=MAXSEC+1&&W&&H))return null;
+    var buf=null;try{buf=await VZ.ac.decodeAudioData(await file.arrayBuffer())}catch(e){}
+    if(!buf&&!(v.audioTracks&&v.audioTracks.length===0))return null; // tem som, mas não deu para ler: vai o original
+    var k=Math.min(1,720/Math.min(W,H)),cw=Math.round(W*k/2)*2,ch=Math.round(H*k/2)*2,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    var cx=cv.getContext('2d'),tr=[cv.captureStream(30).getVideoTracks()[0]],an=null,peak=0,smp=null;
+    if(buf){var dst=VZ.ac.createMediaStreamDestination();src=VZ.ac.createBufferSource();src.buffer=buf;an=VZ.ac.createAnalyser();an.fftSize=1024;smp=new Uint8Array(1024);src.connect(dst);src.connect(an);tr.push(dst.stream.getAudioTracks()[0])}
+    var parts=[];rec=new MediaRecorder(new MediaStream(tr),{mimeType:mt,videoBitsPerSecond:1500000,audioBitsPerSecond:96000});
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)parts.push(e.data)};
+    var stopped=new Promise(function(r){rec.onstop=r});
+    var draw=function(){try{cx.drawImage(v,0,0,cw,ch)}catch(e){}
+      if(an){an.getByteTimeDomainData(smp);for(var i=0;i<smp.length;i+=4){var d=Math.abs(smp[i]-128);if(d>peak)peak=d}}
+      if(onp)onp(Math.min(99,Math.round(100*v.currentTime/dur)))};
+    var loop=function(){draw();if(!v.ended&&!v.paused){if(v.requestVideoFrameCallback)v.requestVideoFrameCallback(loop);else requestAnimationFrame(loop)}};
+    document.addEventListener('visibilitychange',onv);
+    draw();rec.start(1000);
+    var ended=new Promise(function(r){v.onended=function(){r(true)};setTimeout(function(){r(false)},(dur+8)*1000)});
+    await v.play();if(src)src.start();loop();
+    var ok=await ended;draw();
+    await new Promise(function(r){setTimeout(r,200)});rec.stop();await stopped;
+    var type=mt.split(';')[0],out=new Blob(parts,{type:type});
+    if(!ok||hid||out.size<20000||out.size>file.size*.8)return null;
+    if(buf&&peak<2)return null; // o som não foi gravado
+    if(VZ.mp4only){var cc=await vzCodecs(out);if(!cc.mp4||!cc.v||cc.bad||(buf&&!cc.a))return null}
+    return{blob:out,type:type,ext:/webm/.test(type)?'webm':'mp4'};
+  }catch(e){return null}
+  finally{document.removeEventListener('visibilitychange',onv);try{if(rec&&rec.state!=='inactive')rec.stop()}catch(e){}try{if(src)src.stop()}catch(e){}try{if(v){v.pause();v.removeAttribute('src');v.load()}}catch(e){}if(u)URL.revokeObjectURL(u)}
+}
 // Envia as fotos novas (as que já estavam salvas ficam como estão) e devolve os campos da publicação
 async function upMedia(){
   var paths=[],nw=null;S.fresh=[];
@@ -1156,7 +1203,9 @@ async function upMedia(){
     var m=S.media[i];if(m.path){if(paths.indexOf(m.path)<0)paths.push(m.path);continue}
     var blob=m.file,ct=m.file.type,ext;nw=nw||m;
     if(m.audio){ct=(ct||'audio/mp4').split(';')[0];ext=/webm/.test(ct)?'weba':/ogg/.test(ct)?'ogg':/mpeg|mp3/.test(ct)?'mp3':/wav/.test(ct)?'wav':/aac/.test(ct)?'aac':'m4a'}
-    else if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4'}
+    else if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4';
+      if(m.small===undefined){var bt=document.getElementById('ok'),bx=bt&&bt.textContent;m.small=await shrinkV(m.file,function(p){if(bt)bt.textContent='Preparando o vídeo… '+p+'%'})||false;if(bt)bt.textContent=bx}
+      if(m.small){blob=m.small.blob;ct=m.small.type;ext=m.small.ext}}
     else{var sb2=await shrinkP(m.file);if(sb2){blob=sb2;ct='image/jpeg';ext='jpg'}else ext=((m.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg'}
     var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
     if(paths.indexOf(path)<0){

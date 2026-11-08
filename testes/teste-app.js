@@ -391,6 +391,14 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(r.slice(0, 3).map(x => x.pos).join() === '🥇,🥇,🥉', 'posições: ' + r.map(x => x.n + x.pos).join(' '));
     exige(r.length === 4 && r[3].n === 'P6' && r[3].pos === '6', 'a sua posição (empatada em 6º): ' + JSON.stringify(r[3]));
     exige(!coroa, 'ainda tem coroa');
+    // empate: cada um se vê na frente dos empatados (P2 e P3 com 7; P4 com 7 também)
+    ({ S, U } = montar([9, 8, 7, 7, 7, 1]));
+    for (const i of [3, 4]) {
+      pg = await abrir(browser, base, S, U[i]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk2');
+      r = await ler(pg); await pg.click('main [data-rkall]'); const full = await pg.$$eval('#shc .rk2 .nm', e => e.map(x => x.textContent.replace(' (você)', ''))); await pg.context().close();
+      exige(r[2].n === 'P' + i && r[2].pos === '🥉' && r.length === 3, 'P' + i + ' empatado em 3º devia aparecer na prévia, na frente dos outros: ' + r.map(x => x.n + x.pos).join(' '));
+      exige(full[2] === 'P' + i && full.slice(2, 5).sort().join() === 'P2,P3,P4', 'ranking completo da P' + i + ': ' + full.join());
+    }
     // 6 empatados em 1º: a prévia mostra só 3 (todos 🥇) + a sua posição
     ({ S, U } = montar([3, 3, 3, 3, 3, 3, 1, 1]));
     pg = await abrir(browser, base, S, U[7]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk2');

@@ -700,7 +700,8 @@ function feed(){
 // ---- Ranking compacto: 3 primeiros + a sua posição; "Ver ranking completo" abre a lista toda ----
 function rankList(){
   var L=users().map(function(u){return{u:u,d:steps(u),c:days(u).length,s:streak(u),m:mins(u)}}),k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
-  L.sort(function(a,b){return b[k]-a[k]||b.d-a.d||nm(a.u).localeCompare(nm(b.u))});
+  // empate: quem está vendo aparece na frente dos empatados (cada um se vê primeiro); a posição é a mesma
+  L.sort(function(a,b){return b[k]-a[k]||(a.u===S.me?-1:b.u===S.me?1:0)||b.d-a.d||nm(a.u).localeCompare(nm(b.u))});
   L.forEach(function(r){var p=1;L.forEach(function(o){if(o[k]>r[k])p++});r.p=p}); // empate = mesma posição
   return{L:L,k:k};
 }

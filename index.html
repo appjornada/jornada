@@ -725,7 +725,7 @@ function rankList(){
 }
 function rankSeg(){return '<div class="seg sm">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'}
 function rkRow(r,k){
-  var me=r.u===S.me,md=r[k]>0&&['🥇','🥈','🥉'][r.p-1];
+  var me=r.u===S.me,md=r[k]>0&&['👑','🥈','🥉'][r.p-1]; // 1º lugar (empatados também) ganha a coroa, no lugar da posição: a linha não alarga
   var v=k==='m'?fmin(r.m):r[k]+' <small>'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</small>';
   return '<div class="rk rk2'+(me?' me':'')+'" data-who="'+r.u+'" role="button" tabindex="0"><div class="pos">'+(md||r.p)+'</div>'+av(r.u)+'<div class="nm">'+esc(nm(r.u))+(me?' <span class="sub">(você)</span>':'')+'</div><div class="val">'+v+'</div></div>';
 }

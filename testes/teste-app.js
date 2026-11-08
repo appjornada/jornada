@@ -349,18 +349,19 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
       const card = document.querySelector('main .rkc'), pc = [...document.querySelectorAll('main .card')].find(x => x.textContent.includes('Participantes'));
       const rows = [...card.querySelectorAll('.rk2')];
       return { rank: rows.map(r => r.querySelector('.nm').textContent), pos: rows.map(r => r.querySelector('.pos').textContent), me: rows.map(r => r.classList.contains('me')),
-        alt: Math.max(...rows.map(r => r.getBoundingClientRect().height)), foto: card.querySelector('.av').getBoundingClientRect().width,
+        alt: Math.max(...rows.map(r => r.getBoundingClientRect().height)), foto: card.querySelector('.av').getBoundingClientRect().width, pw: rows.map(r => Math.round(r.querySelector('.pos').getBoundingClientRect().width)), largura: rows.every(r => r.scrollWidth <= r.clientWidth + 1),
         umaLinha: rows.every(r => { const n = r.querySelector('.nm'); return n.getBoundingClientRect().height < 26 }),
         sub: card.textContent.includes('Terra Prometida'), coroa: !!card.querySelector('.crown'),
         peers: document.querySelectorAll('#map .peer').length, part: pc.querySelector('b').textContent, lista: pc.querySelectorAll('.rk').length,
         sair: !!document.querySelector('[data-leave]'), botao: card.querySelector('[data-rkall]').textContent };
     });
     let v = await ver();
-    exige(v.rank.slice(0, 3).join() === 'Mayara,Bia,Caio' && v.pos.slice(0, 3).join() === '🥇,🥈,🥉', 'prévia: ' + v.rank.join() + ' / ' + v.pos.join());
+    exige(v.rank.slice(0, 3).join() === 'Mayara,Bia,Caio' && v.pos.slice(0, 3).join() === '👑,🥈,🥉', 'prévia: ' + v.rank.join() + ' / ' + v.pos.join());
     exige(v.rank.length === 4 && v.pos[3] === '8' && v.me[3] && !v.me[0], 'a sua posição (destacada) logo abaixo: ' + JSON.stringify(v).slice(0, 200));
     exige(v.alt >= 40 && v.alt <= 50 && v.foto >= 28 && v.foto <= 32, 'linhas de ' + v.alt + ' px e fotos de ' + v.foto + ' px');
     exige(v.umaLinha, 'nome quebrou em duas linhas');
     exige(!v.sub && !v.coroa, 'ainda tem o subtítulo ou a coroa');
+    exige(v.pw.every(w => w === v.pw[0]) && v.largura, 'a coroa alargou a linha: colunas ' + v.pw.join() + ', cabe: ' + v.largura);
     exige(v.peers <= 5, 'a trilha mostra ' + v.peers + ' pessoas');
     exige(/Ver ranking completo \(8\)/.test(v.botao), 'botão: ' + v.botao);
     exige(v.part === '👥 Participantes (8)' && v.lista === 0 && !v.sair, 'participantes já aparecem listados');
@@ -377,18 +378,18 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pg.click('main [data-mball]'); v = await ver();
     exige(v.lista === 8 && v.sair, 'ao tocar, a lista de participantes não abriu: ' + v.lista);
     await pg.context().close();
-    return 'prévia com 3 (🥇🥈🥉) + Roger (8º) destacado; linhas de ' + Math.round(v.alt) + ' px, fotos de ' + Math.round(v.foto) + ' px, nome em 1 linha; sem coroa/subtítulo; ranking completo em tela, com filtros, ficha e voltar';
+    return 'prévia com 3 (👑🥈🥉) + Roger (8º) destacado; linhas de ' + Math.round(v.alt) + ' px, fotos de ' + Math.round(v.foto) + ' px, nome em 1 linha; sem coroa/subtítulo; ranking completo em tela, com filtros, ficha e voltar';
   });
 
-  await teste('Ranking: empate divide a posição, a prévia mostra só 3 e não tem coroa', async () => {
+  await teste('Ranking: empate divide a posição, a prévia mostra só 3 e a coroa fica no lugar da posição (não sobre a foto)', async () => {
     const montar = passos => { const S = novoServidor(), U = passos.map((_, i) => S.usuario('P' + i)), g = S.caravana(U[0], 'Tiago'); U.slice(1).forEach(u => S.entrar(u, g));
       const c = S.jornada(g, 'João em 21 dias'); U.forEach((u, i) => { for (let k = 1; k <= passos[i]; k++) S.publicacao(u, c, { book: 'João', ref: String(k), chapters: 1 }) }); return { S, U } };
     const ler = pg => pg.$$eval('main .rkc .rk2', rs => rs.map(r => ({ n: r.querySelector('.nm').textContent.replace(' (você)', ''), pos: r.querySelector('.pos').textContent })));
-    // empate em 1º: P0 e P1 com 8 passos → 🥇 🥇, e o próximo fica em 3º (🥉)
+    // empate em 1º: P0 e P1 com 8 passos → 👑 👑, e o próximo fica em 3º (🥉)
     let { S, U } = montar([8, 8, 7, 3, 2, 1, 1]);
     let pg = await abrir(browser, base, S, U[6]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk2');
     let r = await ler(pg); const coroa = await pg.$('.crown'); await pg.context().close();
-    exige(r.slice(0, 3).map(x => x.pos).join() === '🥇,🥇,🥉', 'posições: ' + r.map(x => x.n + x.pos).join(' '));
+    exige(r.slice(0, 3).map(x => x.pos).join() === '👑,👑,🥉', 'posições: ' + r.map(x => x.n + x.pos).join(' '));
     exige(r.length === 4 && r[3].n === 'P6' && r[3].pos === '6', 'a sua posição (empatada em 6º): ' + JSON.stringify(r[3]));
     exige(!coroa, 'ainda tem coroa');
     // empate: cada um se vê na frente dos empatados (P2 e P3 com 7; P4 com 7 também)
@@ -399,18 +400,18 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
       exige(r[2].n === 'P' + i && r[2].pos === '🥉' && r.length === 3, 'P' + i + ' empatado em 3º devia aparecer na prévia, na frente dos outros: ' + r.map(x => x.n + x.pos).join(' '));
       exige(full[2] === 'P' + i && full.slice(2, 5).sort().join() === 'P2,P3,P4', 'ranking completo da P' + i + ': ' + full.join());
     }
-    // 6 empatados em 1º: a prévia mostra só 3 (todos 🥇) + a sua posição
+    // 6 empatados em 1º: a prévia mostra só 3 (todos 👑) + a sua posição
     ({ S, U } = montar([3, 3, 3, 3, 3, 3, 1, 1]));
     pg = await abrir(browser, base, S, U[7]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk2');
     r = await ler(pg); const bt = await pg.textContent('main [data-rkall]'); await pg.context().close();
-    exige(r.length === 4 && r.slice(0, 3).every(x => x.pos === '🥇') && r[3].pos === '7', 'com 6 empatados: ' + r.map(x => x.n + x.pos).join(' '));
+    exige(r.length === 4 && r.slice(0, 3).every(x => x.pos === '👑') && r[3].pos === '7', 'com 6 empatados: ' + r.map(x => x.n + x.pos).join(' '));
     exige(/Ver ranking completo \(8\)/.test(bt), 'botão: ' + bt);
     // ninguém com passos: sem medalha
     ({ S, U } = montar([0, 0])); S.publicacao(U[0], Object.values(S.DB.challenges)[0], { book: 'Romanos', ref: '1' });
     pg = await abrir(browser, base, S, U[1]); await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk2');
     r = await ler(pg); await pg.context().close();
-    exige(!r.some(x => /🥇|🥈|🥉/.test(x.pos)), 'medalha sem ninguém ter dado passo: ' + JSON.stringify(r));
-    return 'empate em 1º: 🥇🥇🥉; 6 empatados: prévia com 3 + você (7º); sem passos: sem medalha; sem coroa';
+    exige(!r.some(x => /👑|🥇|🥈|🥉/.test(x.pos)), 'medalha sem ninguém ter dado passo: ' + JSON.stringify(r));
+    return 'empate em 1º: 👑👑🥉; 6 empatados: prévia com 3 + você (7º); sem passos: sem medalha; sem coroa';
   });
 
   await teste('Sua trilha: miniatura da foto/vídeo no dia; ao tocar, abre em tela cheia', async () => {

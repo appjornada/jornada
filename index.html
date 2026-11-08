@@ -35,8 +35,15 @@ main{padding:8px 16px}
 .av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none;position:relative;overflow:hidden}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av.md{width:54px;height:54px;font-size:22px}
-.avw{position:relative;flex:none}
-.crown{position:absolute;top:-13px;left:50%;transform:translateX(-50%) rotate(-12deg);font-size:19px;line-height:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+.rkc{padding-bottom:10px}.rkc>b{display:block;margin-bottom:8px}
+.seg.sm{margin-bottom:4px;padding:2px}.seg.sm button{padding:5px 2px;font-size:12.5px}
+.rk.rk2{min-height:46px;padding:0;gap:9px}
+.rk2 .pos{width:24px;flex:none;font-size:14px}
+.rk2 .av{width:30px;height:30px;font-size:13px}
+.rk2 .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:15px}
+.rk2 .val{flex:none;font-size:15px}.rk2 .val small{color:var(--mut);font-weight:400;font-size:12px}
+.rk2.me{background:color-mix(in srgb,var(--ac) 11%,transparent);border-radius:10px;border-bottom:0;margin:4px -8px 0;padding:0 8px}
+.rkc .more{display:block;width:100%;margin-top:6px;padding:9px;text-align:center;font-size:14px}
 .av.big{width:84px;height:84px;font-size:34px}
 .grow{flex:1;min-width:0}
 .ref{font-weight:700;margin:10px 0 2px}
@@ -235,7 +242,7 @@ var MAXAUD=180,MAXAB=15*1048576;
 var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
 var tab='feed',rk='dias',loaded=false,sb,gm='in';
 // Mapa: o ranking mostra os 3 primeiros e a trilha os 5 primeiros; participantes só o número (abrem ao tocar)
-var RKALL=false,MBALL=false,TOPN=3,TRAILN=5;
+var MBALL=false,TOPN=3,TRAILN=5;
 function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
 function addD(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}
 function diff(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
@@ -499,7 +506,7 @@ function trail(){
   function path(f){var d='';for(var i=0;i<=60;i++){if(i/60>f+1e-9)break;var p=pt(i/60);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}var q=pt(f);return d+'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)}
   var fm=Math.min(1,steps(S.me)/tot),m=pt(fm),ms='',k=Math.min(tot,14);
   for(var j=1;j<k;j++){var q=pt(j/k);ms+='<circle class="stone" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/>'}
-  var all=users().slice().sort(function(a,b){return steps(b)-steps(a)}),vis=RKALL?all:all.slice(0,TRAILN);
+  var all=users().slice().sort(function(a,b){return steps(b)-steps(a)}),vis=all.slice(0,TRAILN);
   var peers=vis.filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,steps(u)/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+steps(u)+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
   var lx=W-54,ly=H/2;
   return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+steps(S.me)+' de '+tot+' passos até a Terra Prometida">'+
@@ -690,20 +697,28 @@ function feed(){
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
   return h+l.map(post).join('');
 }
+// ---- Ranking compacto: 3 primeiros + a sua posição; "Ver ranking completo" abre a lista toda ----
+function rankList(){
+  var L=users().map(function(u){return{u:u,d:steps(u),c:days(u).length,s:streak(u),m:mins(u)}}),k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
+  L.sort(function(a,b){return b[k]-a[k]||b.d-a.d||nm(a.u).localeCompare(nm(b.u))});
+  L.forEach(function(r){var p=1;L.forEach(function(o){if(o[k]>r[k])p++});r.p=p}); // empate = mesma posição
+  return{L:L,k:k};
+}
+function rankSeg(){return '<div class="seg sm">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'}
+function rkRow(r,k){
+  var me=r.u===S.me,md=r[k]>0&&['🥇','🥈','🥉'][r.p-1];
+  var v=k==='m'?fmin(r.m):r[k]+' <small>'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</small>';
+  return '<div class="rk rk2'+(me?' me':'')+'" data-who="'+r.u+'" role="button" tabindex="0"><div class="pos">'+(md||r.p)+'</div>'+av(r.u)+'<div class="nm">'+esc(nm(r.u))+(me?' <span class="sub">(você)</span>':'')+'</div><div class="val">'+v+'</div></div>';
+}
 function rank(){
   if(!S.chs.length)return noCh();
-  var L=users().map(function(u){return{u:u,d:steps(u),c:days(u).length,s:streak(u),m:mins(u)}});
-  var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
-  L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
-  var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
-  // Coroa em quem está em 1º; empatados com o 1º também ganham a coroa e a medalha de ouro
-  var top1=L.length?L[0][k]:0,king=function(r){return top1>0&&r[k]===top1},nk=L.filter(king).length;
-  var row=function(r,i){var c=king(r);return '<div class="rk'+(c?' king':'')+'" data-who="'+r.u+'" role="button" tabindex="0"><div class="pos">'+(c?'🥇':(['🥇','🥈','🥉'][i]||i+1))+'</div>'+(c?'<div class="avw">'+av(r.u)+'<span class="crown" aria-label="em primeiro">👑</span></div>':av(r.u))+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</span>')+'</div></div>'};
-  var mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
-  var vis=Math.max(TOPN,nk); // se mais de 3 empatarem em 1º, todos aparecem
-  var rows=(RKALL?L:L.slice(0,vis)).map(row).join('')+(!RKALL&&mi>=vis?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
-  var more=L.length>vis?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+vis+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
-  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+rows+more+'</div>';
+  var o=rankList(),L=o.L,mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
+  var rows=L.slice(0,TOPN).map(function(r){return rkRow(r,o.k)}).join('')+(mi>=TOPN?rkRow(L[mi],o.k):'');
+  return '<div class="card rkc"><b>🐪 A caravana</b>'+rankSeg()+rows+(L.length>TOPN?'<button class="btn g more" data-rkall="1">Ver ranking completo ('+L.length+')</button>':'')+'</div>';
+}
+function openRank(){
+  var o=rankList();
+  showSheet('<div data-rkfull="1"><h2 style="margin:0 0 10px">🐪 Ranking da caravana</h2>'+rankSeg()+'<div class="rkc">'+o.L.map(function(r){return rkRow(r,o.k)}).join('')+'</div><button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button></div>');
 }
 // ---- Sua trilha: nos dias com passo, a miniatura da foto/vídeo do dia; ao tocar, abre em tela cheia ----
 function dayPosts(d){return S.posts.filter(function(p){return p.uid===S.me&&p.cid===S.cur&&p.date===d}).sort(function(a,b){return a.ts-b.ts})}
@@ -721,7 +736,7 @@ var WD=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 function openDay(d){var P=dayPosts(d);if(!P.length)return openSheet({d:d});openPosts(P,d,true)}
 function openPost(id){var p=S.posts.filter(function(x){return x.id===id})[0];if(p)openPosts([p],p.date,false)}
 // ---- Ver o que a pessoa fez: toque no nome/foto no mural, no ranking ou na lista de participantes ----
-function openWho(u){
+function openWho(u,back){
   var P=S.posts.filter(function(p){return p.uid===u&&p.cid===S.cur}).sort(function(a,b){return b.date<a.date?-1:b.date>a.date?1:b.ts-a.ts});
   var L=users().map(function(x){return{u:x,d:steps(x)}}).sort(function(a,b){return b.d-a.d}),pos=0;L.forEach(function(r,i){if(r.u===u)pos=i+1});
   var st=steps(u),dd=days(u).length;
@@ -730,7 +745,7 @@ function openWho(u){
     var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
     var del=S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'';
     return '<div class="wpr"><button class="wp" data-post="'+p.id+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
-  showSheet('<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
+  showSheet((back?'<button class="link" data-rkopen="1" style="margin-bottom:8px">‹ Voltar ao ranking</button>':'')+'<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
     '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
     (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
     '<button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button>');
@@ -1798,8 +1813,8 @@ document.addEventListener('click',function(e){
   else if(d.mark){S.preSel=d.mark;openSheet()}
   else if(d.vp)verPick(d.vp);
   else if(d.pv)verChosen(d.pv,d.ctx);
-  else if(d.r){rk=d.r;render()}
-  else if(d.rkall){RKALL=!RKALL;render()}
+  else if(d.r){rk=d.r;render();if(document.querySelector('#sh.show [data-rkfull]'))openRank()}
+  else if(d.rkall||d.rkopen)openRank();
   else if(d.mball){MBALL=!MBALL;render()}
   else if(d.etp!==undefined){var mt=TPL[+d.etp],es0=val('es')||TODAY;document.getElementById('en').value=mt.n;document.getElementById('ed').value=mt.d;document.getElementById('ee').value=addD(es0,mt.days-1);document.querySelectorAll('[data-etp]').forEach(function(x){x.classList.toggle('on',x===t)});eprev()}
   else if(d.js)selJ(d.js);
@@ -1858,7 +1873,7 @@ document.addEventListener('click',function(e){
   else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
 });
 document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});
-document.addEventListener('click',function(e){if(e.target&&e.target.id==='lb'){closeLb();return}var w=e.target.closest&&e.target.closest('[data-who]');if(w&&!e.target.closest('button'))openWho(w.getAttribute('data-who'))});
+document.addEventListener('click',function(e){if(e.target&&e.target.id==='lb'){closeLb();return}var w=e.target.closest&&e.target.closest('[data-who]');if(w&&!e.target.closest('button'))openWho(w.getAttribute('data-who'),!!e.target.closest('[data-rkfull]'))});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();else if(e.key==='Enter'&&e.target.getAttribute&&e.target.getAttribute('data-who')&&e.target.tagName==='DIV')openWho(e.target.getAttribute('data-who'))});
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;

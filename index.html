@@ -191,6 +191,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 .recing{display:flex;align-items:center;gap:8px;font-size:17px;padding:10px 0}.recing .dot{width:12px;height:12px;border-radius:50%;background:#e0455a;animation:pisca 1s infinite}
 @keyframes pisca{50%{opacity:.25}}
 .chip.sug{border:2px dashed var(--ac);color:var(--ac);font-weight:700}
+.chip.lk{opacity:.4;border-style:dashed;cursor:not-allowed}
 .howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
 </style>
 </head>
@@ -1017,6 +1018,9 @@ function openSheet(pre){
 // Cada capítulo marcado é 1 passo. Os do dia (e os atrasados) aparecem destacados como sugestão.
 // Capítulos já registrados ficam travados para não contarem duas vezes.
 var MAXSEL=30;
+// ---- Não andar à frente: só libera os capítulos do roteiro até hoje (atrasados + os de hoje) ----
+function unlockOf(c,k){var P=plan(c);if(!P)return null;var m=P.L.length,n=P.n;for(var j=0;j<m;j++){var x=P.L[j];if(x.b+':'+x.c===k)return addD(c.start,Math.floor(j*n/m))}return null}
+function locked(k){if(S.edit&&(S.editKeys||[]).indexOf(k)>=0)return false;var u=unlockOf(S.ch,k);return !!u&&u>TODAY}
 function stepFor(d){
   var e=document.getElementById('stepr'),ok=document.getElementById('ok'),P=plan(S.ch),block='',h='<div class="sub" style="margin-top:4px">'+(d===TODAY?'Hoje':'Leitura de '+fd(d))+'</div>';
   var ex=S.edit&&S.edit.id,rd=readSet(S.me,ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.sug=[];
@@ -1029,12 +1033,15 @@ function stepFor(d){
     var atr=S.sug.filter(function(k){return !R.some(function(x){return x.b+':'+x.c===k})});
     if(atr.length&&!S.edit)h+='<div class="sub" style="margin-top:4px">Atrasados para recuperar: <b>'+refOf(atr.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}))+'</b></div>';
     if(!avail.length&&!S.edit)block='Você já leu todos os capítulos desta jornada. 🏞️';
+    if(avail.some(function(x){return locked(x.b+':'+x.c)}))h+='<div class="sub" style="margin-top:4px">🔒 Os capítulos dos próximos dias liberam no dia certo.</div>';
   }
   if(S.edit)S.sel=chOfPost(S.edit).slice(0,MAXSEL);
+  S.editKeys=S.edit?S.sel.slice():[]; // ao editar, os capítulos que já estavam no passo continuam valendo
   // veio da Bíblia com "Li este capítulo": só esse capítulo vem marcado (foi a pessoa que escolheu)
   if(S.preSel){
     var pk=S.preSel,pq=pk.split(':'),pb=+pq[0],pc=+pq[1];S.preSel=null;
-    if(!rd[pk]&&(!P||P.L.some(function(x){return x.b===pb&&x.c===pc}))&&S.sel.indexOf(pk)<0)S.sel.unshift(pk);
+    if(!rd[pk]&&!locked(pk)&&(!P||P.L.some(function(x){return x.b===pb&&x.c===pc}))&&S.sel.indexOf(pk)<0)S.sel.unshift(pk);
+    if(locked(pk))S.lockMsg=BOOKS[pb]+' '+pc+' é da leitura de '+fd(unlockOf(S.ch,pk))+'. Ele libera para registrar nesse dia.';
   }
   var first=S.sel[0]||S.sug[0];
   S.bk=first?+first.split(':')[0]:(P?(P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0]||P.L[0]).b:Math.max(0,BOOKS.indexOf((mine(S.me)[0]||{}).book)));
@@ -1047,21 +1054,23 @@ function stepFor(d){
 }
 function drawChaps(){
   var P=plan(S.ch),b=S.bk,cs=P?P.L.filter(function(x){return x.b===b}).map(function(x){return x.c}):rg(1,NC[b]);
-  document.getElementById('chg').innerHTML=cs.map(function(c){var k=b+':'+c,r=S.read[k],on=S.sel.indexOf(k)>=0,sg=!r&&!on&&S.sug.indexOf(k)>=0;
-    return '<button class="chip'+(on?' on':'')+(sg?' sug':'')+'" data-sc="'+k+'"'+(r?' disabled title="Você já leu este capítulo" style="opacity:.45"':'')+(sg?' title="Sugerido para ler"':'')+'>'+(r?'✓ ':on?'✔ ':'')+c+'</button>'}).join('');
+  document.getElementById('chg').innerHTML=cs.map(function(c){var k=b+':'+c,r=S.read[k],on=S.sel.indexOf(k)>=0,lk=!r&&!on&&locked(k),sg=!r&&!on&&!lk&&S.sug.indexOf(k)>=0;
+    return '<button class="chip'+(on?' on':'')+(sg?' sug':'')+(lk?' lk':'')+'" data-sc="'+k+'"'+(r?' disabled title="Você já leu este capítulo" style="opacity:.45"':'')+(lk?' aria-disabled="true" title="Libera em '+fd(unlockOf(S.ch,k))+'"':'')+(sg?' title="Sugerido para ler"':'')+'>'+(r?'✓ ':on?'✔ ':lk?'🔒':'')+c+'</button>'}).join('');
+
   var n=S.sel.length,sel=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
-  document.getElementById('selc').innerHTML=n?'Marcado: <b>'+refOf(sel)+'</b> = '+n+(n>1?' passos':' passo'):'Toque nos capítulos que você leu. Cada capítulo é 1 passo.'+(S.sug.length?' Os destacados são os sugeridos.':'');
+  document.getElementById('selc').innerHTML=(S.lockMsg?'<div style="color:var(--err);margin-bottom:4px">🔒 '+esc(S.lockMsg)+'</div>':'')+(n?'Marcado: <b>'+refOf(sel)+'</b> = '+n+(n>1?' passos':' passo'):'Toque nos capítulos que você leu. Cada capítulo é 1 passo.'+(S.sug.length?' Os destacados são os sugeridos.':''));S.lockMsg='';
   var ok=document.getElementById('ok');if(ok&&!ok.disabled)ok.textContent=okLbl();
 }
 function okLbl(){var n=S.sel.length;if(S.edit)return '💾 Salvar alterações';return n?'👣 Registrar '+n+(n>1?' capítulos ('+n+' passos)':' capítulo (1 passo)'):'👣 Registrar leitura'}
 function pickChap(k){
   var i=S.sel.indexOf(k),er=document.getElementById('er');er.textContent='';
+  if(i<0&&locked(k)){var q=k.split(':');S.lockMsg=BOOKS[+q[0]]+' '+q[1]+' é da leitura de '+fd(unlockOf(S.ch,k))+'. Os capítulos dos próximos dias liberam no dia certo.';drawChaps();return}
   if(i>=0)S.sel.splice(i,1);
   else if(S.sel.length>=MAXSEL){er.textContent='Marque no máximo '+MAXSEL+' capítulos por registro.';return}
   else S.sel.push(k);
   drawChaps();
 }
-function selSug(){S.sug.forEach(function(k){if(S.sel.indexOf(k)<0&&!S.read[k]&&S.sel.length<MAXSEL)S.sel.push(k)});drawChaps()}
+function selSug(){S.sug.forEach(function(k){if(S.sel.indexOf(k)<0&&!S.read[k]&&!locked(k)&&S.sel.length<MAXSEL)S.sel.push(k)});drawChaps()}
 // Duração do vídeo (em segundos); null se o aparelho não conseguir ler
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
@@ -1194,6 +1203,7 @@ async function publish(){
   if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
   var R=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
   if(R.some(function(x){return readSet(S.me,S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
+  var lk0=R.filter(function(x){return locked(x.b+':'+x.c)})[0];if(lk0){er.textContent='🔒 '+BOOKS[lk0.b]+' '+lk0.c+' só libera em '+fd(unlockOf(S.ch,lk0.b+':'+lk0.c))+'. Desmarque para registrar os outros.';return}
   var st=stepOf(R);
   if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
   if(!S.media.some(function(x){return !x.audio})){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}

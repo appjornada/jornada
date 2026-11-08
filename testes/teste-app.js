@@ -499,6 +499,45 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'dia 3 de 11: Tiago 5; 1 Pedro 1 em destaque, atrasados à parte; ✓ no lido e o texto pula para o que falta';
   });
 
+  await teste('Pode registrar atrasados, mas não capítulos dos próximos dias (🔒 até o dia certo)', async () => {
+    const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Tiago'); S.entrar(R, g);
+    const c = S.jornada(g, 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS', -2, 8); // hoje: dia 3 (Tiago 5; 1 Pedro 1)
+    R.md = { jornadas: [c.id] };
+    const pg = await abrir(browser, base, S, R);
+    await pg.click('#add'); await pg.waitForSelector('#chg .chip');
+    const grade = () => pg.evaluate(() => [...document.querySelectorAll('#chg .chip')].map(b => b.textContent + (b.classList.contains('lk') ? '[🔒]' : '')));
+    const livro = n => pg.evaluate(n => { const s = document.getElementById('sbk'); s.value = String(BOOKS.indexOf(n)); s.dispatchEvent(new Event('change', { bubbles: true })) }, n);
+    let gr = await grade();
+    exige(gr.join() === '1,2,3,4,5', 'Tiago (atrasados + hoje) deveria estar todo liberado: ' + gr.join());
+    exige(/liberam no dia certo/.test(await pg.textContent('#stepr')), 'faltou o aviso dos próximos dias');
+    await livro('1 Pedro'); gr = await grade();
+    exige(gr[0] === '1' && gr.slice(1).every(x => x.endsWith('[🔒]')), '1 Pedro: só o 1 liberado hoje: ' + gr.join());
+    await pg.click('#chg [data-sc$=":2"]', { force: true }); // o cadeado avisa leitores de tela; o toque mostra a explicação
+    exige(/🔒 1 Pedro 2 é da leitura de/.test(await pg.textContent('#selc')), 'tocar no capítulo de amanhã não explicou (logo abaixo dos capítulos): ' + await pg.textContent('#selc'));
+    exige((await pg.evaluate(() => S.sel.length)) === 0, 'marcou capítulo de amanhã');
+    await livro('1 João'); gr = await grade();
+    exige(gr.length === 5 && gr.every(x => x.endsWith('[🔒]')), '1 João deveria estar todo bloqueado: ' + gr.join());
+    // marcar os sugeridos não pega nada à frente
+    await pg.click('#selsug'); const sel = await pg.evaluate(() => ({ n: S.sel.length, ok: S.sel.every(k => !locked(k)), ref: refOf(S.sel.map(k => ({ b: +k.split(':')[0], c: +k.split(':')[1] })).sort((a, b) => a.b - b.b || a.c - b.c)) }));
+    exige(sel.n === 6 && sel.ok && sel.ref === 'Tiago 1–5; 1 Pedro 1', 'sugeridos: ' + JSON.stringify(sel));
+    // mesmo forçando, o Registrar recusa
+    await pg.evaluate(() => { S.sel.push(BOOKS.indexOf('1 João') + ':1') }); await pg.click('#ok');
+    exige(/só libera em/.test(await pg.textContent('#er')), 'o Registrar aceitou capítulo à frente: ' + await pg.textContent('#er'));
+    exige(!Object.values(S.DB.checkins).some(k => k.user_id === R.id), 'salvou mesmo assim');
+    // vindo da Bíblia ("Li este capítulo") num capítulo de outro dia: não marca e explica
+    await pg.evaluate(() => { closeSheet(); S.preSel = BOOKS.indexOf('1 João') + ':1'; openSheet() }); await pg.waitForSelector('#chg .chip');
+    exige((await pg.evaluate(() => S.sel.length)) === 0 && /é da leitura de/.test(await pg.textContent('#selc')), 'Bíblia → capítulo de outro dia não explicou');
+    await pg.context().close();
+    // no último dia da jornada (ou depois), tudo libera
+    const pf = await abrir(browser, base, S, R, { relogio: c.end_date + 'T12:00:00' });
+    await pf.click('#add'); await pf.waitForSelector('#chg .chip');
+    await pf.evaluate(() => { const s = document.getElementById('sbk'); s.value = String(BOOKS.indexOf('Judas')); s.dispatchEvent(new Event('change', { bubbles: true })) });
+    const gj = await pf.evaluate(() => [...document.querySelectorAll('#chg .chip')].map(b => b.classList.contains('lk')));
+    await pf.context().close();
+    exige(gj.length === 1 && !gj[0], 'no último dia, Judas devia estar liberado');
+    return 'dia 3: Tiago todo liberado, 1 Pedro só o 1, 1 João bloqueado; tocar explica; sugeridos e Registrar respeitam; Bíblia também; último dia libera tudo';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

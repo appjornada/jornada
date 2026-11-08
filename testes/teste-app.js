@@ -166,6 +166,60 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'sem caravana: só código (e entrou); líder antiga: só edita; Mayara: cria';
   });
 
+  await teste('Foto de perfil: escolher, aparecer para a caravana no lugar da letra, trocar e tirar', async () => {
+    const S = novoServidor();
+    const A = S.usuario('Ana'), B = S.usuario('Bia');
+    const g = S.caravana(A, 'Tiago'); S.entrar(B, g); const c = S.jornada(g, 'Tiago em 5 dias');
+    S.publicacao(A, c); S.publicacao(B, c);
+    const pa = await abrir(browser, base, S, A);
+    pa.on('dialog', d => d.accept());
+    // sem foto: a letra no mural e o convite no alto do Mapa
+    await pa.waitForSelector('main .card .av.md');
+    exige(!(await pa.$('main .av img')), 'apareceu foto sem ninguém ter colocado');
+    await pa.click('nav [data-t="cfg"]'); await pa.waitForSelector('main [data-avp]');
+    exige((await pa.textContent('main .card')).includes('Sua foto de perfil'), 'o convite para pôr a foto não está no alto do Mapa');
+    // escolhe uma foto em pé (600x900): vira um quadrado pequeno
+    const gera = cor => pa.evaluate(k => { const v = document.createElement('canvas'); v.width = 600; v.height = 900; const x = v.getContext('2d'); x.fillStyle = k; x.fillRect(0, 0, 600, 900); return v.toDataURL('image/png').split(',')[1] }, cor).then(b => Buffer.from(b, 'base64'));
+    await pa.setInputFiles('#favt', { name: 'eu.png', mimeType: 'image/png', buffer: await gera('#2a6') });
+    exige(await esperar(() => S.DB.profiles[A.id].avatar_path), 'a foto não foi salva no perfil');
+    const p1 = S.DB.profiles[A.id].avatar_path;
+    exige(new RegExp('^' + A.id + '/avatar-[0-9a-f]{16}\\.jpg$').test(p1) && S.DB.objects[p1], 'caminho da foto errado: ' + p1);
+    exige(S.DB.objects[p1].size < 60000, 'foto grande demais: ' + S.DB.objects[p1].size + ' bytes');
+    await pa.waitForSelector('main .av.big img');
+    exige(await pa.$('main [data-avdel]'), 'sem o botão de tirar a foto');
+    // Bia vê a foto da Ana no mural e no ranking; a dela continua com a letra
+    const pb = await abrir(browser, base, S, B);
+    const circ = (pg, nome, sel) => pg.evaluate(([n, s]) => { const r = [...document.querySelectorAll(s)].find(x => [...x.querySelectorAll('b')].some(b => b.textContent.replace(' (você)', '') === n)); const a = r && r.querySelector('.av'); return a ? { foto: !!a.querySelector('img'), letra: a.firstChild.nodeValue } : null }, [nome, sel]);
+    await esperar(async () => (await circ(pb, 'Ana', 'main .card')) && (await circ(pb, 'Ana', 'main .card')).foto);
+    const fa = await circ(pb, 'Ana', 'main .card'), fb = await circ(pb, 'Bia', 'main .card');
+    exige(fa && fa.foto, 'Bia não vê a foto da Ana no mural');
+    exige(fb && !fb.foto && fb.letra === 'B', 'a publicação da Bia perdeu a letra');
+    await pb.click('nav [data-t="cfg"]'); await pb.waitForSelector('main .rk');
+    exige((await circ(pb, 'Ana', 'main .rk')).foto, 'Bia não vê a foto da Ana no ranking');
+    // trocar: a foto antiga é apagada do armazenamento
+    await pa.setInputFiles('#favt', { name: 'eu2.png', mimeType: 'image/png', buffer: await gera('#a26') });
+    exige(await esperar(() => S.DB.profiles[A.id].avatar_path !== p1), 'não trocou a foto');
+    exige(await esperar(() => !S.DB.objects[p1]), 'a foto antiga ficou guardada');
+    const p2 = S.DB.profiles[A.id].avatar_path;
+    // tirar: volta a letra
+    await pa.click('main [data-avdel]');
+    exige(await esperar(() => S.DB.profiles[A.id].avatar_path == null), 'não tirou a foto');
+    exige(await esperar(() => !S.DB.objects[p2]), 'o arquivo da foto ficou guardado');
+    await pa.waitForSelector('main .av.big:not(:has(img))');
+    exige((await pa.textContent('main .av.big')).trim() === 'A', 'não voltou a letra');
+    await Promise.all([pa, pb].map(p => p.context().close()));
+    // banco ainda sem o campo da foto: tudo como antes (nomes aparecem, sem oferecer a foto)
+    const S2 = novoServidor({ semAvatar: true }), C1 = S2.usuario('Caio'), g2 = S2.caravana(C1, 'X'); S2.publicacao(C1, S2.jornada(g2, 'J'));
+    const pc = await abrir(browser, base, S2, C1);
+    await pc.waitForSelector('main .card .av.md');
+    const nomeOk = (await pc.textContent('main')).includes('Caio');
+    await pc.click('nav [data-t="cfg"]'); await pc.waitForSelector('main .rk');
+    const semFoto = !(await pc.$('[data-avp]')); await pc.context().close();
+    exige(nomeOk, 'sem o campo no banco, os nomes sumiram');
+    exige(semFoto, 'sem o campo no banco, ofereceu a foto');
+    return 'Ana pôs, Bia viu no mural e no ranking, trocou (antiga apagada), tirou (voltou a letra); sem o campo: como antes';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

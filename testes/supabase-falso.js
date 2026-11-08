@@ -57,6 +57,7 @@ function novoServidor(opts = {}) {
     if (q.storage) return storage(me, q);
     const t = q.table;
     if (q.op === 'select') {
+      if (t === 'profiles' && O.semAvatar && /avatar_path/.test(q.cols || '')) return err('column profiles.avatar_path does not exist', '42703');
       let rows = applyFilters(visible(t, me), q.filters);
       if (q.order) { for (const o of [...q.order].reverse()) rows.sort((a, b) => (String(a[o.col]) < String(b[o.col]) ? -1 : String(a[o.col]) > String(b[o.col]) ? 1 : 0) * (o.asc ? 1 : -1)) }
       let from = 0, to = rows.length - 1;
@@ -89,6 +90,11 @@ function novoServidor(opts = {}) {
     if (q.op === 'update') {
       let rows = applyFilters(visible(t, me), q.filters);
       if (t === 'checkins') rows = rows.filter(r => r.user_id === me);
+      if (t === 'profiles') {
+        if (O.semAvatar && 'avatar_path' in q.body) return err("Could not find the 'avatar_path' column of 'profiles' in the schema cache", 'PGRST204');
+        rows = rows.filter(r => r.id === me);
+        const a = q.body.avatar_path; if (a != null && !new RegExp('^' + me + '/avatar-[0-9a-f]{8,40}\\.jpg$').test(a)) return err('new row for relation "profiles" violates check constraint "profiles_avatar_path_check"', '23514');
+      }
       rows.forEach(r => Object.assign(DB[t === 'checkins' ? 'checkins' : t][r.id], q.body));
       return { data: rows.map(r => ({ id: r.id })), error: null };
     }

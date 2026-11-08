@@ -32,7 +32,10 @@ h2{font:700 23px Georgia,"Times New Roman",serif;margin:0}
 main{padding:8px 16px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
 .row{display:flex;align-items:center;gap:10px}
-.av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none}
+.av{width:40px;height:40px;border-radius:50%;background:var(--ac);color:var(--acx);display:grid;place-items:center;font-weight:700;flex:none;position:relative;overflow:hidden}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.av.md{width:54px;height:54px;font-size:22px}
+.av.big{width:84px;height:84px;font-size:34px}
 .grow{flex:1;min-width:0}
 .ref{font-weight:700;margin:10px 0 2px}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -185,6 +188,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 </nav>
 
 <div class="sheet" id="sh"><div id="shc"></div></div>
+<input type="file" id="favt" accept="image/*" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -203,13 +207,69 @@ function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.t
 function addD(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}
 function diff(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
 var TODAY=iso(new Date());
-var S={roster:{},groups:[],grp:null,me:null,canEdit:false,canNew:false,err:'',ch:{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5},chs:[],all:[],myJ:[],joinG:null,cur:null,posts:[],names:{},asked:false,draft:null,openC:{},media:null,step:null};
+var S={roster:{},groups:[],grp:null,me:null,canEdit:false,canNew:false,err:'',ch:{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5},chs:[],all:[],myJ:[],joinG:null,cur:null,posts:[],names:{},avp:{},avu:{},asked:false,draft:null,openC:{},media:null,step:null};
 // Tempo-limite: em conexão ruim a chamada não fica "carregando" para sempre
 function withTimeout(pr,ms){return Promise.race([pr,new Promise(function(_,rej){setTimeout(function(){rej(new Error('tempo esgotado'))},ms)})])}
 function uid(){try{if(crypto.randomUUID)return crypto.randomUUID()}catch(e){}return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)}
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function val(id){var e=document.getElementById(id);return e?e.value:''}
 function nm(u){return S.names[u]||'Peregrino'}
+// ---- Foto de perfil (supabase/7-foto-de-perfil.sql) ----
+// Círculo com a foto da pessoa; sem foto (ou se ela não carregar) fica a letra do nome, como antes
+function av(u,n,c){var url=S.avu[u];return '<div class="av'+(c?' '+c:'')+'">'+esc(((n||nm(u))||'?')[0])+(url?'<img src="'+esc(url)+'" alt="">':'')+'</div>'}
+// Nomes e fotos dos perfis. Se o banco ainda não tiver o campo da foto, busca só os nomes (como antes)
+var NOAV=false;
+async function profs(ids){
+  if(!ids||!ids.length)return;
+  try{
+    var r=null;
+    if(!NOAV){r=await sb.from('profiles').select('id,name,avatar_path').in('id',ids);
+      if(r.error&&(r.error.code==='42703'||/avatar_path/.test(r.error.message||'')))NOAV=true}
+    if(NOAV)r=await sb.from('profiles').select('id,name').in('id',ids);
+    if(r.error)return;
+    (r.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name;if(NOAV)return;if(p.avatar_path)S.avp[p.id]=p.avatar_path;else delete S.avp[p.id]});
+    await avSign();
+  }catch(e){}
+}
+async function avSign(){
+  var ks=Object.keys(S.avp),u=await signed(ks.map(function(k){return S.avp[k]}));
+  Object.keys(S.avu).forEach(function(k){if(!S.avp[k])delete S.avu[k]});
+  ks.forEach(function(k){if(u[S.avp[k]])S.avu[k]=u[S.avp[k]];else delete S.avu[k]});
+}
+function profCard(){
+  if(NOAV||!S.me)return '';var has=!!S.avp[S.me];
+  return '<div class="card"><b>📷 Sua foto de perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
+    '<button class="btn'+(has?' o':'')+'" data-avp="1" style="text-align:center">'+(has?'Trocar foto':'Escolher foto')+'</button>'+(has?'<button class="link" data-avdel="1">Tirar a foto</button>':'')+'</div>';
+}
+// A foto vira um quadrado de 320 px (~30 KB), cortado no centro
+async function setAvatar(file){
+  if(!file||!S.me)return;
+  if(NOAV){alert('A foto de perfil ainda não está disponível.');return}
+  var bl;
+  try{var im=await loadImg(file),w=im.naturalWidth,h=im.naturalHeight,q=Math.min(w,h),z=Math.min(320,q),cv=document.createElement('canvas');
+    cv.width=cv.height=z;var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,(w-q)/2,(h-q)/2,q,q,0,0,z,z);bl=await toJpg(cv,.82)}catch(e){}
+  if(!bl){alert('Não foi possível abrir essa imagem. Tente outra foto.');return}
+  toast('Enviando sua foto…');
+  var hx=Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(8)),function(x){return ('0'+x.toString(16)).slice(-2)}).join('');
+  var path=S.me+'/avatar-'+hx+'.jpg',old=S.avp[S.me];
+  try{
+    var up=await withTimeout(sb.storage.from('photos').upload(path,bl,{contentType:'image/jpeg',upsert:false}),120000);
+    if(up.error)throw up.error;
+    var r=await sb.from('profiles').update({avatar_path:path}).eq('id',S.me).select('id');
+    if(r.error||!r.data||!r.data.length){try{await sb.storage.from('photos').remove([path])}catch(x){}throw r.error||new Error('Tente de novo.')}
+  }catch(e){alert('Não foi possível colocar a foto. '+why(e));return}
+  S.avp[S.me]=path;await avSign();
+  if(old&&old!==path&&old.indexOf(S.me+'/avatar-')===0)try{await sb.storage.from('photos').remove([old])}catch(x){}
+  toast('Foto de perfil atualizada');render();
+}
+async function delAvatar(){
+  if(!confirm('Tirar sua foto de perfil? Volta a aparecer a letra do seu nome.'))return;
+  var old=S.avp[S.me],r=await sb.from('profiles').update({avatar_path:null}).eq('id',S.me).select('id');
+  if(r.error||!r.data||!r.data.length){alert('Não foi possível tirar a foto. '+(r.error?why(r.error):'Tente de novo.'));return}
+  delete S.avp[S.me];delete S.avu[S.me];
+  if(old&&old.indexOf(S.me+'/avatar-')===0)try{await sb.storage.from('photos').remove([old])}catch(x){}
+  toast('Foto tirada');render();
+}
 // Integrantes: a lista real da caravana (group_roster) + quem publicou na jornada + você
 function roster(){return S.grp&&S.roster[S.grp.id]||null}
 function users(){var o={},R=roster();if(R)R.forEach(function(m){o[m.id]=1});S.posts.forEach(function(p){if(p.cid===S.cur)o[p.uid]=1});if(S.me)o[S.me]=1;return Object.keys(o)}
@@ -572,7 +632,7 @@ function postSteps(p){
 function post(p){
   var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=S.openC[p.id],ps=postSteps(p);
   var what=ps.k?'avançou '+ps.k+(ps.k>1?' passos':' passo')+' · passo '+ps.cum:'registrou capítulos já contados';
-  return '<div class="card"><div class="row"><div class="av">'+esc(nm(p.uid)[0])+'</div><div class="grow"><b>'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
+  return '<div class="card"><div class="row">'+av(p.uid,null,'md')+'<div class="grow"><b>'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
     (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
     mediaHtml(p)+
@@ -598,7 +658,7 @@ function rank(){
   var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
   L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
   var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
-  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div><div class="av">'+esc(nm(r.u)[0])+'</div><div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
+  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div>'+av(r.u)+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
 }
 function cal(){
   var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join('');
@@ -611,10 +671,10 @@ var TPL=[{n:'Bíblia em 1 ano',d:'Gênesis a Apocalipse, cerca de 3 capítulos p
 // Integrantes reais da caravana (vínculos gravados no banco), com o líder primeiro
 function membersCard(){
   var R=roster();
-  if(!R)return '<div class="card"><b>👥 Integrantes</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+users().map(function(u){return '<div class="rk"><div class="av">'+esc(nm(u)[0])+'</div><div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+'</div>';
+  if(!R)return '<div class="card"><b>👥 Integrantes</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+users().map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+'</div>';
   var me=R.filter(function(m){return m.id===S.me})[0],alone=R.length===1;
   return '<div class="card"><b>👥 Integrantes ('+R.length+')</b><div class="sub" style="margin-bottom:4px">Quem está na caravana '+esc(S.grp.name)+'.</div>'+
-    R.map(function(m){return '<div class="rk"><div class="av">'+esc((m.name||'?')[0])+'</div><div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join('')+
+    R.map(function(m){return '<div class="rk">'+av(m.id,m.name)+'<div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join('')+
     (me&&(me.role!=='leader'||alone)?'<button class="btn g" data-leave="'+S.grp.id+'" style="color:var(--err)">Sair desta caravana</button>':'')+'</div>'
 }
 async function leaveGroup(gid){
@@ -628,14 +688,15 @@ async function leaveGroup(gid){
 }
 function cfg(){
   var out='<div class="card"><button class="link" data-out="1">Sair da conta</button></div>';
-  if(!S.grp)return noCh()+out;
+  var pf=profCard(),top=S.avp[S.me]?'':pf,bot=S.avp[S.me]?pf:'';
+  if(!S.grp)return noCh()+pf+out;
   var inv='<div class="card"><b>📲 Chame alguém para a caravana</b><div class="sub">Quem abrir o link cria a conta e já entra direto nesta jornada.</div>'+waBtn()+'<button class="btn g" id="shi">Outras formas de compartilhar</button><div class="sub" style="margin-top:8px">Código da caravana, para quem já tem o app:</div><div style="font-size:30px;font-weight:800;letter-spacing:.15em;text-align:center;margin:6px 0">'+esc(S.grp.invite_code)+'</div><button class="link" data-copy="1">Copiar código</button></div>'+(S.canNew?'<div class="card"><b>Outras jornadas</b><div class="sub">Entre em outra caravana ou comece uma jornada nova.</div><div class="two"><button class="btn o" data-o="code" style="text-align:center">Tenho um código</button><button class="btn o" data-o="new" style="text-align:center">Nova jornada</button></div></div>':'<div class="card"><b>Outra caravana</b><div class="sub">Recebeu o código de convite de outra caravana? Toque abaixo para entrar.</div><button class="btn o" data-o="code" style="text-align:center">Tenho um código</button></div>')+out;
   var L=S.chs.map(function(c){var st=TODAY<c.start?'em breve':TODAY>c.end?'encerrada':'em andamento',P=plan(c);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">'+fd(c.start)+' a '+fd(c.end)+' · '+c.goal+' dias/sem · '+st+(P?' · '+P.L.length+' capítulos':'')+(c.desc?'<br>'+esc(c.desc):'')+'</div></div>'+'<div style="margin-top:4px">'+(isMine(c.id)?'<span class="tag" style="color:var(--ok)">✓ Você participa</span>':'<button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button>')+'</div></div>'+(S.canEdit?'<div style="text-align:right"><button class="link" data-ed="'+c.id+'">Editar</button><br><button class="link" style="color:var(--mut)" data-d="'+c.id+'">Excluir</button></div>':'')+'</div>'}).join('')||'<div class="sub">Nenhuma jornada ainda.</div>';
   var f=canMake()?'<div class="card"><b>Traçar nova jornada nesta caravana</b><label>Nome</label><input id="fc" data-keep placeholder="ex.: Evangelho de João em 21 dias"><label>Descrição ou plano (opcional)</label><input id="fd" data-keep placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="fs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="fe" value="'+addD(TODAY,29)+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="fg" min="1" max="7" value="5"><div class="err" id="fer"></div><button class="btn" id="sv">Traçar jornada</button></div>':'<div class="card sub">Só o líder pode traçar e editar jornadas nesta caravana.</div>';
   var tp=canMake()?'<div class="card"><b>Roteiros prontos</b><div class="sub" style="margin-bottom:6px">Toque em Usar para preencher o formulário abaixo.</div>'+TPL.map(function(m,i){return '<div class="rk"><div class="grow"><b>'+m.n+'</b><div class="sub">'+m.d+' · '+m.days+' dias</div></div><button class="link" data-tp="'+i+'">Usar</button></div>'}).join('')+'</div>':'';
   var oth=S.all.filter(function(c){return S.grp&&c.gid!==S.grp.id&&!isMine(c.id)&&c.end>=TODAY});
   var O=oth.length?'<div class="card"><b>Jornadas abertas nas suas outras caravanas</b><div class="sub">Você está nessas caravanas, mas ainda não participa destas jornadas.</div>'+oth.map(function(c){var g=grpOf(c.gid);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">Caravana '+esc(g?g.name:'')+' · '+fd(c.start)+' a '+fd(c.end)+'</div></div><button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button></div>'}).join('')+'</div>':'';
-  return (S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+out;
+  return top+(S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+bot+out;
 }
 // ---- Bíblia: livros → capítulos → leitura (Almeida) ----
 var BIB={v:'books',b:0,c:1,fs:19,last:null,ver:'ALM'};
@@ -745,7 +806,7 @@ async function loadChat(force){
     if(r.error){e.innerHTML='<div class="err">Não foi possível abrir a conversa. '+esc(why(r.error))+'</div>';return}
     var A=(r.data||[]).slice().reverse(),key=A.length+':'+(A.length?A[A.length-1].id:'');
     var miss=A.map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
-    if(miss.length){var pr=await sb.from('profiles').select('id,name').in('id',miss);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name});e=document.getElementById('msgs');if(!e)return}
+    if(miss.length){await profs(miss);e=document.getElementById('msgs');if(!e)return}
     if(!force&&e.dataset.k===key)return;e.dataset.k=key;
     var P=A.filter(isPed).reverse(),L=A.filter(function(m){return !isPed(m)}),pe=document.getElementById('preqs');
     var pc=document.getElementById('pcnt');if(pc)pc.textContent='📜 Pedidos de oração ('+P.length+')';
@@ -1395,7 +1456,7 @@ async function boot(){
   document.body.classList.remove('gate');
   if(!S.groups.length){
     S.grp=null;S.canEdit=false;S.chs=[];S.all=[];S.posts=[];S.cur=null;S.err='';loaded=true;
-    if(!S.names[S.me]){var p=await sb.from('profiles').select('id,name').eq('id',S.me);(p.data||[]).forEach(function(x){S.names[x.id]=x.name})}
+    await profs([S.me]);
     render();
     if(S.invErr){onb('code');document.getElementById('oer').textContent=S.invErr;S.invErr=''}
     else if(!S.asked){S.asked=true;onb('ask')}
@@ -1437,7 +1498,7 @@ async function loadRosters(){
     var by={};gids.forEach(function(g){by[g]=[]});
     (r.data||[]).forEach(function(m){if(by[m.group_id]&&!by[m.group_id].some(function(x){return x.id===m.user_id}))by[m.group_id].push({id:m.user_id,role:m.role})});
     var ids=Object.keys((r.data||[]).reduce(function(o,m){o[m.user_id]=1;return o},{}));
-    if(ids.length){var pr=await sb.from('profiles').select('id,name').in('id',ids);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name})}
+    if(ids.length)await profs(ids);
     gids.forEach(function(g){S.roster[g]=by[g].map(function(m){return{id:m.id,role:m.role,name:nm(m.id)}}).sort(function(a,b){return (b.role==='leader')-(a.role==='leader')||a.name.localeCompare(b.name,'pt')})});
   }catch(e){}
 }
@@ -1473,7 +1534,7 @@ async function loadData(){
     // nomes: só de quem aparece (antes baixava os nomes de todos os usuários do app)
     var want={};rows.forEach(function(p){want[p.user_id]=1;(p.comments||[]).forEach(function(c){want[c.user_id]=1})});if(S.me)want[S.me]=1;
     var miss=Object.keys(want).filter(function(u){return !S.names[u]});
-    if(miss.length){var pr=await sb.from('profiles').select('id,name').in('id',miss);(pr.data||[]).forEach(function(p){if(p.name)S.names[p.id]=p.name})}
+    if(miss.length)await profs(miss);
     var paths=[].concat.apply([],rows.filter(function(p){return p.photo_path}).map(function(p){return p.photo_path.split(PSEP)}));
     var urls=await signed(paths.concat(paths.filter(hasThumb).map(thumbOf)));if(stale())return;
     var pend=S.posts.filter(function(p){return p.local&&!rows.some(function(r){return r.id===p.id})});
@@ -1519,6 +1580,8 @@ document.addEventListener('click',function(e){
   if(d.t){tab=d.t;render();scrollTo(0,0)}
   else if(t.id==='add'||t.id==='add2')openSheet();
   else if(t.id==='x')closeSheet();
+  else if(d.avp)document.getElementById('favt').click();
+  else if(d.avdel)delAvatar();
   else if(t.id==='ok')publish();
   else if(t.id==='pdgo'){S.pendErr='';render();resumePending()}
   else if(t.id==='pdno'){if(confirm('Descartar este passo pendente? Ele não será publicado.')){pendClear();render()}}
@@ -1608,6 +1671,7 @@ document.addEventListener('change',function(e){
   else if(id==='fgal')setMedia(e.target,'galeria');
   else if(id==='faud')setMedia(e.target,'galeria');
   else if(id==='frep')setMedia(e.target,'galeria',S.rep);
+  else if(id==='favt'){var f=e.target.files&&e.target.files[0];e.target.value='';setAvatar(f)}
 });
 function init(){
   render();

@@ -89,8 +89,9 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
       const cs = await pg.textContent('#cs');
       exige(/6 peregrinos/.test(cs), 'cabeçalho mostra "' + cs + '" em vez de 6 peregrinos');
       await pg.click('nav [data-t="cfg"]');
+      exige(/Participantes \(6\)/.test(await pg.textContent('main')), 'não mostra 6 participantes');
+      await pg.click('main [data-mball]'); await pg.click('main [data-rkall]'); // abre a lista e o ranking completo
       const t = await pg.textContent('main');
-      exige(/Integrantes \(6\)/.test(t), 'lista de integrantes não mostra 6');
       for (const n of ['Líder Ana', 'Pessoa 1', 'Pessoa 5']) exige(t.includes(n), 'falta ' + n + ' na lista');
       const rk = await pg.$$eval('.rk .grow b', e => e.length); exige(rk >= 6, 'ranking com ' + rk + ' pessoas');
     }
@@ -108,7 +109,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(/3 peregrinos/.test(await pl.textContent('#cs')), 'novo participante não apareceu');
     const pb = await abrir(browser, base, S, B);
     await pb.click('nav [data-t="cfg"]'); pb.once('dialog', d => d.accept());
-    await pb.click('[data-leave]'); await esperar(() => S.DB.gm.length === 2);
+    await pb.click('main [data-mball]'); await pb.click('[data-leave]'); await esperar(() => S.DB.gm.length === 2);
     await recarregar(pl);
     exige(/2 peregrinos/.test(await pl.textContent('#cs')), 'contagem não voltou para 2 após a saída');
     exige(!S.DB.gm.some(m => m.user_id === B.id), 'vínculo não foi removido');
@@ -336,6 +337,37 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'miniaturas criadas pelas donas; Bia vê a miniatura; reabrir: 0 links novos; sem novidade: só a pergunta; chat: só as novas; sem a função: como antes';
   });
 
+  await teste('Mapa: ranking e trilha mostram os 5 primeiros; participantes só o número até tocar', async () => {
+    const S = novoServidor();
+    const nomes = ['Mayara', 'Bia', 'Caio', 'Davi', 'Eva', 'Fábio', 'Gil', 'Roger'];
+    const U = nomes.map(n => S.usuario(n)), g = S.caravana(U[0], 'Tiago'); U.slice(1).forEach(u => S.entrar(u, g));
+    const c = S.jornada(g, 'João em 21 dias');
+    U.forEach((u, i) => { for (let k = 1; k <= 8 - i; k++) S.publicacao(u, c, { book: 'João', ref: String(k), chapters: 1 }) }); // Mayara 8 passos … Roger 1
+    const pg = await abrir(browser, base, S, U[7]); // Roger, o último
+    await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main [data-rkall]');
+    const ver = () => pg.evaluate(() => {
+      const card = [...document.querySelectorAll('main .card')].find(x => x.textContent.includes('A caravana'));
+      const pc = [...document.querySelectorAll('main .card')].find(x => x.textContent.includes('Participantes'));
+      return { rank: [...card.querySelectorAll('.rk .grow b')].map(b => b.textContent), pos: [...card.querySelectorAll('.rk .pos')].map(b => b.textContent),
+        peers: document.querySelectorAll('#map .peer').length, part: pc.querySelector('b').textContent, lista: pc.querySelectorAll('.rk').length,
+        sair: !!document.querySelector('[data-leave]'), botao: card.querySelector('[data-rkall]').textContent };
+    });
+    let v = await ver();
+    exige(v.rank.slice(0, 5).join() === 'Mayara,Bia,Caio,Davi,Eva', 'ranking não mostra os 5 primeiros: ' + v.rank.join());
+    exige(v.rank.length === 6 && v.rank[5] === 'Roger (você)' && v.pos[5] === '8', 'a própria posição não aparece embaixo: ' + v.rank.join() + ' / ' + v.pos.join());
+    exige(v.peers <= 5, 'a trilha mostra ' + v.peers + ' pessoas (devia mostrar no máximo 5)');
+    exige(/Ver ranking completo \(8\)/.test(v.botao), 'botão: ' + v.botao);
+    exige(v.part === '👥 Participantes (8)' && v.lista === 0 && !v.sair, 'participantes já aparecem listados: ' + JSON.stringify(v));
+    await pg.click('main [data-rkall]'); v = await ver();
+    exige(v.rank.length === 8 && v.peers === 7, 'ranking completo: ' + v.rank.length + ' no ranking, ' + v.peers + ' na trilha');
+    await pg.click('main [data-mball]'); v = await ver();
+    exige(v.lista === 8 && v.sair, 'ao tocar, a lista de participantes não abriu: ' + v.lista);
+    await pg.click('main [data-rkall]'); await pg.click('main [data-mball]'); v = await ver();
+    exige(v.rank.length === 6 && v.lista === 0, 'não fechou de novo');
+    await pg.context().close();
+    return 'Roger (8º) vê os 5 primeiros + a própria posição; trilha com até 5; ranking completo: 8 e 7 na trilha; participantes: só o número até tocar';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');
@@ -485,7 +517,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const A = S.usuario('Ana'), B = S.usuario('Bruno'); const g = S.caravana(A, 'G'); S.entrar(B, g); const c = S.jornada(g, 'João em 21 dias'); S.publicacao(B, c);
     const pa = await abrir(browser, base, S, A); await pa.click('nav [data-t="cfg"]');
     const t = await pa.textContent('main'); await pa.context().close();
-    exige(/Integrantes \(2\)/.test(t), 'lista: ' + t.slice(0, 80)); exige(pa.erros.length === 0, pa.erros.join());
+    exige(/Participantes \(2\)/.test(t), 'lista: ' + t.slice(0, 80)); exige(pa.erros.length === 0, pa.erros.join());
   });
 
   // ---------- 3. Registro de leitura ----------

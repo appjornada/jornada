@@ -203,6 +203,8 @@ function isAudPath(x){return /\.(weba|m4a|mp3|aac|ogg|oga|opus|wav|amr)$/i.test(
 var MAXAUD=180,MAXAB=15*1048576;
 var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
 var tab='feed',rk='dias',loaded=false,sb,gm='in';
+// Mapa: ranking e trilha mostram os 5 primeiros; participantes só o número (abrem ao tocar)
+var RKALL=false,MBALL=false,TOPN=5;
 function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
 function addD(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}
 function diff(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
@@ -466,7 +468,8 @@ function trail(){
   function path(f){var d='';for(var i=0;i<=60;i++){if(i/60>f+1e-9)break;var p=pt(i/60);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}var q=pt(f);return d+'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)}
   var fm=Math.min(1,steps(S.me)/tot),m=pt(fm),ms='',k=Math.min(tot,14);
   for(var j=1;j<k;j++){var q=pt(j/k);ms+='<circle class="stone" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/>'}
-  var peers=users().filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,steps(u)/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+steps(u)+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
+  var all=users().slice().sort(function(a,b){return steps(b)-steps(a)}),vis=RKALL?all:all.slice(0,TOPN);
+  var peers=vis.filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,steps(u)/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+steps(u)+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
   var lx=W-54,ly=H/2;
   return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+steps(S.me)+' de '+tot+' passos até a Terra Prometida">'+
     '<path class="road" d="'+path(1)+'"/>'+(fm>0?'<path class="walked" d="'+path(fm)+'"/>':'')+ms+
@@ -658,7 +661,11 @@ function rank(){
   var k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
   L.sort(function(a,b){return b[k]-a[k]||b.d-a.d});
   var seg='<div class="seg">'+[['dias','Passos'],['caps','Dias'],['seq','Seguidos'],['tempo','Tempo']].map(function(x){return '<button data-r="'+x[0]+'" class="'+(rk===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
-  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+L.map(function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div>'+av(r.u)+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'}).join('')+'</div>';
+  var row=function(r,i){return '<div class="rk"><div class="pos">'+(['🥇','🥈','🥉'][i]||i+1)+'</div>'+av(r.u)+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+{d:'passos',c:'dias',s:'seguidos'}[k]+'</span>')+'</div></div>'};
+  var mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
+  var rows=(RKALL?L:L.slice(0,TOPN)).map(row).join('')+(!RKALL&&mi>=TOPN?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
+  var more=L.length>TOPN?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+TOPN+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
+  return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+rows+more+'</div>';
 }
 function cal(){
   var c=S.ch,dd=days(S.me),w=['D','S','T','Q','Q','S','S'],h=w.map(function(x){return '<div class="w">'+x+'</div>'}).join('');
@@ -671,11 +678,12 @@ var TPL=[{n:'Bíblia em 1 ano',d:'Gênesis a Apocalipse, cerca de 3 capítulos p
 // Integrantes reais da caravana (vínculos gravados no banco), com o líder primeiro
 function membersCard(){
   var R=roster();
-  if(!R)return '<div class="card"><b>👥 Integrantes</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+users().map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+'</div>';
+  var tg=function(n){return '<button class="btn g" data-mball="1" style="text-align:center">'+(MBALL?'Esconder a lista':'Ver os '+n+' participantes')+'</button>'};
+  if(!R){var U=users();return '<div class="card"><b>👥 Participantes ('+U.length+')</b><div class="sub">Não foi possível carregar a lista agora. Aparecem os que já publicaram.</div>'+(MBALL?U.map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join(''):'')+tg(U.length)+'</div>'}
   var me=R.filter(function(m){return m.id===S.me})[0],alone=R.length===1;
-  return '<div class="card"><b>👥 Integrantes ('+R.length+')</b><div class="sub" style="margin-bottom:4px">Quem está na caravana '+esc(S.grp.name)+'.</div>'+
-    R.map(function(m){return '<div class="rk">'+av(m.id,m.name)+'<div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join('')+
-    (me&&(me.role!=='leader'||alone)?'<button class="btn g" data-leave="'+S.grp.id+'" style="color:var(--err)">Sair desta caravana</button>':'')+'</div>'
+  return '<div class="card"><b>👥 Participantes ('+R.length+')</b><div class="sub" style="margin-bottom:4px">Quem está na caravana '+esc(S.grp.name)+'.</div>'+
+    (MBALL?R.map(function(m){return '<div class="rk">'+av(m.id,m.name)+'<div class="grow"><b>'+esc(m.name||'Peregrino')+(m.id===S.me?' (você)':'')+'</b>'+(m.role==='leader'?' <span class="tag">líder</span>':'')+'</div></div>'}).join(''):'')+tg(R.length)+
+    (MBALL&&me&&(me.role!=='leader'||alone)?'<button class="btn g" data-leave="'+S.grp.id+'" style="color:var(--err)">Sair desta caravana</button>':'')+'</div>'
 }
 async function leaveGroup(gid){
   if(!confirm('Sair da caravana "'+(grpOf(gid)||{}).name+'"? Suas publicações continuam guardadas.'))return;
@@ -1698,6 +1706,8 @@ document.addEventListener('click',function(e){
   else if(d.vp)verPick(d.vp);
   else if(d.pv)verChosen(d.pv,d.ctx);
   else if(d.r){rk=d.r;render()}
+  else if(d.rkall){RKALL=!RKALL;render()}
+  else if(d.mball){MBALL=!MBALL;render()}
   else if(d.etp!==undefined){var mt=TPL[+d.etp],es0=val('es')||TODAY;document.getElementById('en').value=mt.n;document.getElementById('ed').value=mt.d;document.getElementById('ee').value=addD(es0,mt.days-1);document.querySelectorAll('[data-etp]').forEach(function(x){x.classList.toggle('on',x===t)});eprev()}
   else if(d.js)selJ(d.js);
   else if(d.pj)participate(d.pj);

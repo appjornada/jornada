@@ -205,8 +205,8 @@ function isAudPath(x){return /\.(weba|m4a|mp3|aac|ogg|oga|opus|wav|amr)$/i.test(
 var MAXAUD=180,MAXAB=15*1048576;
 var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
 var tab='feed',rk='dias',loaded=false,sb,gm='in';
-// Mapa: ranking e trilha mostram os 5 primeiros; participantes só o número (abrem ao tocar)
-var RKALL=false,MBALL=false,TOPN=5;
+// Mapa: o ranking mostra os 3 primeiros e a trilha os 5 primeiros; participantes só o número (abrem ao tocar)
+var RKALL=false,MBALL=false,TOPN=3,TRAILN=5;
 function iso(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
 function addD(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}
 function diff(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
@@ -470,7 +470,7 @@ function trail(){
   function path(f){var d='';for(var i=0;i<=60;i++){if(i/60>f+1e-9)break;var p=pt(i/60);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}var q=pt(f);return d+'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)}
   var fm=Math.min(1,steps(S.me)/tot),m=pt(fm),ms='',k=Math.min(tot,14);
   for(var j=1;j<k;j++){var q=pt(j/k);ms+='<circle class="stone" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/>'}
-  var all=users().slice().sort(function(a,b){return steps(b)-steps(a)}),vis=RKALL?all:all.slice(0,TOPN);
+  var all=users().slice().sort(function(a,b){return steps(b)-steps(a)}),vis=RKALL?all:all.slice(0,TRAILN);
   var peers=vis.filter(function(u){return u!==S.me}).map(function(u){var p=pt(Math.min(1,steps(u)/tot));return '<g class="peer"><title>'+esc(nm(u))+': '+steps(u)+' passos</title><circle cx="'+p[0].toFixed(1)+'" cy="'+(p[1]-14).toFixed(1)+'" r="9"/><text x="'+p[0].toFixed(1)+'" y="'+(p[1]-14).toFixed(1)+'">'+esc(nm(u)[0])+'</text></g>'}).join('');
   var lx=W-54,ly=H/2;
   return '<svg class="trail" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa da jornada: você deu '+steps(S.me)+' de '+tot+' passos até a Terra Prometida">'+
@@ -667,7 +667,7 @@ function rank(){
   var top1=L.length?L[0][k]:0,king=function(r){return top1>0&&r[k]===top1},nk=L.filter(king).length;
   var row=function(r,i){var c=king(r);return '<div class="rk'+(c?' king':'')+'"><div class="pos">'+(c?'🥇':(['🥇','🥈','🥉'][i]||i+1))+'</div>'+(c?'<div class="avw">'+av(r.u)+'<span class="crown" aria-label="em primeiro">👑</span></div>':av(r.u))+'<div class="grow"><b>'+esc(nm(r.u))+(r.u===S.me?' (você)':'')+'</b></div><div class="val">'+(k==='m'?fmin(r.m):r[k]+' <span class="sub">'+(r[k]===1?{d:'passo',c:'dia',s:'seguido'}:{d:'passos',c:'dias',s:'seguidos'})[k]+'</span>')+'</div></div>'};
   var mi=-1;L.forEach(function(r,i){if(r.u===S.me)mi=i});
-  var vis=Math.max(TOPN,nk); // se mais de 5 empatarem em 1º, todos aparecem
+  var vis=Math.max(TOPN,nk); // se mais de 3 empatarem em 1º, todos aparecem
   var rows=(RKALL?L:L.slice(0,vis)).map(row).join('')+(!RKALL&&mi>=vis?'<div class="sub" style="text-align:center;padding:2px 0">⋯</div>'+row(L[mi],mi):'');
   var more=L.length>vis?'<button class="btn g" data-rkall="1" style="text-align:center">'+(RKALL?'Mostrar só os '+vis+' primeiros':'Ver ranking completo ('+L.length+')')+'</button>':'';
   return '<div class="card"><b>🐪 A caravana</b><div class="sub" style="margin-bottom:10px">Quem está mais perto da Terra Prometida.</div>'+seg+rows+more+'</div>';

@@ -337,7 +337,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'miniaturas criadas pelas donas; Bia vê a miniatura; reabrir: 0 links novos; sem novidade: só a pergunta; chat: só as novas; sem a função: como antes';
   });
 
-  await teste('Mapa: ranking e trilha mostram os 5 primeiros; participantes só o número até tocar', async () => {
+  await teste('Mapa: ranking mostra os 3 primeiros e a trilha os 5; participantes só o número até tocar', async () => {
     const S = novoServidor();
     const nomes = ['Mayara', 'Bia', 'Caio', 'Davi', 'Eva', 'Fábio', 'Gil', 'Roger'];
     const U = nomes.map(n => S.usuario(n)), g = S.caravana(U[0], 'Tiago'); U.slice(1).forEach(u => S.entrar(u, g));
@@ -353,8 +353,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
         sair: !!document.querySelector('[data-leave]'), botao: card.querySelector('[data-rkall]').textContent };
     });
     let v = await ver();
-    exige(v.rank.slice(0, 5).join() === 'Mayara,Bia,Caio,Davi,Eva', 'ranking não mostra os 5 primeiros: ' + v.rank.join());
-    exige(v.rank.length === 6 && v.rank[5] === 'Roger (você)' && v.pos[5] === '8', 'a própria posição não aparece embaixo: ' + v.rank.join() + ' / ' + v.pos.join());
+    exige(v.rank.slice(0, 3).join() === 'Mayara,Bia,Caio', 'ranking não mostra os 3 primeiros: ' + v.rank.join());
+    exige(v.rank.length === 4 && v.rank[3] === 'Roger (você)' && v.pos[3] === '8', 'a própria posição não aparece embaixo: ' + v.rank.join() + ' / ' + v.pos.join());
     exige(v.peers <= 5, 'a trilha mostra ' + v.peers + ' pessoas (devia mostrar no máximo 5)');
     exige(/Ver ranking completo \(8\)/.test(v.botao), 'botão: ' + v.botao);
     exige(v.part === '👥 Participantes (8)' && v.lista === 0 && !v.sair, 'participantes já aparecem listados: ' + JSON.stringify(v));
@@ -363,9 +363,9 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pg.click('main [data-mball]'); v = await ver();
     exige(v.lista === 8 && v.sair, 'ao tocar, a lista de participantes não abriu: ' + v.lista);
     await pg.click('main [data-rkall]'); await pg.click('main [data-mball]'); v = await ver();
-    exige(v.rank.length === 6 && v.lista === 0, 'não fechou de novo');
+    exige(v.rank.length === 4 && v.lista === 0, 'não fechou de novo');
     await pg.context().close();
-    return 'Roger (8º) vê os 5 primeiros + a própria posição; trilha com até 5; ranking completo: 8 e 7 na trilha; participantes: só o número até tocar';
+    return 'Roger (8º) vê os 3 primeiros + a própria posição; trilha com até 5; ranking completo: 8 e 7 na trilha; participantes: só o número até tocar';
   });
 
   await teste('Coroa em quem está em 1º; empatados com o 1º também ganham (e nenhum fica escondido)', async () => {

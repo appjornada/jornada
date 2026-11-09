@@ -263,7 +263,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const tempo = [...r.matchAll(/time=(\d+):(\d+):([\d.]+)/g)].pop(), seg = tempo ? +tempo[1] * 3600 + +tempo[2] * 60 + +tempo[3] : 0;
     const tam = r.match(/Video: \w+.*?, (\d+)x(\d+)/), vol = r.match(/mean_volume: (-?[\d.]+) dB/);
     exige(seg > 13.5 && seg < 17, 'duração errada: ' + seg + ' s');
-    exige(tam && +tam[1] <= 720 && +tam[2] <= 1280 && +tam[2] > +tam[1], 'tamanho da imagem errado: ' + (tam && tam[0]));
+    exige(tam && +tam[1] <= 540 && +tam[2] <= 960 && +tam[2] > +tam[1], 'tamanho da imagem errado: ' + (tam && tam[0]));
     exige(vol && +vol[1] > -40, 'o som não foi gravado: ' + (vol ? vol[1] + ' dB' : 'sem faixa de áudio'));
     await pg.context().close();
     // 2) aparelho que não consegue converter: acima do limite, recusa com explicação (para não estourar a cota);
@@ -896,7 +896,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return msg;
   });
 
-  await teste('Mesma foto duas vezes: um arquivo só; foto grande vira ≤300 KB com miniatura', async () => {
+  await teste('Mesma foto duas vezes: um arquivo só; foto grande vira ≤150 KB com miniatura pequena', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
     const pa = await abrir(browser, base, S, A);
     const r = await pa.evaluate(async () => {
@@ -910,7 +910,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(r.paths.length === 1, 'duplicou na publicação');
     exige(objs.length === 2 && objs.some(([k]) => k.endsWith('.t.jpg')), 'arquivos: ' + objs.map(o => o[0]).join());
     const foto = objs.find(([k]) => !k.endsWith('.t.jpg'))[1].size, mini = objs.find(([k]) => k.endsWith('.t.jpg'))[1].size;
-    exige(foto <= 300 * 1024, 'foto com ' + Math.round(foto / 1024) + ' KB');
+    exige(foto <= 150 * 1024, 'foto com ' + Math.round(foto / 1024) + ' KB');
+    exige(mini <= 60 * 1024, 'miniatura com ' + Math.round(mini / 1024) + ' KB');
     return 'original ' + Math.round(r.orig / 1024) + ' KB → foto ' + Math.round(foto / 1024) + ' KB + miniatura ' + Math.round(mini / 1024) + ' KB';
   });
 
@@ -1167,6 +1168,25 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(n1 === 30 && /Ver mais 5/.test(t), 'primeira página: ' + n1 + ' / ' + t);
     exige(n2 === 35 && !resto, 'depois do "Ver mais": ' + n2);
     return '30 → 35, botão some no fim';
+  });
+
+  await teste('Fotos pesadas ficam leves no aparelho da dona: troca na publicação e apaga a pesada', async () => {
+    const S = novoServidor({ imgBase: IMG }), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); const c = S.jornada(g, 'Tiago em 5 dias');
+    const pesada = A.id + '/1794067783651-1wp5b1.jpg', leve = A.id + '/' + 'd'.repeat(40) + '.jpg', vid = A.id + '/' + 'e'.repeat(40) + '.mp4', daBia = B.id + '/1794012953806-4fnany.jpg';
+    S.DB.objects[pesada] = { size: 4250000, owner: A.id }; S.DB.objects[leve] = { size: 120000, owner: A.id }; S.DB.objects[vid] = { size: 3000000, owner: A.id }; S.DB.objects[daBia] = { size: 4000000, owner: B.id };
+    const k1 = S.publicacao(A, c, { ref: '1', photo_path: pesada + '|' + leve, note: 'duas fotos' });
+    const k2 = S.publicacao(A, c, { ref: '2', photo_path: vid, media_type: 'video' });
+    const k3 = S.publicacao(B, c, { ref: '1', photo_path: daBia });
+    const pg = await abrir(browser, base, S, A);
+    await pg.evaluate(async () => { SLIM = false; await slimOwn() });
+    const novo = S.DB.checkins[k1.id].photo_path.split('|');
+    await pg.context().close();
+    exige(novo.length === 2 && novo[1] === leve && /\/[0-9a-f]{40}\.jpg$/.test(novo[0]) && novo[0] !== pesada, 'a publicação não trocou a foto pesada: ' + novo.join(' | '));
+    exige(S.DB.objects[novo[0]] && S.DB.objects[novo[0]].size <= 150 * 1024 && S.DB.objects[novo[0].replace('.jpg', '.t.jpg')], 'a foto nova ou a miniatura não foram salvas');
+    exige(!S.DB.objects[pesada], 'a foto pesada continuou guardada');
+    exige(S.DB.objects[leve] && S.DB.checkins[k2.id].photo_path === vid && S.DB.objects[vid], 'mexeu no que já era leve ou no vídeo');
+    exige(S.DB.checkins[k3.id].photo_path === daBia && S.DB.objects[daBia], 'mexeu na foto de outra pessoa');
+    return '4,1 MB → ' + Math.round(S.DB.objects[novo[0]].size / 1024) + ' KB + miniatura; leve, vídeo e foto da Bia intactos';
   });
 
   await browser.close(); srv.close();

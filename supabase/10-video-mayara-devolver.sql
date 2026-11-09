@@ -1,4 +1,5 @@
 -- Devolve o vídeo ao post da Mayara (Tiago 3, leitura de 07/11/2026).
+-- Decisão de 09/11/2026: o post fica sem esse vídeo. Este script fica só como registro, caso mudem de ideia.
 --
 -- Em 09/11/2026 o vídeo foi tirado do post só no banco, para parar de gastar a cota: sem capa, ele era
 -- baixado inteiro (27 MB) toda vez que alguém abria o app (3,7 GB num dia). O arquivo continua guardado

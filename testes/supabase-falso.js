@@ -138,6 +138,7 @@ function novoServidor(opts = {}) {
   }
   function storage(me, q) {
     if (q.op === 'upload') { if (!q.path.startsWith(me + '/')) return err('rls', '42501'); if (O.tipos && !O.tipos.some(t => t.endsWith('/*') ? (q.ct || '').startsWith(t.slice(0, -1)) : t === q.ct)) return { data: null, error: { message: 'mime type ' + q.ct + ' is not supported', statusCode: '415' } }; if (DB.objects[q.path]) return err('The resource already exists', '409'); DB.objects[q.path] = { size: q.size, owner: me, cache: q.cache }; return { data: { path: q.path }, error: null } }
+    if (q.op === 'list') { const pre = q.prefix.replace(/\/$/, '') + '/'; return { data: Object.keys(DB.objects).filter(p => p.startsWith(pre) && !p.slice(pre.length).includes('/')).map(p => ({ name: p.slice(pre.length), metadata: { size: DB.objects[p].size || 0, mimetype: DB.objects[p].ct || '' } })), error: null } }
     if (q.op === 'remove') { const gone = q.paths.filter(p => p.startsWith(me + '/') && DB.objects[p]); gone.forEach(p => delete DB.objects[p]); return { data: gone.map(name => ({ name })), error: null } }
     if (q.op === 'sign' && O.imgBase) return { data: q.paths.map(p => ({ path: p, signedUrl: DB.objects[p] ? O.imgBase + encodeURIComponent(p) : null, error: DB.objects[p] ? null : 'not found' })), error: null }; // fotos servidas com atraso, como na internet
     if (q.op === 'sign') return { data: q.paths.map(p => ({ path: p, signedUrl: DB.objects[p] || p.startsWith('antigo/') ? 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#c96"/></svg>') + '#' + p : null, error: DB.objects[p] ? null : 'not found' })), error: null };
@@ -177,6 +178,7 @@ const cliente = `(function(){
     storage:{from:function(){return{
       upload:function(p,b,o){return call({storage:1,op:'upload',path:p,size:b.size,ct:(o&&o.contentType)||b.type,cache:o&&o.cacheControl})},
       remove:function(ps){return call({storage:1,op:'remove',paths:ps})},
+      list:function(pr){return call({storage:1,op:'list',prefix:pr||''})},
       createSignedUrls:function(ps){return call({storage:1,op:'sign',paths:ps})}}}}
   }}};
 })();`;

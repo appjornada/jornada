@@ -319,13 +319,13 @@ function profCard(){
   return '<div class="card"><b>📷 Sua foto de perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
     '<button class="btn'+(has?' o':'')+'" data-avp="1" style="text-align:center">'+(has?'Trocar foto':'Escolher foto')+'</button>'+(has?'<button class="link" data-avdel="1">Tirar a foto</button>':'')+'</div>';
 }
-// A foto vira um quadrado de 320 px (~30 KB), cortado no centro
+// A foto vira um quadrado de 256 px (~12 KB), cortado no centro
 async function setAvatar(file){
   if(!file||!S.me)return;
   if(NOAV){alert('A foto de perfil ainda não está disponível.');return}
   var bl;
-  try{var im=await loadImg(file),w=im.naturalWidth,h=im.naturalHeight,q=Math.min(w,h),z=Math.min(320,q),cv=document.createElement('canvas');
-    cv.width=cv.height=z;var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,(w-q)/2,(h-q)/2,q,q,0,0,z,z);bl=await toJpg(cv,.82)}catch(e){}
+  try{var im=await loadImg(file),w=im.naturalWidth,h=im.naturalHeight,q=Math.min(w,h),z=Math.min(256,q),cv=document.createElement('canvas');
+    cv.width=cv.height=z;var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,(w-q)/2,(h-q)/2,q,q,0,0,z,z);bl=await toJpg(cv,.72)}catch(e){}
   if(!bl){alert('Não foi possível abrir essa imagem. Tente outra foto.');return}
   toast('Enviando sua foto…');
   var hx=Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(8)),function(x){return ('0'+x.toString(16)).slice(-2)}).join('');
@@ -1209,7 +1209,7 @@ function selSug(){var f=S.edit?null:folga(S.ch),cap=f===null?MAXSEL:Math.min(MAX
 // Duração do vídeo (em segundos); null se o aparelho não conseguir ler
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
-var MAXSEC=15,MAXVUP=12*1048576; // vídeo que não ficou leve: até 12 MB
+var MAXSEC=15,MAXVUP=10*1048576; // vídeo que não ficou leve: até 10 MB
 async function setMedia(inp,src,rep){
   var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
   for(var i=0;i<fs.length;i++){
@@ -1248,7 +1248,7 @@ async function recStart(){
   if(!navigator.mediaDevices||!window.MediaRecorder){er.textContent='Este celular não grava áudio pelo app. Use "Escolher áudio" com um áudio gravado no gravador do celular.';return}
   var st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(x){er.textContent='Não foi possível usar o microfone. Toque em "Permitir" quando o celular perguntar, ou libere o microfone nas configurações do navegador.';return}
   var types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],mt=types.filter(function(t){try{return MediaRecorder.isTypeSupported(t)}catch(x){return false}})[0]||'';
-  var mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt,audioBitsPerSecond:64000}):new MediaRecorder(st)}catch(x){st.getTracks().forEach(function(t){t.stop()});er.textContent='Não foi possível gravar neste celular. Use "Escolher áudio".';return}
+  var mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt,audioBitsPerSecond:32000}):new MediaRecorder(st)}catch(x){st.getTracks().forEach(function(t){t.stop()});er.textContent='Não foi possível gravar neste celular. Use "Escolher áudio".';return}
   var parts=[];REC={on:true,t:0,mr:mr,st:st,keep:true};
   mr.ondataavailable=function(ev){if(ev.data&&ev.data.size)parts.push(ev.data)};
   mr.onstop=function(){
@@ -1271,16 +1271,16 @@ function drawMedia(){
   e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?(m.path?'<img src="'+esc(m.poster||VPOSTER)+'" alt="Vídeo">':'<video src="'+esc(m.img)+'" playsinline muted preload="metadata"></video>'):'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
 }
 // ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
-var MAXB=300*1024,MAXSIDE=1600,MINSIDE=1024;
+var MAXB=150*1024,MAXSIDE=1280,MINSIDE=800;
 function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('imagem'))};im.src=u})}
 function toJpg(cv,q){return new Promise(function(r){cv.toBlob(r,'image/jpeg',q)})}
-// Reduz o tamanho e a qualidade aos poucos até caber em 300 KB. Primeiro baixa a qualidade (até 0,62,
-// que ainda deixa letras nítidas); só depois diminui a imagem, sem passar de 1024 px no lado maior.
+// Reduz o tamanho e a qualidade aos poucos até caber em 150 KB. Primeiro baixa a qualidade (até 0,56,
+// que ainda deixa letras legíveis); só depois diminui a imagem, até 800 px no lado maior.
 async function shrinkP(file){
   var im;try{im=await loadImg(file)}catch(e){return null}
   var W=im.naturalWidth,H=im.naturalHeight,big=Math.max(W,H);if(!big)return null;
   if(/jpe?g/i.test(file.type)&&file.size<=MAXB&&big<=MAXSIDE)return file;
-  var side=Math.min(MAXSIDE,big),best=null,Q=[.86,.8,.74,.68,.62];
+  var side=Math.min(MAXSIDE,big),best=null,Q=[.8,.72,.64,.56];
   for(;;){
     var k=side/big,cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);
     var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,cv.width,cv.height);
@@ -1289,25 +1289,25 @@ async function shrinkP(file){
     side=Math.max(MINSIDE,Math.round(side*.85));
   }
 }
-// Miniatura (até 720 px, ~60 KB) para o mural; a foto inteira só abre ao tocar
+// Miniatura (até 540 px, ~30 KB) para o mural; a foto inteira só abre ao tocar
 function hasThumb(x){return /\/[0-9a-f]{40}\.jpg$/.test(x)}
 // Miniatura de foto ou capa de vídeo: abc.jpg / abc.mp4 → abc.t.jpg (fotos antigas também podem ter)
 function thumbOf(x){return x.replace(/\.[^.\/]+$/,'.t.jpg')}
 function canThumb(x){return !!x&&!isAudPath(x)&&!/\.t\.jpg$/.test(x)}
-// Capa do vídeo: um quadro do começo, até 720 px
+// Capa do vídeo: um quadro do começo, até 540 px
 function vidPoster(file){return new Promise(function(res){
   var u=URL.createObjectURL(file),v=document.createElement('video'),fim=false;
   var done=function(b){if(fim)return;fim=true;try{v.pause();v.removeAttribute('src');v.load()}catch(e){}URL.revokeObjectURL(u);res(b||null)};
-  var grab=function(){if(fim||!v.videoWidth)return;try{v.pause();var W=v.videoWidth,H=v.videoHeight,k=Math.min(1,720/Math.max(W,H)),cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);
-    cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);toJpg(cv,.72).then(done,function(){done()})}catch(e){done()}};
+  var grab=function(){if(fim||!v.videoWidth)return;try{v.pause();var W=v.videoWidth,H=v.videoHeight,k=Math.min(1,540/Math.max(W,H)),cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);
+    cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);toJpg(cv,.62).then(done,function(){done()})}catch(e){done()}};
   v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';
   v.onloadeddata=function(){var q=v.play();if(q&&q.catch)q.catch(function(){try{v.currentTime=Math.min(.3,(v.duration||1)/2)}catch(e){}})};
   v.ontimeupdate=function(){if(v.currentTime>.25)grab()};v.onseeked=grab;v.onended=grab;v.onerror=function(){done()};
   setTimeout(function(){done()},10000);v.src=u})}
 async function makeThumb(blob){
-  try{var im=await loadImg(blob),big=Math.max(im.naturalWidth,im.naturalHeight),k=Math.min(1,720/big),cv=document.createElement('canvas');
+  try{var im=await loadImg(blob),big=Math.max(im.naturalWidth,im.naturalHeight),k=Math.min(1,540/big),cv=document.createElement('canvas');
     cv.width=Math.round(im.naturalWidth*k);cv.height=Math.round(im.naturalHeight*k);var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,cv.width,cv.height);
-    return await toJpg(cv,.72)}catch(e){return null}
+    return await toJpg(cv,.62)}catch(e){return null}
 }
 // Impressão digital do arquivo: a mesma foto gera sempre o mesmo nome, então não é guardada duas vezes
 async function fileHash(blob){
@@ -1410,7 +1410,7 @@ async function saveCheckin(row,key){
 // ---- Vídeo menor antes de enviar: até 720p e ~1,5 Mbps (um vídeo de 15 s cai de ~25 MB para ~3 MB) ----
 // O celular regrava o vídeo enquanto ele toca escondido (leva o tempo do vídeo). O som é lido à parte.
 // Se qualquer coisa falhar (aparelho sem suporte, app fechado no meio, som não gravado), vai o original, como antes.
-var VZ={ac:null,min:6*1048576,mp4only:true,types:['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1.4D401F,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4']};
+var VZ={ac:null,min:2*1048576,mp4only:true,types:['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1.4D401F,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4']};
 // Só vale MP4 com H.264 e AAC, que todo celular toca (alguns aparelhos gravam VP9/Opus, que o iPhone não toca).
 // Procura as etiquetas dos formatos no começo e no fim do arquivo
 async function vzCodecs(blob){var n=524288,ps=[blob.slice(0,n)];if(blob.size>n)ps.push(blob.slice(Math.max(n,blob.size-n)));var s='';
@@ -1429,10 +1429,10 @@ async function shrinkV(file,onp){
     var dur=v.duration,W=v.videoWidth,H=v.videoHeight;if(!(dur>0&&dur<=MAXSEC+1&&W&&H))return null;
     var buf=null;try{buf=await VZ.ac.decodeAudioData(await file.arrayBuffer())}catch(e){}
     if(!buf&&!(v.audioTracks&&v.audioTracks.length===0))return null; // tem som, mas não deu para ler: vai o original
-    var k=Math.min(1,720/Math.min(W,H)),cw=Math.round(W*k/2)*2,ch=Math.round(H*k/2)*2,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    var k=Math.min(1,540/Math.min(W,H)),cw=Math.round(W*k/2)*2,ch=Math.round(H*k/2)*2,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
     var cx=cv.getContext('2d'),tr=[cv.captureStream(30).getVideoTracks()[0]],an=null,peak=0,smp=null;
     if(buf){var dst=VZ.ac.createMediaStreamDestination();src=VZ.ac.createBufferSource();src.buffer=buf;an=VZ.ac.createAnalyser();an.fftSize=1024;smp=new Uint8Array(1024);src.connect(dst);src.connect(an);tr.push(dst.stream.getAudioTracks()[0])}
-    var parts=[];rec=new MediaRecorder(new MediaStream(tr),{mimeType:mt,videoBitsPerSecond:1500000,audioBitsPerSecond:96000});
+    var parts=[];rec=new MediaRecorder(new MediaStream(tr),{mimeType:mt,videoBitsPerSecond:700000,audioBitsPerSecond:64000});
     rec.ondataavailable=function(e){if(e.data&&e.data.size)parts.push(e.data)};
     var stopped=new Promise(function(r){rec.onstop=r});
     var draw=function(){try{cx.drawImage(v,0,0,cw,ch)}catch(e){}
@@ -1830,6 +1830,38 @@ async function thumbFill(){
     }catch(e){}
   }
 }
+// ---- Fotos pesadas ficam leves (no aparelho da dona, em segundo plano) ----
+// Foto com mais de 160 KB (as antigas chegam a 4 MB): o app baixa uma vez, refaz no tamanho de hoje
+// (até 150 KB, com miniatura de ~30 KB), troca na publicação e só então apaga o arquivo pesado.
+// Até 6 por vez, só com o app na tela; se a publicação mudou nesse meio-tempo, desiste daquela foto.
+var SLIM=false,SLIMB=160*1024;
+async function slimOwn(){
+  if(SLIM||!S.me||document.hidden||(navigator.connection&&navigator.connection.saveData))return;SLIM=true;var n=0;
+  try{
+    var ls=await sb.storage.from('photos').list(S.me,{limit:1000});if(!ls||ls.error||!ls.data)return;
+    var sz={};ls.data.forEach(function(o){if(o&&o.name)sz[S.me+'/'+o.name]=+((o.metadata&&o.metadata.size)||0)});
+    var C=[];S.posts.forEach(function(p){if(p.uid!==S.me||p.local)return;(p.imgs||[]).forEach(function(m){
+      if(!m.video&&!m.audio&&m.img&&m.path.indexOf(S.me+'/')===0&&!/\.t\.jpg$/.test(m.path)&&sz[m.path]>SLIMB&&!C.some(function(c){return c.m.path===m.path}))C.push({id:p.id,m:m})})});
+    for(var i=0;i<C.length&&n<6&&!document.hidden;i++){
+      var c=C[i],old=c.m.path;
+      try{
+        var r=await fetch(c.m.img);if(!r.ok)continue;var b0=await r.blob();
+        var nb=await shrinkP(new File([b0],'foto.jpg',{type:b0.type||'image/jpeg'}));if(!nb||nb.size>sz[old]*.7)continue;
+        var np=S.me+'/'+(await fileHash(nb))+'.jpg';if(np===old)continue;
+        var up=await withTimeout(sb.storage.from('photos').upload(np,nb,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),120000);
+        if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))continue;
+        var th=await makeThumb(nb);if(th)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(np),th,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),60000)}catch(x){}
+        var q=await sb.from('checkins').select('photo_path').eq('id',c.id).eq('user_id',S.me);
+        var pp=q.data&&q.data[0]&&q.data[0].photo_path;if(!pp)continue;
+        var L=pp.split(PSEP),k=L.indexOf(old);if(k<0)continue;L[k]=np;
+        var u=await sb.from('checkins').update({photo_path:L.join(PSEP)}).eq('id',c.id).eq('user_id',S.me).eq('photo_path',pp).select('id');
+        if(u.error||!u.data||!u.data.length)continue;
+        n++;delete SU[old];await dropUnused([old]);
+      }catch(x){}
+    }
+  }catch(e){}
+  if(n)loadData();
+}
 // ---- Atualização leve (supabase/8-atualizacao-leve.sql) ----
 // A cada 30 s o app só pergunta ao banco se algo mudou (32 letras); baixa tudo só quando mudou.
 // Sem a função no banco, baixa tudo a cada 30 s, como antes
@@ -1885,7 +1917,7 @@ async function loadData(){
     // e tirava a pessoa da jornada que ela estava olhando)
     if(FIRST){FIRST=false;var mineL=S.all.filter(function(x){return isMine(x.id)});
       if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}}
-    loaded=true;S.err='';setTimeout(thumbFill,3000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
+    loaded=true;S.err='';setTimeout(thumbFill,3000);setTimeout(slimOwn,8000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
   }catch(e){
     if(stale())return;
     S.err='Não foi possível atualizar agora. '+why(e)+' Tentaremos de novo em instantes.';

@@ -662,7 +662,7 @@ function invSheet(){
 function selJ(k){
   var t=k.slice(0,1),id=k.slice(2);
   if(t==='c')S.cur=id;else{S.cur=null;S.grp=grpOf(id)}
-  useCur();S.openC={};render();scrollTo(0,0);
+  useCur();S.openC={};S.feedN=0;render();scrollTo(0,0);
 }
 function hdr(){
   document.body.dataset.tab=tab;
@@ -737,8 +737,12 @@ function mediaHtml(p){
   var au=A.map(function(m){return '<div class="aud"><span aria-hidden="true">🎙️</span><audio src="'+esc(m.img)+'" controls preload="none"></audio></div>'}).join('');
   return mediaVis(p,L)+au;
 }
+// Capa para vídeo que não tem capa (vídeos antigos): sem ela, o celular baixava o vídeo inteiro só para
+// mostrar o primeiro quadro, toda vez que alguém abria o app (um vídeo de 27 MB gastou 3,7 GB num dia)
+var VPOSTER='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#172309"/><circle cx="320" cy="160" r="54" fill="#e6b04a"/><path d="M302 132v56l48-28z" fill="#14200a"/><text x="320" y="265" fill="#f2ead3" font-family="system-ui,sans-serif" font-size="26" text-anchor="middle">Toque para ver o vídeo</text></svg>');
+function vtag(m,cls){return '<video'+(cls?' class="'+cls+'"':'')+' src="'+esc(m.img)+'" controls playsinline preload="none" poster="'+esc(m.poster||VPOSTER)+'"></video>'}
 function mediaVis(p,L){
-  function one(m,i){return m.video?'<video class="media" src="'+esc(m.img)+'" controls playsinline '+(m.poster?'preload="none" poster="'+esc(m.poster)+'"':'preload="metadata"')+'></video>':'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
+  function one(m,i){return m.video?vtag(m,'media'):'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
   if(!L.length)return '';if(L.length===1)return one(L[0],0);
   return '<div class="car"><div class="cart" data-car>'+L.map(function(m,i){return '<div class="cars">'+one(m,i)+'</div>'}).join('')+'</div><span class="carc">1/'+L.length+'</span>'+
     '<div class="dots">'+L.map(function(m,i){return '<button'+(i?'':' class="on"')+' data-cdot="'+i+'" aria-label="Foto '+(i+1)+'"></button>'}).join('')+'</div></div>'
@@ -787,8 +791,10 @@ function feed(){
   h+=hcCard()+today()+statsHtml();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
-  return h+l.map(post).join('');
+  var lim=S.feedN||FEEDN,mais=l.length-lim;
+  return h+l.slice(0,lim).map(function(p){return post(p)}).join('')+(mais>0?'<button class="btn g" data-more="1" style="text-align:center">Ver mais '+Math.min(mais,FEEDN)+' publicações (faltam '+mais+')</button>':'');
 }
+var FEEDN=30; // o mural mostra 30 publicações por vez: as fotos antigas só são baixadas por quem pedir para ver
 // ---- Ranking compacto: 3 primeiros + a sua posição; "Ver ranking completo" abre a lista toda ----
 function rankList(){
   var L=users().map(function(u){return{u:u,d:steps(u),c:days(u).length,s:streak(u),m:mins(u)}}),k={dias:'d',caps:'c',seq:'s',tempo:'m'}[rk];
@@ -863,7 +869,7 @@ function openPosts(P,d,more){
   P.forEach(function(p){(p.imgs||[]).forEach(function(m){(m.audio?A:M).push(m)});if(p.note)notes.push(p.note);refs.push(((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim())});
   var lb=document.getElementById('lb');
   lb.innerHTML='<div class="top"><div><b>'+WD[new Date(d+'T12:00:00').getDay()]+', '+fd(d)+'</b><div style="color:#bbb;font-size:14px">'+esc(refs.filter(Boolean).join(' · '))+'</div></div><button class="x" data-lbx="1" aria-label="Fechar">✕</button></div>'+
-    (M.length?'<div class="lbm">'+M.map(function(m){return m.video?'<video src="'+esc(m.img)+'" controls playsinline preload="metadata"'+(m.poster?' poster="'+esc(m.poster)+'"':'')+'></video>':'<img src="'+esc(m.img)+'" alt="Foto do estudo">'}).join('')+'</div>'+(M.length>1?'<div style="text-align:center;color:#aaa;font-size:13px;margin-top:6px">Deslize para ver as '+M.length+'</div>':''):'')+
+    (M.length?'<div class="lbm">'+M.map(function(m){return m.video?vtag(m):'<img src="'+esc(m.img)+'" alt="Foto do estudo">'}).join('')+'</div>'+(M.length>1?'<div style="text-align:center;color:#aaa;font-size:13px;margin-top:6px">Deslize para ver as '+M.length+'</div>':''):'')+
     A.map(function(m){return '<audio src="'+esc(m.img)+'" controls preload="none"></audio>'}).join('')+
     (notes.length?'<div class="cap">'+esc(notes.join('\n\n'))+'</div>':'')+
     P.filter(function(p){return p.uid===S.me}).map(function(p){var r=((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim();return '<button class="btn g more" data-ep="'+p.id+'">✏️ Editar'+(P.length>1?' '+esc(r):' este passo')+'</button>'}).join('')+
@@ -1120,7 +1126,7 @@ function openSheet(pre){
   if(!S.chs.length){onb('ask');return}
   var c=S.ch,mx=TODAY<c.end?TODAY:c.end;
   if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
-  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio}}):[];
+  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
   showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
     '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
     ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
@@ -1203,7 +1209,7 @@ function selSug(){var f=S.edit?null:folga(S.ch),cap=f===null?MAXSEL:Math.min(MAX
 // Duração do vídeo (em segundos); null se o aparelho não conseguir ler
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
-var MAXSEC=15;
+var MAXSEC=15,MAXVUP=12*1048576; // vídeo que não ficou leve: até 12 MB
 async function setMedia(inp,src,rep){
   var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
   for(var i=0;i<fs.length;i++){
@@ -1262,7 +1268,7 @@ function recStop(keep){if(!REC)return;REC.keep=keep;REC.on=false;try{REC.mr.stop
 function drawMedia(){
   var e=document.getElementById('mprev');if(!e)return;var M=S.media||[],L=M.filter(function(m){return !m.audio});
   var au=M.map(function(m,i){return m.audio?'<div class="aud"><span aria-hidden="true">🎙️</span><audio src="'+esc(m.img)+'" controls preload="metadata"></audio><button class="link" data-mx="'+i+'" aria-label="Remover áudio" style="color:var(--err)">✕ Remover</button></div>':''}).join('');
-  e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?'<video src="'+esc(m.img)+'" playsinline muted></video>':'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
+  e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?(m.path?'<img src="'+esc(m.poster||VPOSTER)+'" alt="Vídeo">':'<video src="'+esc(m.img)+'" playsinline muted preload="metadata"></video>'):'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
 }
 // ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
 var MAXB=300*1024,MAXSIDE=1600,MINSIDE=1024;
@@ -1357,7 +1363,9 @@ async function publish(){
     loadData();
   }catch(e){
     // as fotos que já subiram ficam guardadas: ao tentar de novo, não são enviadas outra vez
-    btn.disabled=false;btn.textContent='🔁 Tentar de novo';
+    btn.disabled=false;
+    if(e&&e.leve){btn.textContent=okLbl();er.textContent=e.message+' Toque no ✕ do vídeo para tirá-lo.';return}
+    btn.textContent='🔁 Tentar de novo';
     er.textContent='Não foi possível publicar. '+why(e)+' Sua leitura e as fotos continuam aqui: toque em "Tentar de novo".';
   }
 }
@@ -1454,7 +1462,9 @@ async function upMedia(){
     if(m.audio){ct=(ct||'audio/mp4').split(';')[0];ext=/webm/.test(ct)?'weba':/ogg/.test(ct)?'ogg':/mpeg|mp3/.test(ct)?'mp3':/wav/.test(ct)?'wav':/aac/.test(ct)?'aac':'m4a'}
     else if(m.video){ext=((m.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp4';ct=ct||'video/mp4';
       if(m.small===undefined){var bt=document.getElementById('ok'),bx=bt&&bt.textContent;m.small=await shrinkV(m.file,function(p){if(bt)bt.textContent='Preparando o vídeo… '+p+'%'})||false;if(bt)bt.textContent=bx}
-      if(m.small){blob=m.small.blob;ct=m.small.type;ext=m.small.ext}}
+      if(m.small){blob=m.small.blob;ct=m.small.type;ext=m.small.ext}
+      // não deu para deixar leve neste celular: vídeo pesado vai embora inteiro para cada pessoa que der play
+      else if(blob.size>MAXVUP){var e2=new Error('O vídeo tem '+Math.round(blob.size/1048576)+' MB e não deu para deixá-lo mais leve neste celular. Para não estourar o espaço da caravana, o limite é '+Math.round(MAXVUP/1048576)+' MB: grave um vídeo mais curto ou mande uma foto.');e2.leve=1;throw e2}}
     else{var sb2=await shrinkP(m.file);if(sb2){blob=sb2;ct='image/jpeg';ext='jpg'}else ext=((m.file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg'}
     var path=S.me+'/'+(await fileHash(blob))+'.'+ext;
     if(paths.indexOf(path)<0){
@@ -1490,7 +1500,7 @@ async function saveEdit(st,mn,m,btn,er){
     var now=pm.photo_path.split(PSEP),old=(S.edit.imgs||[]).map(function(x){return x.path}).filter(function(x){return x&&now.indexOf(x)<0});
     dropUnused(old);
     S.edit=null;S.media=null;closeSheet();tab='feed';toast('✓ Publicação atualizada');await loadData();
-  }catch(e){btn.disabled=false;btn.textContent='🔁 Tentar de novo';er.textContent='Não foi possível salvar. '+why(e)}
+  }catch(e){btn.disabled=false;if(e&&e.leve){btn.textContent='💾 Salvar alterações';er.textContent=e.message+' Toque no ✕ do vídeo para tirá-lo.';return}btn.textContent='🔁 Tentar de novo';er.textContent='Não foi possível salvar. '+why(e)}
 }
 function toast(t){var e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.setAttribute('role','status');document.body.appendChild(e)}e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},3500)}
 function editPost(id){
@@ -1852,13 +1862,13 @@ async function loadData(){
       S.cur=ch?ch.id:null;
     }
     useCur();fv=feedVer(); // depois de saber as jornadas e antes de baixar as publicações
-    var ids=S.all.map(function(x){return x.id}),rows=[];
+    var ids=S.all.map(function(x){return x.id}),rows=[],seen=new Set();
     if(ids.length){
       for(var from=0;from<20000;from+=1000){
         var k=await withTimeout(sb.from('checkins').select('*,likes(user_id),comments(id,user_id,body,created_at)').in('challenge_id',ids).order('created_at',{ascending:false}).order('id',{ascending:true}).range(from,from+999),30000);
         if(stale())return;
         if(k.error)throw k.error;
-        (k.data||[]).forEach(function(r){if(!rows.some(function(x){return x.id===r.id}))rows.push(r)});
+        (k.data||[]).forEach(function(r){if(!seen.has(r.id)){seen.add(r.id);rows.push(r)}});
         if(!k.data||k.data.length<1000)break;
       }
     }
@@ -1949,6 +1959,7 @@ document.addEventListener('click',function(e){
   else if(d.lbday){var dl=d.lbday;closeLb();openSheet({d:dl})}
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
   else if(d.cs)sendComment(d.cs,d.ci);
+  else if(d.more){S.feedN=(S.feedN||FEEDN)+FEEDN;render()}
   else if(d.cif){var cf=document.getElementById(d.cif);if(cf)cf.focus()}
   else if(d.wpost)postSheet(d.wpost,d.wu);
   else if(d.whoback)openWho(d.whoback);
@@ -2033,6 +2044,8 @@ function init(){
   boot().then(function(){if(INV&&!S.me&&!S.linkErr&&gm==='in'){REG.step=1;gate('up')}});
   setInterval(function(){var t=iso(new Date()),nd=t!==TODAY;TODAY=t;if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show')){if(nd)loadData();else poll()}},30000);
   setInterval(function(){if(!document.hidden)loadChat()},5000);
+  // fotos guardadas no aparelho (sw.js): cada foto é baixada uma vez só, mesmo quando o link assinado muda
+  try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 }
 init();
 </script>

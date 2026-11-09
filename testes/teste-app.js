@@ -16,17 +16,22 @@ function servirApp() {
   return new Promise(res => {
     const srv = http.createServer((req, rsp) => {
       let u = decodeURIComponent(req.url.split('?')[0].split('#')[0]);
+      // imita o armazenamento de fotos do Supabase (link assinado), contando quantas vezes cada foto foi baixada
+      if (u.startsWith('/storage/v1/object/sign/photos/')) { FOTOS[u] = (FOTOS[u] || 0) + 1; rsp.writeHead(200, { 'content-type': 'image/png', 'access-control-allow-origin': '*', 'cache-control': 'no-store' }); return rsp.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')) }
+      if (u === '/sw-teste.html') { rsp.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return rsp.end('<!doctype html><meta charset="utf-8"><title>sw</title>') }
       if (u.startsWith('/img/')) return setTimeout(() => { rsp.writeHead(200, { 'content-type': 'image/svg+xml', 'cache-control': 'no-store' }); rsp.end('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c96"/></svg>') }, 350); // foto com atraso de rede
       if (u === '/' || u === '/index.html') { rsp.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return rsp.end(fs.readFileSync(HTML)) }
       const f = path.join(RAIZ, u);
       if (!f.startsWith(RAIZ) || !fs.existsSync(f)) { rsp.writeHead(404); return rsp.end() }
-      rsp.writeHead(200, { 'content-type': f.endsWith('.json') ? 'application/json' : 'application/octet-stream' }); rsp.end(fs.readFileSync(f));
+      rsp.writeHead(200, { 'content-type': f.endsWith('.json') ? 'application/json' : f.endsWith('.js') ? 'text/javascript' : 'application/octet-stream' }); rsp.end(fs.readFileSync(f));
     }).listen(0, () => res(srv));
   });
 }
 
+const FOTOS = {}; // downloads por foto no armazenamento imitado
 async function abrir(browser, base, S, u, extra = {}) {
-  const opc = Object.assign({ viewport: { width: 390, height: 844 } }, extra); delete opc.relogio;
+  // o guardador de fotos (sw.js) fica de fora destes testes: tem teste próprio
+  const opc = Object.assign({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' }, extra); delete opc.relogio;
   const ctx = await browser.newContext(opc);
   await ctx.grantPermissions(['microphone']).catch(() => {});
   await ctx.exposeFunction('__api', async (me, q) => JSON.stringify(await S.handle(me, JSON.parse(q))));
@@ -261,10 +266,15 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(tam && +tam[1] <= 720 && +tam[2] <= 1280 && +tam[2] > +tam[1], 'tamanho da imagem errado: ' + (tam && tam[0]));
     exige(vol && +vol[1] > -40, 'o som não foi gravado: ' + (vol ? vol[1] + ' dB' : 'sem faixa de áudio'));
     await pg.context().close();
-    // 2) aparelho que não consegue converter: vai o original, como antes
+    // 2) aparelho que não consegue converter: acima do limite, recusa com explicação (para não estourar a cota);
+    //    dentro do limite, vai o original, como antes
     const S2 = novoServidor(), U2 = S2.usuario('Bia'), g2 = S2.caravana(U2, 'Tiago'); S2.jornada(g2, 'Tiago em 5 dias');
     const p2 = await abrir(browser, base, S2, U2);
+    await p2.evaluate(n => { MAXVUP = n }, orig.length - 1);
     await postar(p2, ['video/x-nenhum']);
+    exige(await esperar(() => p2.evaluate(() => /não deu para deixá-lo mais leve/.test(document.getElementById('er').textContent)), 15000), 'vídeo pesado sem conversão não foi recusado: ' + await p2.textContent('#er'));
+    exige(!Object.values(S2.DB.checkins).length && !Object.keys(S2.DB.objects).some(o => /\.webm$/.test(o)), 'o vídeo pesado foi enviado mesmo assim');
+    await p2.evaluate(n => { MAXVUP = n }, orig.length + 1); await p2.click('#ok');
     exige(await esperar(() => Object.values(S2.DB.checkins).some(k => /\.webm$/.test(k.photo_path || '')), 15000), 'sem conversão, a publicação não foi salva');
     const k2 = Object.values(S2.DB.checkins).find(x => /\.webm$/.test(x.photo_path || ''));
     exige(S2.DB.objects[k2.photo_path].size === orig.length, 'sem conversão, não foi o original');
@@ -278,7 +288,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await p2.context().close(); fs.rmSync(dir, { recursive: true, force: true });
     exige(res['h264-fragmentado'] && res['h264-normal'], 'recusou um MP4 H.264/AAC: ' + JSON.stringify(res));
     exige(!res['vp9-opus'] && !res.webm, 'aceitou um formato que o iPhone não toca: ' + JSON.stringify(res));
-    return (orig.length / 1048576).toFixed(1) + ' MB → ' + (env / 1048576).toFixed(1) + ' MB, ' + seg.toFixed(1) + ' s, ' + tam[1] + 'x' + tam[2] + ', som ' + vol[1] + ' dB; sem suporte: original; formatos: ' + JSON.stringify(res);
+    return (orig.length / 1048576).toFixed(1) + ' MB → ' + (env / 1048576).toFixed(1) + ' MB, ' + seg.toFixed(1) + ' s, ' + tam[1] + 'x' + tam[2] + ', som ' + vol[1] + ' dB; sem suporte: acima do limite recusa, dentro vai o original; formatos: ' + JSON.stringify(res);
   });
 
   await teste('Economia de dados: miniaturas das fotos antigas, links guardados, atualização só do que mudou e chat incremental', async () => {
@@ -1108,6 +1118,55 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(alheio === 0, 'apareceu ✏️ no passo de outra pessoa');
     await pg.context().close();
     return 'Tiago 2 → 1 Pedro 1, texto reescrito; ✏️ também na lista da pessoa e no visualizador; nada no passo dos outros';
+  });
+
+  await teste('Fotos guardadas no aparelho (sw.js): a mesma foto com outro link assinado não é baixada de novo', async () => {
+    const ctx = await browser.newContext(), pg = await ctx.newPage(), erros = [];
+    pg.on('pageerror', e => erros.push(e.message));
+    await pg.goto(base + '/sw-teste.html');
+    await pg.evaluate(async () => { await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready });
+    await pg.reload(); await pg.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 10000 });
+    const ver = (q) => pg.evaluate(src => new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth); i.onerror = () => r(-1); i.src = src }), q);
+    const F = '/storage/v1/object/sign/photos/u1/' + 'a'.repeat(40) + '.t.jpg';
+    const w1 = await ver(base + F + '?token=um'), w2 = await ver(base + F + '?token=dois'), w3 = await ver(base + F + '?token=tres');
+    // vídeo e áudio passam direto (não são guardados)
+    const V = '/storage/v1/object/sign/photos/u1/' + 'b'.repeat(40) + '.mp4';
+    await pg.evaluate(src => fetch(src).then(r => r.status), base + V + '?token=1'); await pg.evaluate(src => fetch(src).then(r => r.status), base + V + '?token=2');
+    await ctx.close();
+    exige(w1 === 1 && w2 === 1 && w3 === 1, 'a foto não apareceu: ' + [w1, w2, w3].join());
+    exige(FOTOS[F] === 1, 'a mesma foto foi baixada ' + FOTOS[F] + ' vezes (devia ser 1)');
+    exige(FOTOS[V] === 2, 'o vídeo não devia ser guardado: ' + FOTOS[V]);
+    exige(erros.length === 0, erros.join(' | '));
+    return '3 links diferentes da mesma foto = 1 download; vídeo passa direto';
+  });
+
+  await teste('Vídeo sem capa (antigo) não é baixado ao abrir o app: só quando a pessoa toca no play', async () => {
+    const S = novoServidor({ imgBase: IMG }), A = S.usuario('Ana'), g = S.caravana(A, 'G'); const c = S.jornada(g, 'Tiago em 5 dias');
+    const vid = A.id + '/' + 'c'.repeat(40) + '.mov'; S.DB.objects[vid] = { size: 27954952 }; // sem a capa .t.jpg
+    S.publicacao(A, c, { book: 'Tiago', ref: '1', photo_path: vid, media_type: 'video' });
+    const pg = await abrir(browser, base, S, A);
+    await pg.waitForSelector('main video.media');
+    const v = await pg.$eval('main video.media', e => ({ pre: e.getAttribute('preload'), capa: (e.getAttribute('poster') || '').slice(0, 19) }));
+    exige(v.pre === 'none' && v.capa === 'data:image/svg+xml,', 'o vídeo sem capa seria baixado sem ninguém tocar: ' + JSON.stringify(v));
+    await pg.evaluate(() => openPosts(S.posts.slice(0, 1), S.posts[0].date, false));
+    const l = await pg.$eval('#lb video', e => e.getAttribute('preload'));
+    await pg.context().close();
+    exige(l === 'none', 'na tela cheia o vídeo também baixaria sozinho: preload=' + l);
+    return 'mural e tela cheia: preload="none" com capa "Toque para ver o vídeo"';
+  });
+
+  await teste('Mural mostra 30 publicações por vez, com "Ver mais"', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); const c = S.jornada(g, 'Salmos em 30 dias');
+    for (let i = 0; i < 35; i++) S.publicacao(A, c, { book: 'Salmos', ref: String(i + 1), created_at: new Date(Date.now() - i * 6e4).toISOString() });
+    const pg = await abrir(browser, base, S, A);
+    await pg.waitForSelector('main [data-more]');
+    const n1 = await pg.$$eval('main .ref', e => e.length), t = await pg.textContent('main [data-more]');
+    await pg.click('main [data-more]');
+    const n2 = await pg.$$eval('main .ref', e => e.length), resto = await pg.$('main [data-more]');
+    await pg.context().close();
+    exige(n1 === 30 && /Ver mais 5/.test(t), 'primeira página: ' + n1 + ' / ' + t);
+    exige(n2 === 35 && !resto, 'depois do "Ver mais": ' + n2);
+    return '30 → 35, botão some no fim';
   });
 
   await browser.close(); srv.close();

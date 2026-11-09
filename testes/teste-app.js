@@ -506,9 +506,9 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     R.md = { jornadas: [c.id] };
     const pg = await abrir(browser, base, S, R);
     const ver = () => pg.evaluate(() => { const h = document.querySelector('main .card.hoje'); return h ? { l: h.querySelector('.hj-l').textContent, t: h.querySelector('.tref').textContent,
-      ch: [...h.querySelectorAll('.hj-ch .chip')].map(b => b.textContent + (b.classList.contains('ok') ? '[ok]' : '')), txt: h.textContent, primeiro: document.querySelector('main .card') === h } : null });
+      ch: [...h.querySelectorAll('.hj-ch .chip')].map(b => b.textContent + (b.classList.contains('ok') ? '[ok]' : '')), txt: h.textContent, primeiro: document.querySelector('main .card:not(.hc)') === h && h.previousElementSibling && h.previousElementSibling.id === 'hc' } : null });
     let v = await ver();
-    exige(v && v.primeiro, 'o destaque não é o primeiro cartão do Início');
+    exige(v && v.primeiro, 'a leitura de hoje devia vir logo abaixo do cartão de progresso, antes de tudo');
     exige(/Leitura de hoje · dia 3 de 11/.test(v.l) && v.t === 'Tiago 5; 1 Pedro 1', 'leitura de hoje: ' + JSON.stringify(v).slice(0, 160));
     exige(v.ch.join() === 'Tiago 5,1 Pedro 1', 'capítulos: ' + v.ch.join());
     exige(/Atrasados: Tiago 1–4 \(4 capítulos\)/.test(v.txt) && !/Para ler/.test(v.txt), 'atrasados misturados com os de hoje: ' + v.txt.slice(0, 300));

@@ -1070,6 +1070,36 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(errs.length === 0, errs.join(' | '));
   });
 
+  await teste('Editar o próprio passo: trocar livro e capítulo e reescrever o texto', async () => {
+    const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Conhecendo as Cartas'); S.entrar(R, g);
+    const c = S.jornada(g, 'TIAGO + 1 PEDRO + 2 PEDRO + 1 JOÃO + 2 JOÃO + 3 JOÃO + JUDAS', -2, 8);
+    R.md = { jornadas: [c.id] };
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    const k = S.publicacao(R, c, { read_date: dia(-1), book: 'Tiago', ref: '2', chapters: 1, note: 'Texto antigo', study_minutes: 10 });
+    const pg = await abrir(browser, base, S, R);
+    await pg.click('[data-ep="' + k.id + '"]'); await pg.waitForSelector('#chg .chip');
+    await pg.click('#chg [data-sc$=":2"]'); // desmarca Tiago 2
+    await pg.evaluate(() => { const s = document.getElementById('sbk'); s.value = String(BOOKS.indexOf('1 Pedro')); s.dispatchEvent(new Event('change', { bubbles: true })) });
+    await pg.click('#chg [data-sc$=":1"]'); // marca 1 Pedro 1
+    await pg.fill('#t', 'Texto novo');
+    await pg.click('#ok');
+    await esperar(() => S.DB.checkins[k.id].book === '1 Pedro', 8000).catch(() => {});
+    const r = S.DB.checkins[k.id];
+    exige(r.book === '1 Pedro' && r.ref === '1' && r.note === 'Texto novo', 'não salvou a troca: ' + JSON.stringify({ book: r.book, ref: r.ref, note: r.note, er: await pg.textContent('#er').catch(() => '') }));
+    // também dá para editar pela lista "o que a pessoa fez" e pelo visualizador do passo
+    S.publicacao(M, c, { read_date: dia(-1), book: 'Tiago', ref: '1', chapters: 1, note: '' }); await recarregar(pg);
+    await pg.evaluate(() => { closeSheet(); openWho(S.me) }); await pg.waitForSelector('#shc [data-ep]');
+    await pg.click('#shc [data-ep]'); await pg.waitForSelector('#chg .chip');
+    exige(/Editar publicação/.test(await pg.textContent('#shc')), 'o ✏️ da lista não abriu a edição');
+    await pg.evaluate(id => { closeSheet(); openPost(id) }, k.id); await pg.waitForSelector('#lb [data-ep]');
+    await pg.click('#lb [data-ep]'); await pg.waitForSelector('#chg .chip');
+    exige(await pg.evaluate(() => document.getElementById('lb').hidden) && /Editar publicação/.test(await pg.textContent('#shc')), 'o Editar do visualizador não abriu a edição');
+    const alheio = await pg.evaluate(id => { closeSheet(); openWho(id); return document.querySelectorAll('#shc [data-ep]').length }, M.id);
+    exige(alheio === 0, 'apareceu ✏️ no passo de outra pessoa');
+    await pg.context().close();
+    return 'Tiago 2 → 1 Pedro 1, texto reescrito; ✏️ também na lista da pessoa e no visualizador; nada no passo dos outros';
+  });
+
   await browser.close(); srv.close();
   const ok = resultados.filter(r => r.ok).length;
   console.log('\n' + ok + ' de ' + resultados.length + ' testes passaram');

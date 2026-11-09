@@ -558,6 +558,39 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'dia 3: Tiago todo liberado, 1 Pedro só o 1, 1 João bloqueado; tocar explica; sugeridos e Registrar respeitam; Bíblia também; último dia libera tudo';
   });
 
+  await teste('Regra da jornada: 1, 2 e 3 João liberados antes do dia, com no máximo 2 passos por dia desde a partida', async () => {
+    const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Conhecendo as Cartas'); S.entrar(R, g);
+    const c = S.jornada(g, 'TIAGO + 1 PEDRO + 2 PEDRO + 1 JOÃO + 2 JOÃO + 3 JOÃO + JUDAS', -2, 8); // hoje: dia 3 → até 6 passos no total
+    R.md = { jornadas: [c.id] };
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    S.publicacao(R, c, { read_date: dia(-1), book: 'Tiago', ref: '1–5', chapters: 5, note: '' }); // já tem 5 → hoje cabe só mais 1
+    const pg = await abrir(browser, base, S, R);
+    await pg.evaluate(id => { REGRA[id] = { livres: ['1 João', '2 João', '3 João'], porDia: 2 } }, c.id);
+    await pg.click('#add'); await pg.waitForSelector('#chg .chip');
+    const txt = await pg.textContent('#stepr');
+    exige(/1 João, 2 João e 3 João já estão liberados/.test(txt) && /ainda pode marcar 1/.test(txt), 'faltou o aviso da regra: ' + txt);
+    const grade = () => pg.evaluate(() => [...document.querySelectorAll('#chg .chip')].map(b => b.textContent + (b.classList.contains('lk') ? '[🔒]' : '')));
+    const livro = n => pg.evaluate(n => { const s = document.getElementById('sbk'); s.value = String(BOOKS.indexOf(n)); s.dispatchEvent(new Event('change', { bubbles: true })) }, n);
+    await livro('1 João'); let gr = await grade();
+    exige(gr.length === 5 && gr.every(x => !x.endsWith('[🔒]')), '1 João devia estar liberado: ' + gr.join());
+    await livro('3 João'); gr = await grade();
+    exige(gr.length === 1 && !gr[0].endsWith('[🔒]'), '3 João devia estar liberado: ' + gr.join());
+    await livro('2 Pedro'); gr = await grade();
+    exige(gr.every(x => x.endsWith('[🔒]')), '2 Pedro continua no dia do roteiro: ' + gr.join());
+    await livro('1 João');
+    await pg.click('#chg [data-sc$=":1"]'); await pg.click('#chg [data-sc$=":2"]');
+    const v = await pg.evaluate(() => ({ n: S.sel.length, msg: document.getElementById('selc').textContent }));
+    exige(v.n === 1 && /no máximo 2 passos por dia/.test(v.msg), 'deixou passar do limite: ' + JSON.stringify(v));
+    // mesmo forçando, o Registrar recusa
+    await pg.evaluate(() => { S.sel.push(BOOKS.indexOf('1 João') + ':2') }); await pg.click('#ok');
+    exige(/no máximo 2 passos por dia/.test(await pg.textContent('#er')), 'o Registrar aceitou passar do limite: ' + await pg.textContent('#er'));
+    exige(Object.values(S.DB.checkins).filter(k => k.user_id === R.id).length === 1, 'salvou mesmo assim');
+    // em outra jornada, sem regra, nada muda
+    exige(await pg.evaluate(() => folga({ id: 'outra' }) === null), 'a regra vazou para outra jornada');
+    await pg.context().close();
+    return '1–3 João liberados, 2 Pedro no dia; com 5 passos no dia 3 só cabe mais 1; tocar e Registrar respeitam; outras jornadas sem limite';
+  });
+
   await teste('Data fora do período da jornada: o servidor recusa e o app explica', async () => {
     const S = novoServidor();
     const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias');

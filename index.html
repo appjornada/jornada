@@ -765,15 +765,16 @@ function postSteps(p){
     })}
   return PSC.m[p.id]||{k:0,cum:0}
 }
-function post(p){
-  var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=S.openC[p.id],ps=postSteps(p);
+function post(p,pre){
+  pre=typeof pre==='string'?pre:''; // (o mural chama post pelo map, que passa o índice como 2º argumento)
+  var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=pre?true:S.openC[p.id],ps=postSteps(p);
   var what=ps.k?'avançou '+ps.k+(ps.k>1?' passos':' passo')+' · passo '+ps.cum:'registrou capítulos já contados';
   return '<div class="card"><div class="row"><div data-who="'+p.uid+'" style="flex:none">'+av(p.uid,null,'md')+'</div><div class="grow"><b data-who="'+p.uid+'">'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
     (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
     mediaHtml(p)+
-    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" data-cm="'+p.id+'">💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':'')+'</div>'+
-    (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'">Enviar</button></div></div>':'')+'</div>'
+    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" '+(pre?'data-cif="'+pre+'ci-'+p.id+'"':'data-cm="'+p.id+'"')+'>💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':'')+'</div>'+
+    (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="'+pre+'ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'" data-ci="'+pre+'ci-'+p.id+'">Enviar</button></div></div>':'')+'</div>'
 }
 function feed(){
   var h='';
@@ -826,6 +827,11 @@ function cal(){
 }
 var WD=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 function openDay(d){var P=dayPosts(d);if(!P.length)return openSheet({d:d});openPosts(P,d,true)}
+// Um passo aberto a partir de "o que a pessoa fez": dá para dar Amém e comentar ali mesmo
+function postSheetHtml(p,back){return '<button class="link" data-whoback="'+back+'" style="margin-bottom:8px">‹ Voltar para '+esc(nm(back).split(' ')[0])+'</button>'+post(p,'s')+'<button class="btn g" id="x" style="text-align:center">Fechar</button>'}
+function postSheet(id,back){var p=S.posts.filter(function(x){return x.id===id})[0];if(!p)return;showSheet(postSheetHtml(p,back));S.sheetPost={id:id,back:back}}
+// depois de um Amém ou comentário (ou da atualização automática), a folha mostra o passo atualizado sem perder o que está sendo escrito
+function refreshPostSheet(){var sp=S.sheetPost,c=document.getElementById('shc');if(!sp||!c)return;var p=S.posts.filter(function(x){return x.id===sp.id})[0];if(!p)return;var t=document.createElement('template');t.innerHTML=postSheetHtml(p,sp.back);morphKids(c,t.content)}
 function openPost(id){var p=S.posts.filter(function(x){return x.id===id})[0];if(p)openPosts([p],p.date,false)}
 // ---- Ver o que a pessoa fez: toque no nome/foto no mural, no ranking ou na lista de participantes ----
 function openWho(u,back){
@@ -836,7 +842,7 @@ function openWho(u,back){
     var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
     var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
     var del=(p.uid===S.me?'<button class="wdel" data-ep="'+p.id+'" aria-label="Editar este passo">✏️</button>':'')+(S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
-    return '<div class="wpr"><button class="wp" data-post="'+p.id+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
+    return '<div class="wpr"><button class="wp" data-wpost="'+p.id+'" data-wu="'+u+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+((p.likes||[]).length?' · ♥ '+p.likes.length:'')+(p.cm.length?' · 💬 '+p.cm.length:'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
   showSheet((back?'<button class="link" data-rkopen="1" style="margin-bottom:8px">‹ Voltar ao ranking</button>':'')+'<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
     '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
     (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
@@ -1037,8 +1043,8 @@ async function sendPed(){
   if(!PEDOPEN)pedTog();
   loadChat(true);
 }
-async function sendComment(id){
-  var i=document.getElementById('ci-'+id),b=i?tidy(i.value):'';if(!b.trim())return;
+async function sendComment(id,ci){
+  var i=document.getElementById(ci||'ci-'+id),b=i?tidy(i.value):'';if(!b.trim())return;
   i.disabled=true;
   var r=await sb.from('comments').insert({checkin_id:id,body:b});
   if(r.error){i.disabled=false;alert('Não foi possível comentar. '+why(r.error));return}
@@ -1076,6 +1082,7 @@ function render(){
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e)e.value=keep[id]});
   if(fid&&keep[fid]!==undefined){var f=document.getElementById(fid);if(f)f.focus()}
   document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});
+  refreshPostSheet();
   after();
 }
 // Atualização seletiva da tela: compara o que está na tela com o novo conteúdo e troca só o que mudou
@@ -1105,8 +1112,8 @@ function morphNode(o,n){
   for(k=0;k<na.length;k++)if(o.getAttribute(na[k].name)!==na[k].value)o.setAttribute(na[k].name,na[k].value);
   morphKids(o,n);return o
 }
-function showSheet(h){var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
-function closeSheet(){if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show')}
+function showSheet(h){S.sheetPost=null;var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
+function closeSheet(){S.sheetPost=null;if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show')}
 
 // ---- Dar um passo (check-in) ----
 function openSheet(pre){
@@ -1941,7 +1948,10 @@ document.addEventListener('click',function(e){
   else if(d.lbx)closeLb();
   else if(d.lbday){var dl=d.lbday;closeLb();openSheet({d:dl})}
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
-  else if(d.cs)sendComment(d.cs);
+  else if(d.cs)sendComment(d.cs,d.ci);
+  else if(d.cif){var cf=document.getElementById(d.cif);if(cf)cf.focus()}
+  else if(d.wpost)postSheet(d.wpost,d.wu);
+  else if(d.whoback)openWho(d.whoback);
   else if(t.id==='csend')sendChat();
   else if(t.id==='psend')sendPed();
   else if(t.id==='ptog')pedTog();

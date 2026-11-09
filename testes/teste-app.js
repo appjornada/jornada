@@ -469,11 +469,21 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(f.aberto && f.nome === 'Bia Souza', 'não abriu a ficha da Bia: ' + JSON.stringify(f).slice(0, 120));
     exige(f.passos.join() === 'João 2,João 1', 'passos da Bia (mais novo primeiro): ' + f.passos.join());
     exige(/2\s*passos/.test(f.txt) && /35 min/.test(f.txt) && /1º/.test(f.txt), 'números da Bia: ' + f.txt.slice(0, 200));
-    // toca num passo: abre a mídia por cima; ao fechar, a ficha continua
-    await pg.locator('#shc .wp').nth(1).click(); await pg.waitForSelector('#lb:not([hidden]) .lbm img');
-    exige((await pg.textContent('#lb')).includes('No princípio era o Verbo'), 'o passo abriu sem o texto');
-    exige(!(await pg.$('#lb [data-lbday]')), 'passo de outra pessoa oferece "registrar neste dia"');
-    await pg.click('#lb [data-lbx]'); exige((await ficha()).aberto, 'fechar a mídia fechou a ficha');
+    // toca num passo: abre o passo com Amém e comentários, e dá para curtir e comentar ali mesmo
+    await pg.locator('#shc .wp').nth(1).click(); await pg.waitForSelector('#shc .card [data-l]');
+    exige((await pg.textContent('#shc')).includes('No princípio era o Verbo'), 'o passo abriu sem o texto');
+    const k1 = Object.values(S.DB.checkins).find(k => k.user_id === B.id && k.ref === '1');
+    await pg.click('#shc [data-l]');
+    exige(await esperar(() => S.DB.likes.some(l => l.checkin_id === k1.id && l.user_id === A.id)), 'o Amém pela ficha não salvou');
+    exige(await esperar(() => pg.evaluate(() => /♥ 1 Amém/.test(document.getElementById('shc').textContent))), 'a folha não mostrou o Amém');
+    await pg.fill('#shc textarea[id^="sci-"]', 'Que palavra!'); await pg.click('#shc [data-cs]');
+    exige(await esperar(() => Object.values(S.DB.comments).some(c => c.checkin_id === k1.id && c.body === 'Que palavra!')), 'o comentário pela ficha não salvou');
+    exige(await esperar(() => pg.evaluate(() => /Que palavra!/.test(document.getElementById('shc').textContent))), 'a folha não mostrou o comentário');
+    // a foto aparece no passo; "Voltar" leva de novo à ficha da Bia
+    exige(!!(await pg.$('#shc .card img.media')), 'a foto não apareceu no passo');
+    exige(!(await pg.$('#shc [data-ep]')), 'passo de outra pessoa oferece Editar');
+    await pg.click('#shc [data-whoback]'); f = await ficha();
+    exige(f.nome === 'Bia Souza' && /♥ 1/.test(f.txt) && /💬 1/.test(f.txt), 'voltar não mostrou a ficha com Amém e comentário: ' + f.txt.slice(0, 200));
     await pg.click('#shc #x');
     // no ranking (aba Mapa) e na lista de participantes
     await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main .rk[data-who="' + B.id + '"]');
@@ -497,7 +507,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pc.waitForSelector('main .rk[data-who="' + B.id + '"]'); await pc.click('main .rk[data-who="' + B.id + '"]'); await pc.waitForSelector('#shc .wp');
     const lixo = await pc.$$('#shc [data-delpost]'); await pc.context().close();
     exige(lixo.length === 0, 'participante comum vê o 🗑️');
-    return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre a mídia por cima; a líder apaga (com Amém), os outros não veem o 🗑️';
+    return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre o passo com Amém e comentários (salvam e aparecem na hora), com a foto, Voltar; a líder apaga (com Amém), os outros não veem o 🗑️';
   });
 
   await teste('Início: leitura de hoje em destaque (capítulos grandes, ✓ quando lidos, atrasados à parte)', async () => {

@@ -31,8 +31,11 @@ h1.brand{text-align:center;margin:0 0 8px;line-height:0}
 h1.brand img{width:140px;height:auto;display:inline-block}
 body[data-tab="feed"] #pt{display:none}body[data-tab="feed"] h1.brand{margin-bottom:2px}
 #gate h1.brand{margin:4px 0 22px}#gate h1.brand img{width:250px}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) h1.brand img{filter:brightness(.72) saturate(1.3)}}
-:root[data-theme="light"] h1.brand img{filter:brightness(.72) saturate(1.3)}
+/* Terra Prometida: a plantinha com fruto do logo */
+.bro{height:1.3em;width:auto;vertical-align:-.3em}.land .bro{height:72px;display:block;margin:0 auto 6px}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) :is(h1.brand img,.pbar .tp,.bro){filter:brightness(.72) saturate(1.3)}}
+:root[data-theme="light"] :is(h1.brand img,.pbar .tp,.bro){filter:brightness(.72) saturate(1.3)}
+.land .bro{filter:none!important}
 /* Cartão da caravana no Início */
 /* Cartão da caravana no Início: compacto (nome, jornada, progresso e chegada em 4 linhas) */
 .card.hc{padding:12px 14px 8px}
@@ -46,12 +49,12 @@ body[data-tab="feed"] #pt{display:none}body[data-tab="feed"] h1.brand{margin-bot
 .jpill span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.jpill svg{flex:none}
 .jpill .jb{flex:none;font-size:12px;padding:2px 7px;border-radius:99px;background:var(--ac);color:var(--acx)}
 .pg-n{flex:none;color:var(--mut);font-size:15px}.pg-n b{color:var(--tx)}
-.pbar{position:relative;height:24px;margin:6px 32px 0 6px}
+.pbar{position:relative;height:24px;margin:8px 42px 0 6px}
 .pbar i{position:absolute;display:block}
 .pbar .tk{left:0;right:0;top:10px;height:5px;border-radius:9px;background:color-mix(in srgb,var(--ok) 38%,var(--card))}
 .pbar .fl{left:0;top:10px;height:5px;border-radius:9px;background:var(--ac)}
 .pbar .dt{top:5px;width:15px;height:15px;margin-left:-7px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 25%,transparent)}
-.pbar .tp{position:absolute;right:-32px;top:-2px;font-size:22px;line-height:1}
+.pbar .tp{position:absolute;right:-42px;top:-10px;width:36px;height:auto}
 .hc-ft{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px;color:var(--mut);font-size:14px}
 .hc-ft span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc-ft .link{flex:none;font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:8px 0}
 .jlist .jc{flex:none;width:100%;max-width:none;margin-top:8px}.jlist .jc b{white-space:normal}
@@ -552,7 +555,7 @@ function trail(){
     '<path class="road" d="'+path(1)+'"/>'+(fm>0?'<path class="walked" d="'+path(fm)+'"/>':'')+ms+
     '<text class="lbl" x="'+x0+'" y="'+(H-6)+'">Partida</text>'+
     '<path class="hill" d="M'+(lx-38)+' '+(ly+22)+' Q'+lx+' '+(ly-38)+' '+(lx+38)+' '+(ly+22)+' Z"/>'+
-    '<text x="'+lx+'" y="'+(ly+4)+'" text-anchor="middle" font-size="28">🏞️</text>'+
+    '<image href="icones/broto.png" x="'+(lx-22)+'" y="'+(ly-34)+'" width="44" height="36"/>'+
     '<text class="lbl" x="'+lx+'" y="'+(ly+40)+'" text-anchor="middle">Terra Prometida</text>'+
     peers+'<g class="me"><title>Você: '+steps(S.me)+' passos</title><circle cx="'+m[0].toFixed(1)+'" cy="'+m[1].toFixed(1)+'" r="14"/><text x="'+m[0].toFixed(1)+'" y="'+(m[1]+6).toFixed(1)+'" text-anchor="middle" font-size="16">🚶</text></g></svg>'
 }
@@ -602,7 +605,7 @@ function behind(u,c,d){var P=plan(c);if(!P)return[];var i=diff(c.start,d),m=P.L.
 function chDay(u,cid,d){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.date===d)chOfPost(p).forEach(function(k){o[k]=1})});return Object.keys(o).length}
 function jStatus(c){
   var tot=totalSteps(c),st=steps(S.me,c.id);
-  if(st>=tot)return['🏞️ Chegou à Terra Prometida','ok'];
+  if(st>=tot)return[BROTO+' Chegou à Terra Prometida','ok'];
   if(TODAY<c.start)return['Começa em '+fd(c.start),''];
   if(TODAY>c.end)return['Encerrada · '+st+' de '+tot+' passos',''];
   var got=chDay(S.me,c.id,TODAY),need=needOn(c,TODAY),atr=behind(S.me,c,TODAY).length;
@@ -659,14 +662,15 @@ function pageTitle(){
 function cvName(g){return /^caravana\b/i.test(g.name)?g.name:'Caravana '+g.name}
 var MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function fdl(d){var p=d.split('-');return (+p[2])+' '+MES[+p[1]-1]+(p[0]!==TODAY.slice(0,4)?' de '+p[0]:'')}
+var BROTO='<img class="bro" src="icones/broto.png" alt="" width="119" height="98">';
 // Seu progresso: "3 de 21 passos · 14%" ao lado do seletor de jornada e a barra até a Terra Prometida
 function progHtml(c,on){
   var pill='<div id="jsw">'+switcher()+'</div>';
   if(!on)return '<div class="hc-r">'+pill+'<span class="pg-n">Aguardando o líder traçar a jornada</span></div>';
   var tot=totalSteps(c),st=Math.min(steps(S.me),tot),pc=tot?Math.round(st*100/tot):0;
-  var t=TODAY<c.start?'Parte em '+fdl(c.start):st>=tot?'Chegou! 🏞️ <b>100%</b>':'<b>'+st+'</b> de '+tot+(tot===1?' passo':' passos')+' · <b>'+pc+'%</b>';
+  var t=TODAY<c.start?'Parte em '+fdl(c.start):st>=tot?'Chegou! <b>100%</b>':'<b>'+st+'</b> de '+tot+(tot===1?' passo':' passos')+' · <b>'+pc+'%</b>';
   return '<div class="hc-r">'+pill+'<span class="pg-n">'+t+'</span></div>'+
-    '<div class="pbar" role="progressbar" aria-label="Seu progresso até a Terra Prometida: '+st+' de '+tot+' passos" aria-valuemin="0" aria-valuemax="'+tot+'" aria-valuenow="'+st+'"><i class="tk"></i><i class="fl" style="width:'+pc+'%"></i><i class="dt" style="left:'+pc+'%"></i><span class="tp" title="Terra Prometida" aria-hidden="true">🏞️</span></div>';
+    '<div class="pbar" role="progressbar" aria-label="Seu progresso até a Terra Prometida: '+st+' de '+tot+' passos" aria-valuemin="0" aria-valuemax="'+tot+'" aria-valuenow="'+st+'"><i class="tk"></i><i class="fl" style="width:'+pc+'%"></i><i class="dt" style="left:'+pc+'%"></i><img class="tp" src="icones/broto.png" alt="" title="Terra Prometida" width="119" height="98"></div>';
 }
 function hdrHome(){
   S.ch=S.chs.filter(function(c){return c.id===S.cur})[0]||{name:'Jornada',desc:'',start:TODAY,end:TODAY,goal:5};
@@ -686,7 +690,7 @@ function statsHtml(){
 function noCh(){if(!S.canNew)return S.grp?'<div class="card sub">Nenhuma jornada traçada ainda. Aguarde o líder traçar a primeira.</div>':'<div class="card"><b>Você ainda não está numa caravana</b><div class="sub">Peça o código de convite a quem te chamou e toque abaixo para entrar.</div><button class="btn" data-o="code">Tenho um código de convite</button></div>';return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
 function today(){
   var c=S.ch,P=plan(c),i=diff(c.start,TODAY),tot=totalSteps(c),done=P?chDay(S.me,S.cur,TODAY)>=needOn(c,TODAY):days(S.me).indexOf(TODAY)>=0;
-  if(steps(S.me)>=tot)return '<div class="card land"><div style="font-size:44px">🏞️</div><h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
+  if(steps(S.me)>=tot)return '<div class="card land">'+BROTO+'<h2>Você chegou à Terra Prometida!</h2><div class="sub">'+tot+' passos dados em '+fmin(mins(S.me))+' de estudo. Glória a Deus pela caminhada!</div></div>';
   if(!P)return done?'':'<div class="card"><b>Passo de hoje</b><div class="sub">Registre o que você leu hoje para avançar na trilha.</div><button class="btn" id="add2">👣 Dar o passo de hoje</button></div>';
   if(i<0){var R0=dayRead(c,0);return '<div class="card hoje"><div class="hj-l">📖 Primeira leitura · a caravana parte em '+fd(c.start)+'</div><div class="tref">'+refOf(R0)+'</div><div class="hj-ch">'+R0.map(chip).join('')+'</div>'+biBtn(R0[0].b)+'</div>'}
   if(i>=P.n)return '';
@@ -1113,7 +1117,7 @@ function stepFor(d){
     if(R.length)h+='<div class="sub">Meta do dia: <b>'+refOf(R)+'</b> ('+R.length+(R.length>1?' capítulos':' capítulo')+'). A meta não é obrigatória: cada capítulo que você marcar é 1 passo.</div>';
     var atr=S.sug.filter(function(k){return !R.some(function(x){return x.b+':'+x.c===k})});
     if(atr.length&&!S.edit)h+='<div class="sub" style="margin-top:4px">Atrasados para recuperar: <b>'+refOf(atr.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}))+'</b></div>';
-    if(!avail.length&&!S.edit)block='Você já leu todos os capítulos desta jornada. 🏞️';
+    if(!avail.length&&!S.edit)block='Você já leu todos os capítulos desta jornada. '+BROTO;
     if(avail.some(function(x){return locked(x.b+':'+x.c)}))h+='<div class="sub" style="margin-top:4px">🔒 Os capítulos dos próximos dias liberam no dia certo.</div>';
   }
   if(S.edit)S.sel=chOfPost(S.edit).slice(0,MAXSEL);

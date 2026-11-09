@@ -788,7 +788,7 @@ function feed(){
   if(!S.grp)return h+noCh();
   if(!S.chs.length)return h+hcCard()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>';
   if(S.cur&&!isMine(S.cur))return h+hcCard()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}).map(post).join('');
-  h+=hcCard()+today()+statsHtml();
+  h+=hcCard()+today()+statsHtml()+revidCard();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
   var lim=S.feedN||FEEDN,mais=l.length-lim;
@@ -1418,7 +1418,7 @@ async function vzCodecs(blob){var n=524288,ps=[blob.slice(0,n)];if(blob.size>n)p
   return{mp4:/ftyp/.test(s.slice(0,64)),v:/avc1|avc3/.test(s),a:/mp4a/.test(s),bad:/vp09|vp08|av01|Opus|hvc1|hev1/.test(s)}}
 // No iPhone o som só pode ser preparado no toque do botão
 function vzUnlock(){try{if(!VZ.ac){var A=window.AudioContext||window.webkitAudioContext;if(A)VZ.ac=new A()}if(VZ.ac&&VZ.ac.state!=='running')VZ.ac.resume()}catch(e){}}
-async function shrinkV(file,onp){
+async function shrinkV(file,onp,maxSec){
   var u=null,v=null,src=null,rec=null,hid=false,onv=function(){if(document.hidden)hid=true};
   try{
     if(!file||file.size<VZ.min||typeof MediaRecorder==='undefined'||!VZ.ac||!HTMLCanvasElement.prototype.captureStream)return null;
@@ -1426,7 +1426,7 @@ async function shrinkV(file,onp){
     if(VZ.ac.state!=='running'){try{await withTimeout(VZ.ac.resume(),1500)}catch(e){}if(VZ.ac.state!=='running')return null}
     u=URL.createObjectURL(file);v=document.createElement('video');v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';v.src=u;
     await new Promise(function(res,rej){v.onloadeddata=res;v.onerror=rej;setTimeout(rej,10000)});
-    var dur=v.duration,W=v.videoWidth,H=v.videoHeight;if(!(dur>0&&dur<=MAXSEC+1&&W&&H))return null;
+    var dur=v.duration,W=v.videoWidth,H=v.videoHeight;if(!(dur>0&&dur<=(maxSec||MAXSEC)+1&&W&&H))return null;
     var buf=null;try{buf=await VZ.ac.decodeAudioData(await file.arrayBuffer())}catch(e){}
     if(!buf&&!(v.audioTracks&&v.audioTracks.length===0))return null; // tem som, mas não deu para ler: vai o original
     var k=Math.min(1,540/Math.min(W,H)),cw=Math.round(W*k/2)*2,ch=Math.round(H*k/2)*2,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
@@ -1830,6 +1830,40 @@ async function thumbFill(){
     }catch(e){}
   }
 }
+// ---- Vídeo da Mayara que estava pesado (27 MB) ----
+// Saiu do post (Tiago 3, 07/11) em 09/11 para não estourar a cota. No celular dela, o Início mostra um
+// cartão: ao tocar, o app baixa o vídeo uma vez, refaz em 540p (uns 2–4 MB), devolve ao post com capa e
+// só então apaga o pesado. O vídeo solto antigo (23 MB, de nenhum post) é apagado sozinho.
+var REVID={post:'e15ee801-63bc-41be-9dfa-75c79ae322dc',path:'9b3d254b-47e3-42cf-8494-ea72859e5052/99ef405a9b4598490f1fc46fa2c11d06e3878c10.mov',solto:['9b3d254b-47e3-42cf-8494-ea72859e5052/1793932138848.mov'],ok:false,busy:false,msg:''};
+function revidPost(){if(!S.me||REVID.ok||REVID.path.indexOf(S.me+'/')!==0)return null;var p=S.posts.filter(function(x){return x.id===REVID.post&&x.uid===S.me})[0];return p&&!(p.imgs||[]).length?p:null}
+function revidCard(){
+  var p=revidPost();if(!p)return '';
+  return '<div class="card" id="revid"><b>🎬 Seu vídeo de '+esc(p.book)+' '+esc(p.ref)+' ('+fd(p.date).slice(0,5)+')</b><div class="sub" style="margin-top:4px">Ele estava pesado demais (27 MB) e saiu do mural para não estourar a cota do app. Toque abaixo para deixá-lo leve e devolvê-lo ao post. Deixe o app aberto até terminar (leva mais ou menos o tempo do vídeo).</div>'+
+    (REVID.msg?'<div class="'+(/não/i.test(REVID.msg)?'err':'sub')+'" style="margin-top:6px">'+esc(REVID.msg)+'</div>':'')+
+    '<button class="btn" id="revgo"'+(REVID.busy?' disabled':'')+'>'+(REVID.busy?'Preparando o vídeo…':'🎬 Deixar leve e devolver ao post')+'</button></div>';
+}
+async function revidGo(){
+  var p=revidPost();if(!p||REVID.busy)return;vzUnlock();REVID.busy=true;REVID.msg='';render();
+  var bt=function(t){var b=document.getElementById('revgo');if(b)b.textContent=t};
+  try{
+    delete SU[REVID.path];var u=(await signed([REVID.path]))[REVID.path];if(!u)throw new Error('O vídeo não foi encontrado no armazenamento.');
+    bt('Baixando o vídeo…');var r=await fetch(u);if(!r.ok)throw new Error('Não foi possível baixar o vídeo.');
+    var b0=await r.blob(),f=new File([b0],'video.mov',{type:b0.type||'video/quicktime'});
+    var sm=await shrinkV(f,function(x){bt('Preparando o vídeo… '+x+'%')},600);
+    if(!sm)throw new Error('Não deu para deixar o vídeo leve neste celular. Tente de novo com o app aberto na tela até o fim.');
+    bt('Enviando…');var np=S.me+'/'+(await fileHash(sm.blob))+'.'+sm.ext;
+    var up=await withTimeout(sb.storage.from('photos').upload(np,sm.blob,{contentType:sm.type,upsert:false,cacheControl:KEEP}),300000);
+    if(up.error&&!/exist|duplicate|409/i.test(up.error.message||up.error.error||up.error.statusCode||''))throw up.error;
+    var cv=await vidPoster(new File([sm.blob],'v.'+sm.ext,{type:sm.type}));if(cv)try{await withTimeout(sb.storage.from('photos').upload(thumbOf(np),cv,{contentType:'image/jpeg',upsert:false,cacheControl:KEEP}),60000)}catch(x){}
+    var w=await sb.from('checkins').update({photo_path:np,media_type:'video'}).eq('id',REVID.post).eq('user_id',S.me).is('photo_path',null).select('id');
+    if(w.error||!w.data||!w.data.length)throw w.error||new Error('Não foi possível devolver o vídeo ao post.');
+    REVID.ok=true;REVID.busy=false;await dropUnused([REVID.path]);
+    toast('✓ Vídeo devolvido ao post: '+(sm.blob.size/1048576).toFixed(1)+' MB (antes 27 MB)');await loadData();
+  }catch(e){REVID.busy=false;REVID.msg=(e&&e.message)||why(e);render()}
+}
+var SOLTO=false;
+function dropSolto(){if(SOLTO||!S.me)return;SOLTO=true;var L=REVID.solto.filter(function(x){return x.indexOf(S.me+'/')===0});if(L.length)dropUnused(L)}
+
 // ---- Fotos pesadas ficam leves (no aparelho da dona, em segundo plano) ----
 // Foto com mais de 160 KB (as antigas chegam a 4 MB): o app baixa uma vez, refaz no tamanho de hoje
 // (até 150 KB, com miniatura de ~30 KB), troca na publicação e só então apaga o arquivo pesado.
@@ -1917,7 +1951,7 @@ async function loadData(){
     // e tirava a pessoa da jornada que ela estava olhando)
     if(FIRST){FIRST=false;var mineL=S.all.filter(function(x){return isMine(x.id)});
       if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}}
-    loaded=true;S.err='';setTimeout(thumbFill,3000);setTimeout(slimOwn,8000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
+    loaded=true;S.err='';setTimeout(thumbFill,3000);setTimeout(slimOwn,8000);setTimeout(dropSolto,5000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
   }catch(e){
     if(stale())return;
     S.err='Não foi possível atualizar agora. '+why(e)+' Tentaremos de novo em instantes.';
@@ -1992,6 +2026,7 @@ document.addEventListener('click',function(e){
   else if(d.cm){S.openC[d.cm]=!S.openC[d.cm];render();var ci=document.getElementById('ci-'+d.cm);if(ci)ci.focus()}
   else if(d.cs)sendComment(d.cs,d.ci);
   else if(d.more){S.feedN=(S.feedN||FEEDN)+FEEDN;render()}
+  else if(t.id==='revgo')revidGo();
   else if(d.cif){var cf=document.getElementById(d.cif);if(cf)cf.focus()}
   else if(d.wpost)postSheet(d.wpost,d.wu);
   else if(d.whoback)openWho(d.whoback);

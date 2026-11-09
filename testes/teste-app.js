@@ -1189,6 +1189,39 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return '4,1 MB → ' + Math.round(S.DB.objects[novo[0]].size / 1024) + ' KB + miniatura; leve, vídeo e foto da Bia intactos';
   });
 
+  await teste('Vídeo pesado da Mayara: no celular dela, um toque deixa o vídeo leve e devolve ao post; o vídeo solto é apagado', async () => {
+    const { execFileSync } = require('child_process'), os = require('os');
+    try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }) } catch (e) { return 'pulado: este computador não tem ffmpeg' }
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rev-')), arq = path.join(dir, 'pesado.webm');
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30:duration=4,noise=alls=12:allf=t', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4', '-c:v', 'libvpx', '-b:v', '9M', '-deadline', 'realtime', '-cpu-used', '8', '-c:a', 'libopus', arq]);
+    const bin = fs.readFileSync(arq); fs.rmSync(dir, { recursive: true, force: true });
+    const S = novoServidor({ imgBase: IMG }), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Cartas'); S.entrar(R, g); const c = S.jornada(g, 'Tiago em 5 dias');
+    const vid = M.id + '/' + 'f'.repeat(40) + '.mov', solto = M.id + '/1793932138848.mov';
+    S.DB.objects[vid] = { size: bin.length, owner: M.id }; S.DB.objects[solto] = { size: 23000000, owner: M.id };
+    const k = S.publicacao(M, c, { book: 'Tiago', ref: '3', photo_path: null, media_type: null, note: 'O poder das palavras' });
+    const cfg = (pg) => pg.evaluate(([post, p, so]) => { REVID.post = post; REVID.path = p; REVID.solto = [so]; render() }, [k.id, vid, solto]);
+    // Roger não vê o cartão
+    const pr = await abrir(browser, base, S, R); await cfg(pr);
+    const viuRoger = !!(await pr.$('#revid')); await pr.context().close();
+    exige(!viuRoger, 'o cartão apareceu para quem não é a dona');
+    const pg = await abrir(browser, base, S, M);
+    await pg.route('**/img/**', r => decodeURIComponent(r.request().url()).endsWith('.mov') ? r.fulfill({ contentType: 'video/webm', body: bin }) : r.fallback());
+    await pg.evaluate(() => { VZ.types = ['video/webm;codecs=vp8,opus']; VZ.mp4only = false; VZ.min = 1048576 });
+    await cfg(pg); await pg.waitForSelector('#revid #revgo');
+    await pg.evaluate(() => dropSolto());
+    exige(await esperar(() => !S.DB.objects[solto]), 'o vídeo solto não foi apagado');
+    await pg.click('#revgo');
+    exige(await esperar(() => !!S.DB.checkins[k.id].photo_path, 30000), 'o vídeo não voltou ao post: ' + await pg.textContent('#revid').catch(() => ''));
+    const np = S.DB.checkins[k.id].photo_path;
+    exige(S.DB.checkins[k.id].media_type === 'video' && /\/[0-9a-f]{40}\.webm$/.test(np), 'post com o vídeo errado: ' + np);
+    exige(S.DB.objects[np].size < bin.length * 0.5, 'o vídeo não ficou leve: ' + bin.length + ' → ' + S.DB.objects[np].size);
+    exige(await esperar(() => !!S.DB.objects[np.replace(/\.webm$/, '.t.jpg')]), 'o vídeo voltou sem capa');
+    exige(await esperar(() => !S.DB.objects[vid]), 'o vídeo pesado não foi apagado');
+    exige(await esperar(() => pg.evaluate(() => !document.getElementById('revid'))), 'o cartão continuou depois de devolver o vídeo');
+    await pg.context().close();
+    return (bin.length / 1048576).toFixed(1) + ' MB → ' + (S.DB.objects[np].size / 1048576).toFixed(2) + ' MB, com capa; solto apagado; Roger não vê o cartão';
+  });
+
   await browser.close(); srv.close();
   const ok = resultados.filter(r => r.ok).length;
   console.log('\n' + ok + ' de ' + resultados.length + ' testes passaram');

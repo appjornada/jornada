@@ -95,6 +95,8 @@ main{padding:8px 16px}
 .cart{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .cart::-webkit-scrollbar{display:none}
 .cars{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always}
+.vpause{position:relative;overflow:hidden;background:#172309;min-height:180px}.vpause img{display:block;width:100%;height:100%;max-height:520px;object-fit:cover;filter:brightness(.5)}
+.vpause span{position:absolute;left:0;right:0;bottom:0;padding:12px 14px;color:#f2ead3;font-weight:600;font-size:15px;line-height:1.35;background:linear-gradient(transparent,rgba(0,0,0,.65))}
 .cars .media{margin-top:0;border-radius:0;height:420px;max-height:62vh}
 .carc{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;pointer-events:none}
 .dots{display:flex;justify-content:center;gap:6px;margin-top:8px}
@@ -740,7 +742,14 @@ function mediaHtml(p){
 // Capa para vídeo que não tem capa (vídeos antigos): sem ela, o celular baixava o vídeo inteiro só para
 // mostrar o primeiro quadro, toda vez que alguém abria o app (um vídeo de 27 MB gastou 3,7 GB num dia)
 var VPOSTER='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#172309"/><circle cx="320" cy="160" r="54" fill="#e6b04a"/><path d="M302 132v56l48-28z" fill="#14200a"/><text x="320" y="265" fill="#f2ead3" font-family="system-ui,sans-serif" font-size="26" text-anchor="middle">Toque para ver o vídeo</text></svg>');
-function vtag(m,cls){return '<video'+(cls?' class="'+cls+'"':'')+' src="'+esc(m.img)+'" controls playsinline preload="none" poster="'+esc(m.poster||VPOSTER)+'"></video>'}
+// Vídeos pausados até o Supabase virar o mês (a cota de download do plano gratuito é mensal): ninguém
+// baixa vídeo até essa data; aparece só a capa (pequena) com o aviso. Para soltar antes, é só mudar a data.
+var VIDOFF=typeof window.__vidoff==='string'?window.__vidoff:'2026-12-02';
+function vidOff(){return !!VIDOFF&&TODAY<VIDOFF}
+function vidOffMsg(){return 'Vídeos pausados até '+fd(VIDOFF).slice(0,5)+' para não estourar a cota do app.'}
+function vtag(m,cls){
+  if(vidOff())return '<div class="vpause'+(cls?' '+cls:'')+'" role="img" aria-label="'+esc(vidOffMsg())+'">'+(m.poster?'<img src="'+esc(m.poster)+'" alt="" loading="lazy">':'')+'<span>🎬 '+esc(vidOffMsg())+'</span></div>';
+  return '<video'+(cls?' class="'+cls+'"':'')+' src="'+esc(m.img)+'" controls playsinline preload="none" poster="'+esc(m.poster||VPOSTER)+'"></video>'}
 function mediaVis(p,L){
   function one(m,i){return m.video?vtag(m,'media'):'<img class="media" alt="Foto '+(L.length>1?(i+1)+' ':'')+'do estudo de '+esc(nm(p.uid))+'" src="'+esc(m.thumb||m.img)+'" data-full="'+esc(m.img)+'" loading="lazy" decoding="async">'}
   if(!L.length)return '';if(L.length===1)return one(L[0],0);
@@ -1216,6 +1225,7 @@ async function setMedia(inp,src,rep){
     var f=fs[i],v=/^video\//.test(f.type)||(!f.type&&isVidPath(f.name||''));
     if(/^audio\//.test(f.type)||(!f.type&&isAudPath(f.name||''))){if(await addAudio(f,src))continue;else continue}
     if(!v&&!/^image\//.test(f.type)){er.textContent='Escolha fotos ou vídeos.';continue}
+    if(v&&vidOff()){er.textContent=vidOffMsg()+' Mande uma foto ou um áudio.';continue}
     if(v&&f.size>MAXV){er.textContent='Um vídeo tem mais de 50 MB. Grave um vídeo mais curto (até '+MAXSEC+' segundos).';continue}
     if(v){var du=await vidDur(f);if(du&&du>MAXSEC+0.9){er.textContent='O vídeo tem '+Math.round(du)+' segundos. O máximo é '+MAXSEC+' segundos: grave um vídeo mais curto.';continue}}
     var it={file:f,src:src,video:v,img:URL.createObjectURL(f)};
@@ -1837,7 +1847,7 @@ async function thumbFill(){
 var REVID={post:'e15ee801-63bc-41be-9dfa-75c79ae322dc',path:'9b3d254b-47e3-42cf-8494-ea72859e5052/99ef405a9b4598490f1fc46fa2c11d06e3878c10.mov',solto:['9b3d254b-47e3-42cf-8494-ea72859e5052/1793932138848.mov'],ok:false,busy:false,msg:''};
 function revidPost(){if(!S.me||REVID.ok||REVID.path.indexOf(S.me+'/')!==0)return null;var p=S.posts.filter(function(x){return x.id===REVID.post&&x.uid===S.me})[0];return p&&!(p.imgs||[]).length?p:null}
 function revidCard(){
-  var p=revidPost();if(!p)return '';
+  var p=revidPost();if(!p||vidOff())return '';
   return '<div class="card" id="revid"><b>🎬 Seu vídeo de '+esc(p.book)+' '+esc(p.ref)+' ('+fd(p.date).slice(0,5)+')</b><div class="sub" style="margin-top:4px">Ele estava pesado demais (27 MB) e saiu do mural para não estourar a cota do app. Toque abaixo para deixá-lo leve e devolvê-lo ao post. Deixe o app aberto até terminar (leva mais ou menos o tempo do vídeo).</div>'+
     (REVID.msg?'<div class="'+(/não/i.test(REVID.msg)?'err':'sub')+'" style="margin-top:6px">'+esc(REVID.msg)+'</div>':'')+
     '<button class="btn" id="revgo"'+(REVID.busy?' disabled':'')+'>'+(REVID.busy?'Preparando o vídeo…':'🎬 Deixar leve e devolver ao post')+'</button></div>';

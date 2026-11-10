@@ -31,13 +31,15 @@ function servirApp() {
 const FOTOS = {}; // downloads por foto no armazenamento imitado
 async function abrir(browser, base, S, u, extra = {}) {
   // o guardador de fotos (sw.js) fica de fora destes testes: tem teste próprio
-  const opc = Object.assign({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' }, extra); delete opc.relogio;
+  const opc = Object.assign({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' }, extra); delete opc.relogio; delete opc.pausaVideo;
   const ctx = await browser.newContext(opc);
   await ctx.grantPermissions(['microphone']).catch(() => {});
   await ctx.exposeFunction('__api', async (me, q) => JSON.stringify(await S.handle(me, JSON.parse(q))));
   await ctx.route('**/supabase.js', r => r.fulfill({ contentType: 'application/javascript', body: cliente }));
   await ctx.route('**/auth/v1/settings', r => r.fulfill({ contentType: 'application/json', body: '{"external":{"phone":false}}' }));
   await ctx.route('https://bible-api.com/**', r => r.abort());
+  // vídeos pausados até virar o mês do Supabase: nos testes ficam liberados, menos no teste da pausa
+  await ctx.addInitScript(v => { window.__vidoff = v }, extra.pausaVideo || '');
   await ctx.addInitScript(([id, md]) => { if (!localStorage.getItem('fake_me')) { localStorage.setItem('fake_me', id); localStorage.setItem('fake_md', md) } }, [u.id, JSON.stringify(u.md || {})]);
   const pg = await ctx.newPage();
   if (extra.relogio) await pg.clock.install({ time: new Date(extra.relogio) });
@@ -1220,6 +1222,30 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(await esperar(() => pg.evaluate(() => !document.getElementById('revid'))), 'o cartão continuou depois de devolver o vídeo');
     await pg.context().close();
     return (bin.length / 1048576).toFixed(1) + ' MB → ' + (S.DB.objects[np].size / 1048576).toFixed(2) + ' MB, com capa; solto apagado; Roger não vê o cartão';
+  });
+
+  await teste('Vídeos pausados até virar o mês do Supabase: ninguém baixa vídeo, aparece a capa com aviso', async () => {
+    const S = novoServidor({ imgBase: IMG }), A = S.usuario('Ana'), g = S.caravana(A, 'G'); const c = S.jornada(g, 'Tiago em 5 dias');
+    const vid = A.id + '/' + 'a'.repeat(40) + '.mp4'; S.DB.objects[vid] = { size: 2000000 }; S.DB.objects[vid.replace('.mp4', '.t.jpg')] = { size: 20000 };
+    S.publicacao(A, c, { book: 'Tiago', ref: '1', photo_path: vid, media_type: 'video' });
+    const pg = await abrir(browser, base, S, A, { pausaVideo: '2099-12-02' });
+    const pedidos = []; pg.on('request', r => { if (/\.mp4/.test(decodeURIComponent(r.url())) && !/\.t\.jpg/.test(r.url())) pedidos.push(r.url()) });
+    await pg.waitForSelector('main .vpause');
+    const v = await pg.evaluate(() => ({ videos: document.querySelectorAll('video').length, txt: document.querySelector('main .vpause').textContent, capa: !!document.querySelector('main .vpause img') }));
+    await pg.evaluate(() => openPosts(S.posts.slice(0, 1), S.posts[0].date, false));
+    const lb = await pg.evaluate(() => ({ videos: document.querySelectorAll('#lb video').length, aviso: !!document.querySelector('#lb .vpause') }));
+    await pg.evaluate(() => closeLb());
+    // vídeo novo não entra enquanto estiver pausado
+    await pg.click('#add'); await pg.waitForSelector('#fgal', { state: 'attached' });
+    await pg.setInputFiles('#fgal', { name: 'v.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(1000) });
+    exige(await esperar(() => pg.evaluate(() => /Vídeos pausados até 02\/12/.test(document.getElementById('er').textContent))), 'aceitou vídeo novo durante a pausa: ' + await pg.textContent('#er'));
+    const nm = await pg.evaluate(() => S.media.length);
+    await pg.context().close();
+    exige(v.videos === 0 && v.capa && /Vídeos pausados até 02\/12/.test(v.txt), 'no mural: ' + JSON.stringify(v));
+    exige(lb.videos === 0 && lb.aviso, 'na tela cheia: ' + JSON.stringify(lb));
+    exige(nm === 0, 'o vídeo novo entrou na publicação');
+    exige(pedidos.length === 0, 'baixou vídeo durante a pausa: ' + pedidos.join());
+    return 'mural e tela cheia só com a capa e o aviso; nenhum vídeo baixado; vídeo novo recusado';
   });
 
   await browser.close(); srv.close();

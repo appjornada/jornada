@@ -1847,7 +1847,8 @@ async function thumbFill(){
 var REVID={post:'e15ee801-63bc-41be-9dfa-75c79ae322dc',path:'9b3d254b-47e3-42cf-8494-ea72859e5052/99ef405a9b4598490f1fc46fa2c11d06e3878c10.mov',solto:['9b3d254b-47e3-42cf-8494-ea72859e5052/1793932138848.mov'],ok:false,busy:false,msg:''};
 function revidPost(){if(!S.me||REVID.ok||REVID.path.indexOf(S.me+'/')!==0)return null;var p=S.posts.filter(function(x){return x.id===REVID.post&&x.uid===S.me})[0];return p&&!(p.imgs||[]).length?p:null}
 function revidCard(){
-  var p=revidPost();if(!p||vidOff())return '';
+  // aparece mesmo com os vídeos pausados: são 27 MB baixados uma vez só, pela dona; para os outros o vídeo continua pausado
+  var p=revidPost();if(!p)return '';
   return '<div class="card" id="revid"><b>🎬 Seu vídeo de '+esc(p.book)+' '+esc(p.ref)+' ('+fd(p.date).slice(0,5)+')</b><div class="sub" style="margin-top:4px">Ele estava pesado demais (27 MB) e saiu do mural para não estourar a cota do app. Toque abaixo para deixá-lo leve e devolvê-lo ao post. Deixe o app aberto até terminar (leva mais ou menos o tempo do vídeo).</div>'+
     (REVID.msg?'<div class="'+(/não/i.test(REVID.msg)?'err':'sub')+'" style="margin-top:6px">'+esc(REVID.msg)+'</div>':'')+
     '<button class="btn" id="revgo"'+(REVID.busy?' disabled':'')+'>'+(REVID.busy?'Preparando o vídeo…':'🎬 Deixar leve e devolver ao post')+'</button></div>';

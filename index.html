@@ -1225,7 +1225,7 @@ function selSug(){var f=S.edit?null:folga(S.ch),cap=f===null?MAXSEL:Math.min(MAX
 // Duração do vídeo (em segundos); null se o aparelho não conseguir ler
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
-var MAXSEC=15,MAXVUP=10*1048576; // vídeo que não ficou leve: até 10 MB
+var MAXSEC=15,MAXVUP=4*1048576; // vídeo que o celular não conseguiu deixar leve: até 4 MB (cada play baixa o arquivo inteiro)
 async function setMedia(inp,src,rep){
   var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
   for(var i=0;i<fs.length;i++){
@@ -1425,7 +1425,7 @@ async function saveCheckin(row,key){
   if(!r.data){var f3=await find();if(f3)return f3;throw new Error('o servidor não confirmou a gravação')}
   return r.data
 }
-// ---- Vídeo menor antes de enviar: até 720p e ~1,5 Mbps (um vídeo de 15 s cai de ~25 MB para ~3 MB) ----
+// ---- Vídeo menor antes de enviar: lado menor até 540 px e ~0,7 Mbps (um vídeo de 15 s cai de ~25 MB para ~1,5 MB) ----
 // O celular regrava o vídeo enquanto ele toca escondido (leva o tempo do vídeo). O som é lido à parte.
 // Se qualquer coisa falhar (aparelho sem suporte, app fechado no meio, som não gravado), vai o original, como antes.
 var VZ={ac:null,min:2*1048576,mp4only:true,types:['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1.4D401F,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4']};
@@ -1862,7 +1862,8 @@ async function thumbFill(){
 // Saiu do post (Tiago 3, 07/11) em 09/11 para não estourar a cota. No celular dela, o Início mostra um
 // cartão: ao tocar, o app baixa o vídeo uma vez, refaz em 540p (uns 2–4 MB), devolve ao post com capa e
 // só então apaga o pesado. O vídeo solto antigo (23 MB, de nenhum post) é apagado sozinho.
-var REVID={post:'e15ee801-63bc-41be-9dfa-75c79ae322dc',path:'9b3d254b-47e3-42cf-8494-ea72859e5052/99ef405a9b4598490f1fc46fa2c11d06e3878c10.mov',solto:['9b3d254b-47e3-42cf-8494-ea72859e5052/1793932138848.mov'],ok:false,busy:false,msg:''};
+// 13/11/2026: o vídeo de 27 MB foi apagado do armazenamento; o cartão de "devolver ao post" fica desligado (post e caminho vazios).
+var REVID={post:'',path:'',solto:['9b3d254b-47e3-42cf-8494-ea72859e5052/1793932138848.mov'],ok:false,busy:false,msg:''};
 function revidPost(){if(!S.me||REVID.ok||REVID.path.indexOf(S.me+'/')!==0)return null;var p=S.posts.filter(function(x){return x.id===REVID.post&&x.uid===S.me})[0];return p&&!(p.imgs||[]).length?p:null}
 function revidCard(){
   // aparece mesmo com os vídeos pausados: são 27 MB baixados uma vez só, pela dona; para os outros o vídeo continua pausado

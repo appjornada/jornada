@@ -354,6 +354,9 @@ async function delAvatar(){
 function roster(){return S.grp&&S.roster[S.grp.id]||null}
 function users(){var o={},R=roster();if(R)R.forEach(function(m){o[m.id]=1});S.posts.forEach(function(p){if(p.cid===S.cur)o[p.uid]=1});if(S.me)o[S.me]=1;return Object.keys(o)}
 function memberCount(){var R=roster();return R?R.length:users().length}
+// Dona do passo que está sendo editado (a líder pode corrigir o de outra pessoa)
+function who(){return S.edit?S.edit.uid:S.me}
+function isMod(){return !!S.edit&&S.edit.uid!==S.me}
 function mine(u){return S.posts.filter(function(p){return p.uid===u&&p.cid===S.cur})}
 // Dias com leitura (qualquer quantidade de capítulos): usados na constância e no calendário
 function days(u){return daysIn(u,S.cur)}
@@ -786,7 +789,7 @@ function post(p,pre){
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
     (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+
     mediaHtml(p)+
-    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" '+(pre?'data-cif="'+pre+'ci-'+p.id+'"':'data-cm="'+p.id+'"')+'>💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':'')+'</div>'+
+    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" '+(pre?'data-cif="'+pre+'ci-'+p.id+'"':'data-cm="'+p.id+'"')+'>💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':S.canEdit?'<button class="like" data-ep="'+p.id+'">✏️ Corrigir</button>':'')+'</div>'+
     (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="'+pre+'ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'" data-ci="'+pre+'ci-'+p.id+'">Enviar</button></div></div>':'')+'</div>'
 }
 function feed(){
@@ -856,7 +859,7 @@ function openWho(u,back){
   var row=function(p){var M=(p.imgs||[]).filter(function(m){return !m.audio})[0],A=(p.imgs||[]).some(function(m){return m.audio});
     var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
     var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
-    var del=(p.uid===S.me?'<button class="wdel" data-ep="'+p.id+'" aria-label="Editar este passo">✏️</button>':'')+(S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
+    var del=(p.uid===S.me||S.canEdit?'<button class="wdel" data-ep="'+p.id+'" aria-label="'+(p.uid===S.me?'Editar':'Corrigir')+' este passo">✏️</button>':'')+(S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
     return '<div class="wpr"><button class="wp" data-wpost="'+p.id+'" data-wu="'+u+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+((p.likes||[]).length?' · ♥ '+p.likes.length:'')+(p.cm.length?' · 💬 '+p.cm.length:'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
   showSheet((back?'<button class="link" data-rkopen="1" style="margin-bottom:8px">‹ Voltar ao ranking</button>':'')+'<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
     '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
@@ -1136,6 +1139,10 @@ function openSheet(pre){
   var c=S.ch,mx=TODAY<c.end?TODAY:c.end;
   if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
   pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
+  if(E&&E.uid!==S.me){
+    showSheet('<h1>✏️ Corrigir leitura</h1><h2>'+esc(nm(E.uid))+'</h2><div class="sub">Como líder, você corrige só o livro e os capítulos. Reflexão, fotos e tempo de estudo continuam como ela publicou.</div>'+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" value="'+dt+'" disabled><div id="stepr"></div><div class="err" id="er"></div><button class="btn" id="ok">💾 Salvar correção</button><button class="btn g" id="x">Cancelar</button>');
+    stepFor(dt);return;
+  }
   showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
     '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
     ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
@@ -1159,11 +1166,11 @@ function regra(c){return c&&REGRA[c.id]||null}
 function livre(c,k){var r=regra(c);return !!r&&r.livres.indexOf(BOOKS[+k.split(':')[0]])>=0}
 function lista(a){return a.length>1?a.slice(0,-1).join(', ')+' e '+a[a.length-1]:a.join('')}
 // quantos capítulos a pessoa ainda pode marcar hoje nesta jornada, além dos já registrados (null = sem limite)
-function folga(c){var r=regra(c);if(!r||!r.porDia)return null;var cap=r.porDia*(Math.min(diff(c.start,TODAY),diff(c.start,c.end))+1);return Math.max(0,cap-Object.keys(S.read||{}).length)}
+function folga(c){var r=regra(c);if(!r||!r.porDia||isMod())return null;var cap=r.porDia*(Math.min(diff(c.start,TODAY),diff(c.start,c.end))+1);return Math.max(0,cap-Object.keys(S.read||{}).length)}
 function folgaMsg(c,f){var r=regra(c);return f>0?'Por hoje dá para marcar até '+f+(f>1?' capítulos':' capítulo')+': nesta jornada são no máximo '+r.porDia+' passos por dia.':'Você já deu os passos de hoje: nesta jornada são no máximo '+r.porDia+' passos por dia. Amanhã libera mais.'}
 function stepFor(d){
   var e=document.getElementById('stepr'),ok=document.getElementById('ok'),P=plan(S.ch),block='',h='<div class="sub" style="margin-top:4px">'+(d===TODAY?'Hoje':'Leitura de '+fd(d))+'</div>';
-  var ex=S.edit&&S.edit.id,rd=readSet(S.me,ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.sug=[];
+  var ex=S.edit&&S.edit.id,rd=readSet(who(),ex);S.read=rd;S.sel=[];S.need=0;S.pbs=null;S.sug=[];
   if(P){
     var i=diff(S.ch.start,d),R=dayRead(S.ch,i),m=P.L.length,n=P.n,avail=P.L.filter(function(x){return !rd[x.b+':'+x.c]});
     S.pbs={};P.L.forEach(function(x){S.pbs[x.b]=1});
@@ -1189,7 +1196,7 @@ function stepFor(d){
   var first=S.sel[0]||S.sug[0];
   S.bk=first?+first.split(':')[0]:(P?(P.L.filter(function(x){return !rd[x.b+':'+x.c]})[0]||P.L[0]).b:Math.max(0,BOOKS.indexOf((mine(S.me)[0]||{}).book)));
   var bks=P?Object.keys(S.pbs).map(Number):rg(0,65);
-  h+='<label>Quais capítulos você leu?</label>'+(S.sug.length&&!S.edit?'<button class="btn o" id="selsug" style="margin-top:0;text-align:center">✔️ Marcar '+(S.sug.length>1?'os '+S.sug.length+' capítulos sugeridos':'o capítulo sugerido')+'</button>':'')+
+  h+='<label>'+(isMod()?'Quais capítulos ela leu?':'Quais capítulos você leu?')+'</label>'+(S.sug.length&&!S.edit?'<button class="btn o" id="selsug" style="margin-top:0;text-align:center">✔️ Marcar '+(S.sug.length>1?'os '+S.sug.length+' capítulos sugeridos':'o capítulo sugerido')+'</button>':'')+
     '<select id="sbk" style="margin-top:8px">'+bks.map(function(b){return '<option value="'+b+'"'+(b===S.bk?' selected':'')+'>'+BOOKS[b]+'</option>'}).join('')+'</select><div id="chg" style="margin-top:4px"></div><div class="sub" id="selc" style="margin-top:8px"></div>';
   e.innerHTML=h+(block?'<div class="err" style="margin-top:8px">'+block+'</div>':'');
   ok.disabled=!!block;
@@ -1347,10 +1354,11 @@ async function publish(){
   if(S.edit)dt=S.edit.date;
   if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
   var R=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
-  if(R.some(function(x){return readSet(S.me,S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
+  if(R.some(function(x){return readSet(who(),S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
   var fs=folga(S.ch);if(fs!==null&&R.length>fs){er.textContent=folgaMsg(S.ch,fs)+(fs>0?' Desmarque '+(R.length-fs)+(R.length-fs>1?' capítulos.':' capítulo.'):'');return}
   var lk0=R.filter(function(x){return locked(x.b+':'+x.c)})[0];if(lk0){er.textContent='🔒 '+BOOKS[lk0.b]+' '+lk0.c+' só libera em '+fd(unlockOf(S.ch,lk0.b+':'+lk0.c))+'. Desmarque para registrar os outros.';return}
   var st=stepOf(R);
+  if(isMod())return saveMod(st,btn,er);
   if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
   if(!S.media.some(function(x){return !x.audio})){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto ou vídeo do seu estudo (câmera ou galeria).';return}
   if(S.media.some(function(x){return x.video&&!x.path}))vzUnlock();
@@ -1497,6 +1505,16 @@ async function upMedia(){
   var vis=S.media.filter(function(x){return !x.audio})[0]||S.media[0];
   return{photo_path:paths.join(PSEP),media_type:vis.video?'video':vis.audio?'audio':'image',media_source:nw?nw.src:null}
 }
+// Líder corrigindo o passo de outra pessoa: só livro, capítulos e contagem (supabase/11-lider-corrige-passo.sql)
+async function saveMod(st,btn,er){
+  btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    var r=await withTimeout(sb.from('checkins').update({book:BOOKS[st.b],ref:st.ref||null,chapters:st.n}).eq('id',S.edit.id).select('id'),45000);
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length)throw new Error('sem permissão para corrigir esta publicação (falta rodar o supabase/11-lider-corrige-passo.sql?)');
+    S.edit=null;S.media=null;closeSheet();toast('✓ Leitura corrigida');await loadData();
+  }catch(e){btn.disabled=false;btn.textContent='🔁 Tentar de novo';er.textContent='Não foi possível salvar. '+why(e)}
+}
 async function saveEdit(st,mn,m,btn,er){
   btn.disabled=true;btn.textContent='Salvando…';
   try{
@@ -1514,7 +1532,7 @@ async function saveEdit(st,mn,m,btn,er){
 }
 function toast(t){var e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.setAttribute('role','status');document.body.appendChild(e)}e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},3500)}
 function editPost(id){
-  var p=S.posts.filter(function(x){return x.id===id})[0];if(!p||p.uid!==S.me)return;
+  var p=S.posts.filter(function(x){return x.id===id})[0];if(!p||(p.uid!==S.me&&!S.canEdit))return;
   if(p.cid!==S.cur){S.cur=p.cid;useCur();hdr()}
   openSheet({edit:p});
 }

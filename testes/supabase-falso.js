@@ -91,7 +91,11 @@ function novoServidor(opts = {}) {
     }
     if (q.op === 'update') {
       let rows = applyFilters(visible(t, me), q.filters);
-      if (t === 'checkins') rows = rows.filter(r => r.user_id === me);
+      if (t === 'checkins') { // ck_update (a própria) + ck_update_leader com a trava ck_guard_leader (supabase/11-lider-corrige-passo.sql)
+        const lider = k => { const c = DB.challenges[k.challenge_id]; return !O.semLiderCorrige && c && DB.gm.some(m => m.group_id === c.group_id && m.user_id === me && m.role === 'leader') };
+        rows = rows.filter(r => r.user_id === me || lider(r));
+        if (rows.some(r => r.user_id !== me) && Object.keys(q.body).some(k => !['book', 'ref', 'chapters'].includes(k) && q.body[k] !== rows[0][k])) return err('A líder só pode corrigir o livro e os capítulos do passo de outra pessoa.', 'P0001');
+      }
       if (t === 'profiles') {
         if (O.semAvatar && 'avatar_path' in q.body) return err("Could not find the 'avatar_path' column of 'profiles' in the schema cache", 'PGRST204');
         rows = rows.filter(r => r.id === me);

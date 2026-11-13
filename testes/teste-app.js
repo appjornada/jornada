@@ -493,7 +493,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(await esperar(() => pg.evaluate(() => /Que palavra!/.test(document.getElementById('shc').textContent))), 'a folha não mostrou o comentário');
     // a foto aparece no passo; "Voltar" leva de novo à ficha da Bia
     exige(!!(await pg.$('#shc .card img.media')), 'a foto não apareceu no passo');
-    exige(!(await pg.$('#shc [data-ep]')), 'passo de outra pessoa oferece Editar');
+    exige(!!(await pg.$('#shc [data-ep]')), 'a líder não vê ✏️ Corrigir no passo de outra pessoa');
     await pg.click('#shc [data-whoback]'); f = await ficha();
     exige(f.nome === 'Bia Souza' && /♥ 1/.test(f.txt) && /💬 1/.test(f.txt), 'voltar não mostrou a ficha com Amém e comentário: ' + f.txt.slice(0, 200));
     await pg.click('#shc #x');
@@ -1121,6 +1121,42 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(alheio === 0, 'apareceu ✏️ no passo de outra pessoa');
     await pg.context().close();
     return 'Tiago 2 → 1 Pedro 1, texto reescrito; ✏️ também na lista da pessoa e no visualizador; nada no passo dos outros';
+  });
+
+  await teste('Líder corrige livro e capítulos do passo de outra pessoa; participante não', async () => {
+    const S = novoServidor(), M = S.usuario('Mayara'), A = S.usuario('Andrea Karla'), R = S.usuario('Roger'), g = S.caravana(M, 'Conhecendo as Cartas'); S.entrar(A, g); S.entrar(R, g);
+    const c = S.jornada(g, 'TIAGO + 1 PEDRO + 2 PEDRO + 1 JOÃO + 2 JOÃO + 3 JOÃO + JUDAS', -2, 8);
+    M.md = { jornadas: [c.id] }; R.md = { jornadas: [c.id] };
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    const k = S.publicacao(A, c, { read_date: dia(-1), book: 'Tiago', ref: 'Tiago 1; 1 João 5', chapters: 2, note: 'Texto dela', study_minutes: 15, photo_path: 'antigo/foto-andrea.jpg' });
+    S.publicacao(A, c, { read_date: dia(-2), book: 'Tiago', ref: '2', chapters: 1, note: '' });
+    // participante comum não vê ✏️ no passo da Andrea, nem consegue gravar direto no banco
+    const pr = await abrir(browser, base, S, R);
+    await pr.waitForSelector('main b[data-who="' + A.id + '"]');
+    exige(!(await pr.$('main [data-ep="' + k.id + '"]')), 'participante comum viu ✏️ no passo de outra pessoa');
+    const tent = await pr.evaluate(id => sb.from('checkins').update({ ref: '3' }).eq('id', id).select('id'), k.id);
+    exige(!tent.data || !tent.data.length, 'participante comum conseguiu mudar o passo de outra pessoa');
+    await pr.context().close();
+    // líder: ✏️ Corrigir abre só livro e capítulos, já com os capítulos dela marcados; os dela de outro dia ficam travados
+    const pg = await abrir(browser, base, S, M);
+    await pg.waitForSelector('main [data-ep="' + k.id + '"]');
+    exige(/Corrigir/.test(await pg.textContent('main [data-ep="' + k.id + '"]')), 'o botão da líder não diz Corrigir');
+    await pg.click('main [data-ep="' + k.id + '"]'); await pg.waitForSelector('#chg .chip');
+    const fo = await pg.evaluate(() => ({ t: document.getElementById('shc').textContent, nota: !!document.getElementById('t'), fotos: !!document.getElementById('fgal'), sel: S.sel.slice(), t2: !!document.querySelector('#chg [data-sc$=":2"][disabled]') }));
+    exige(/Corrigir leitura/.test(fo.t) && /Andrea Karla/.test(fo.t) && !fo.nota && !fo.fotos, 'a folha da líder não é só de livro e capítulos: ' + fo.t.slice(0, 160));
+    exige(fo.sel.length === 2 && fo.t2, 'capítulos da Andrea: ' + JSON.stringify(fo));
+    await pg.click('#chg [data-sc$=":1"]'); // desmarca Tiago 1
+    await pg.click('#chg [data-sc$=":3"]'); // marca Tiago 3
+    await pg.click('#ok');
+    await esperar(() => S.DB.checkins[k.id].ref !== 'Tiago 1; 1 João 5', 8000).catch(() => {});
+    const r = S.DB.checkins[k.id];
+    exige(r.book === 'Tiago' && r.ref === 'Tiago 3; 1 João 5' && r.chapters === 2, 'não salvou a correção: ' + JSON.stringify({ book: r.book, ref: r.ref, ch: r.chapters, er: await pg.textContent('#er').catch(() => '') }));
+    exige(r.user_id === A.id && r.note === 'Texto dela' && r.study_minutes === 15 && r.photo_path === 'antigo/foto-andrea.jpg', 'a correção mexeu em outra coisa do passo');
+    // a trava do banco: a líder não muda a reflexão de outra pessoa
+    const nota = await pg.evaluate(id => sb.from('checkins').update({ note: 'mudado' }).eq('id', id).select('id'), k.id);
+    exige(nota.error && S.DB.checkins[k.id].note === 'Texto dela', 'a líder conseguiu mudar a reflexão da Andrea');
+    await pg.context().close();
+    return 'Tiago 1; 1 João 5 → Tiago 3; 1 João 5; texto, foto e tempo intactos; participante sem ✏️ e barrado no banco; reflexão protegida';
   });
 
   await teste('Fotos guardadas no aparelho (sw.js): a mesma foto com outro link assinado não é baixada de novo', async () => {

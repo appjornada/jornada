@@ -278,7 +278,7 @@ var MAXV=50*1048576,MAXF=10,PSEP='|';
 function isVidPath(x){return /\.(mp4|mov|m4v|webm|3gp|3g2|avi|mkv|qt|mpe?g)$/i.test(x)}
 // Áudio (até 3 min): gravado no app ou escolhido do celular; extensões próprias para não confundir com vídeo
 function isAudPath(x){return /\.(weba|m4a|mp3|aac|ogg|oga|opus|wav|amr)$/i.test(x)}
-var MAXAUD=180,MAXAB=15*1048576;
+var MAXAUD=180,MAXAB=15*1048576,MAXAN=3; // até 3 áudios por publicação, de até 3 minutos cada
 var SB_URL='https://xqcxynucnqnafcednuky.supabase.co',SB_KEY='sb_publishable_garjJN0dhNrPCrlSN-pSYg_tslkINnP';
 var tab='feed',rk='dias',loaded=false,sb,gm='in';
 // Mapa: o ranking mostra os 3 primeiros e a trilha os 5 primeiros; participantes só o número (abrem ao tocar)
@@ -1131,7 +1131,9 @@ function morphNode(o,n){
   morphKids(o,n);return o
 }
 function showSheet(h){S.sheetPost=null;var c=document.getElementById('shc');c.innerHTML=h;c.scrollTop=0;document.getElementById('sh').classList.add('show')}
-function closeSheet(){S.sheetPost=null;if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show')}
+function closeSheet(force){
+  if(!force&&typeof REC!=='undefined'&&REC&&REC.on){var w=document.getElementById('rwarn');if(w)w.textContent='Você está gravando. Toque em "Parar e usar o áudio" ou em "Cancelar gravação" antes de sair.';var a=document.getElementById('arec');if(a&&a.scrollIntoView)a.scrollIntoView({block:'center',behavior:'smooth'});return false}
+  S.sheetPost=null;if(typeof REC!=='undefined'&&REC)recStop(false);document.getElementById('sh').classList.remove('show');return true}
 
 // ---- Dar um passo (check-in) ----
 function openSheet(pre){
@@ -1237,44 +1239,58 @@ async function setMedia(inp,src,rep){
     if(v){var du=await vidDur(f);if(du&&du>MAXSEC+0.9){er.textContent='O vídeo tem '+Math.round(du)+' segundos. O máximo é '+MAXSEC+' segundos: grave um vídeo mais curto.';continue}}
     var it={file:f,src:src,video:v,img:URL.createObjectURL(f)};
     if(rep!=null&&S.media[rep]){S.media[rep]=it;rep=null}
-    else if(S.media.length>=MAXF){er.textContent='No máximo '+MAXF+' fotos por publicação.';break}
+    else if(S.media.filter(function(m){return !m.audio}).length>=MAXF){er.textContent='No máximo '+MAXF+' fotos por publicação.';break}
     else S.media.push(it);
   }
   drawMedia();
 }
-// ---- Áudio: gravar no app ou escolher do celular (um por publicação, até 3 minutos) ----
+// ---- Áudio: gravar no app ou escolher do celular (até 3 por publicação, de até 3 minutos cada) ----
+function nAud(){return (S.media||[]).filter(function(m){return m.audio}).length}
+function audCheio(){return 'No máximo '+MAXAN+' áudios por publicação. Para pôr outro, toque em ✕ Remover num deles.'}
 async function addAudio(f,src){
   var er=document.getElementById('er');
+  if(nAud()>=MAXAN){er.textContent=audCheio();return false}
   if(f.size>MAXAB){er.textContent='O áudio tem mais de 15 MB. Grave um áudio de até 3 minutos.';return false}
   var du=await vidDur(f);
   if(du&&du>MAXAUD+0.9){er.textContent='O áudio tem '+fmt(du)+'. O máximo é 3 minutos: grave um áudio mais curto.';return false}
   var it={file:f,src:src,audio:true,img:URL.createObjectURL(f)};
-  var k=S.media.findIndex(function(m){return m.audio});if(k>=0)S.media[k]=it;else S.media.push(it);
+  S.media.push(it);
   drawMedia();drawRec();return true
 }
 function audioAsVideo(ct){ct=String(ct||'');return /webm/.test(ct)?['video/webm','video/mp4']:/ogg/.test(ct)?['video/ogg','video/mp4']:/mpeg|mp3/.test(ct)?['video/mpeg','video/mp4']:['video/mp4','video/quicktime']}
 function fmt(t){t=Math.max(0,Math.round(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
 var REC=null;
 function drawRec(){
-  var e=document.getElementById('arec');if(!e)return;var has=(S.media||[]).some(function(m){return m.audio});
-  if(REC&&REC.on){e.innerHTML='<div class="recing" role="status"><span class="dot"></span> Gravando <b id="rect">'+fmt(REC.t)+'</b> de 3:00</div><button class="btn" id="rstop">⏹️ Parar e usar o áudio</button><button class="btn g" id="rcancel">Cancelar gravação</button>';return}
-  e.innerHTML='<div class="two"><button class="btn o" id="rgo" style="margin-top:0;text-align:center">🎙️ '+(has?'Gravar outro':'Gravar áudio')+'</button><label class="btn o" for="faud" style="margin-top:0">🎵 Escolher áudio</label></div>'+(has?'<div class="sub" style="margin-top:4px">Um áudio por publicação: gravar ou escolher outro substitui o atual.</div>':'');
+  var e=document.getElementById('arec');if(!e)return;var n=nAud();
+  if(REC&&REC.on){e.innerHTML='<div class="recing" role="status"><span class="dot"></span> Gravando <b id="rect">'+fmt(REC.t)+'</b> de 3:00</div><div class="sub">A tela fica acesa enquanto grava. Não saia do app até parar.</div><div class="err" id="rwarn" role="alert"></div><button class="btn" id="rstop">⏹️ Parar e usar o áudio</button><button class="btn g" id="rcancel">Cancelar gravação</button>';return}
+  e.innerHTML=(n>=MAXAN?'<div class="sub">Você já pôs '+MAXAN+' áudios, o máximo. Para pôr outro, toque em ✕ Remover num deles.</div>':
+    '<div class="two"><button class="btn o" id="rgo" style="margin-top:0;text-align:center">🎙️ '+(n?'Gravar outro áudio':'Gravar áudio')+'</button><label class="btn o" for="faud" style="margin-top:0">🎵 Escolher áudio</label></div>'+
+    (n?'<div class="sub" style="margin-top:4px">Os áudios ficam todos na publicação (até '+MAXAN+').</div>':''))+
+    (REC_MSG?'<div class="sub" style="margin-top:4px">'+esc(REC_MSG)+'</div>':'');
 }
+// A tela não pode apagar no meio da gravação: o celular deixaria de gravar
+var WL=null,REC_MSG='';
+async function wakeOn(){try{if(navigator.wakeLock&&!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',function(){WL=null})}}catch(e){WL=null}}
+function wakeOff(){try{if(WL)WL.release()}catch(e){}WL=null}
+// se mesmo assim a pessoa sair do app ou a tela apagar, o que já foi gravado fica guardado
+document.addEventListener('visibilitychange',function(){if(document.hidden&&REC&&REC.on){REC.bg=true;recStop(true)}});
 async function recStart(){
-  var er=document.getElementById('er');er.textContent='';
+  var er=document.getElementById('er');er.textContent='';REC_MSG='';
+  if(nAud()>=MAXAN){er.textContent=audCheio();return}
   if(!navigator.mediaDevices||!window.MediaRecorder){er.textContent='Este celular não grava áudio pelo app. Use "Escolher áudio" com um áudio gravado no gravador do celular.';return}
   var st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(x){er.textContent='Não foi possível usar o microfone. Toque em "Permitir" quando o celular perguntar, ou libere o microfone nas configurações do navegador.';return}
   var types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],mt=types.filter(function(t){try{return MediaRecorder.isTypeSupported(t)}catch(x){return false}})[0]||'';
   var mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt,audioBitsPerSecond:32000}):new MediaRecorder(st)}catch(x){st.getTracks().forEach(function(t){t.stop()});er.textContent='Não foi possível gravar neste celular. Use "Escolher áudio".';return}
-  var parts=[];REC={on:true,t:0,mr:mr,st:st,keep:true};
+  var parts=[];REC={on:true,t:0,mr:mr,st:st,keep:true};wakeOn();
   mr.ondataavailable=function(ev){if(ev.data&&ev.data.size)parts.push(ev.data)};
   mr.onstop=function(){
-    var r=REC;st.getTracks().forEach(function(t){t.stop()});clearInterval(r.iv);REC=null;
+    var r=REC;st.getTracks().forEach(function(t){t.stop()});clearInterval(r.iv);REC=null;wakeOff();
+    if(r.bg)REC_MSG=parts.length?'A gravação parou porque você saiu do app ou a tela apagou. O que foi gravado ficou guardado: se quiser, grave outro áudio para continuar.':'A gravação parou porque você saiu do app ou a tela apagou.';
     if(!r.keep||!parts.length){drawRec();return}
     var ty=(mr.mimeType||mt||'audio/webm').split(';')[0],ext=/mp4|m4a|aac/.test(ty)?'m4a':/ogg/.test(ty)?'ogg':'weba';
     var f=new File(parts,'gravacao.'+ext,{type:ty});
     var it={file:f,src:'gravacao',audio:true,img:URL.createObjectURL(f),dur:r.t};
-    var k=S.media.findIndex(function(m){return m.audio});if(k>=0)S.media[k]=it;else S.media.push(it);
+    S.media.push(it);
     drawMedia();drawRec();
   };
   mr.start(1000);
@@ -1350,6 +1366,7 @@ var USE_KEY=true;
 async function publish(){
   var er=document.getElementById('er'),btn=document.getElementById('ok'),dt=val('dt'),cid=S.stepCid||S.cur,c=jOf(cid)||S.ch,mx=TODAY<c.end?TODAY:c.end,m=S.media,mn=parseInt(val('mn'),10);
   er.textContent='';
+  if(REC&&REC.on){er.textContent='Você está gravando um áudio: toque em "Parar e usar o áudio" antes de registrar.';return}
   if(!dt||dt<c.start||dt>mx){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
   if(S.edit)dt=S.edit.date;
   if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
@@ -2015,7 +2032,7 @@ async function auth(){
 }
 document.addEventListener('click',function(e){
   var t=e.target.closest('button');if(!t)return;var d=t.dataset;
-  if(d.t){closeSheet();tab=d.t;render();scrollTo(0,0)}
+  if(d.t){if(closeSheet()===false)return;tab=d.t;render();scrollTo(0,0)}
   else if(t.id==='add'||t.id==='add2')openSheet();
   else if(t.id==='x')closeSheet();
   else if(d.avp)document.getElementById('favt').click();

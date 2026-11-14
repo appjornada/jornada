@@ -1284,6 +1284,46 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'mural e tela cheia só com a capa e o aviso; nenhum vídeo baixado; vídeo novo recusado';
   });
 
+  await teste('Áudio: gravar um segundo não apaga o primeiro (até 3); a tela não fecha no meio da gravação; sair do app guarda o que foi gravado', async () => {
+    const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pa = await abrir(browser, base, S, A);
+    await pa.click('#add'); await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    // 1º áudio
+    await pa.click('#rgo'); await pa.waitForSelector('#rstop'); await new Promise(r => setTimeout(r, 1300));
+    await pa.click('#rstop'); await pa.waitForSelector('#mprev .aud audio');
+    // 2º áudio: durante a gravação, tocar fora da folha e nas abas não fecha nem para a gravação
+    await pa.click('#rgo'); await pa.waitForSelector('#rstop');
+    await pa.mouse.click(195, 8); // fora da folha (fundo escuro)
+    await pa.click('nav [data-t="cfg"]', { force: true }).catch(() => {});
+    await new Promise(r => setTimeout(r, 600));
+    const durante = await pa.evaluate(() => ({ aberta: document.getElementById('sh').classList.contains('show'), gravando: !!(REC && REC.on), aviso: (document.getElementById('rwarn') || {}).textContent || '', aba: tab }));
+    await pa.click('#ok'); const naoPublica = await pa.textContent('#er');
+    await pa.click('#rstop'); await esperar(async () => (await pa.$$eval('#mprev .aud audio', a => a.length)) === 2);
+    // 3º áudio: a pessoa sai do app no meio (tela apagou) → para e guarda o que já foi gravado
+    await pa.click('#rgo'); await pa.waitForSelector('#rstop'); await new Promise(r => setTimeout(r, 1300));
+    await pa.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')) });
+    await esperar(async () => (await pa.$$eval('#mprev .aud audio', a => a.length)) === 3);
+    await pa.evaluate(() => { delete document.hidden; Object.defineProperty(document, 'hidden', { value: false, configurable: true }) });
+    const depois = await pa.evaluate(() => ({ n: document.querySelectorAll('#mprev .aud audio').length, gravar: !!document.getElementById('rgo'), txt: document.getElementById('arec').textContent }));
+    // 4º não entra (nem escolhido do celular)
+    await pa.evaluate(() => { vidDur = () => Promise.resolve(30) });
+    await pa.setInputFiles('#faud', { name: 'mais.m4a', mimeType: 'audio/mp4', buffer: Buffer.alloc(3000) });
+    await esperar(async () => /No máximo 3 áudios/.test(await pa.textContent('#er')));
+    const n4 = await pa.$$eval('#mprev .aud audio', a => a.length);
+    // publica com os 3 áudios
+    await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    await esperar(() => Object.keys(S.DB.checkins).length === 1);
+    const partes = (Object.values(S.DB.checkins)[0].photo_path || '').split('|');
+    const nb = await pa.$$eval('.card .aud audio', a => a.length);
+    await pa.context().close();
+    exige(durante.aberta && durante.gravando && /Você está gravando/.test(durante.aviso) && durante.aba === 'feed', 'a folha fechou ou a gravação parou: ' + JSON.stringify(durante));
+    exige(/antes de registrar/.test(naoPublica), 'registrou no meio da gravação: ' + naoPublica);
+    exige(depois.n === 3 && !depois.gravar && /saiu do app ou a tela apagou/.test(depois.txt) && /máximo/.test(depois.txt), 'depois de sair do app: ' + JSON.stringify(depois));
+    exige(n4 === 3, 'entrou um 4º áudio');
+    exige(partes.length === 4 && partes.filter(x => /\.(weba|m4a|ogg)$/.test(x)).length === 3 && nb === 3, 'publicação: ' + partes.join(' | ') + ' / tocadores ' + nb);
+    return '3 áudios na publicação; fora da folha e abas não fecham; sair do app guarda; 4º recusado';
+  });
+
   await browser.close(); srv.close();
   const ok = resultados.filter(r => r.ok).length;
   console.log('\n' + ok + ' de ' + resultados.length + ' testes passaram');

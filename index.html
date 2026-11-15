@@ -223,15 +223,25 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .jtag{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--bd);font-size:14px}
 .ecard{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-top:12px}
 .pray{border-color:var(--ac)}
-.preqs{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:32vh;overflow:auto}
-.preqs[hidden]{display:none}
 .pcmp{padding:10px 12px}.pcmp .chk{margin-top:6px;font-size:13px}.pcmp .chk input{width:18px;height:18px}
 .pcmp .pbtn{width:auto;margin:0;padding:8px 12px;font-size:14px;flex:none}
 .pcmp hr{border:0;border-top:1px solid var(--bd);margin:10px 0 8px}
 .pcmp textarea{padding:8px 10px;font-size:15px}.pcmp .sbtn{padding:8px 12px;font-size:14px}
-.preq{background:var(--bg);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:10px;padding:8px 12px;font-size:15px;white-space:pre-wrap}
-.preq b{display:block;font-size:12px;color:var(--act)}
-.preq small{display:block;font-size:11px;opacity:.65}
+/* mural de oração */
+.cvs button{font-size:15px;padding:10px 2px}
+.orv{text-align:center;padding:14px 16px}.orv-t{font:italic 16px/1.45 var(--fe);color:var(--mut);margin-bottom:6px}.orv b{font-size:14px}
+.otabs{display:flex;margin:4px 0 6px}.otabs button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:10px 4px;font:700 18px var(--ft);color:var(--mut);cursor:pointer}
+.otabs button.on{color:var(--tx);border-bottom-color:var(--ac)}
+.ofl{display:flex;margin-bottom:4px;border-bottom:1px solid var(--bd)}.ofl button{flex:1;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:10px 2px;font:600 14.5px var(--ft);color:var(--mut);cursor:pointer;white-space:nowrap}
+.ofl button.on{color:var(--tx);border-bottom-color:var(--tx)}
+.ofl .cnt{display:inline-block;min-width:20px;padding:0 6px;border-radius:99px;background:var(--vt);font-size:12px;color:var(--tx)}.ofl .nov{color:var(--err);font-size:20px;line-height:0}
+.onew{margin:12px 0}
+.oc .oc-h{align-items:flex-start}.oc-h b{font-size:17px}.oc-n{flex:none;font-size:14px;color:var(--mut);padding:4px 0}
+.oc-t{font-weight:700;font-size:16px;margin-top:10px}.oc-b{margin-top:4px;font-size:16px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.btn.ora{margin-top:14px;border-radius:99px;padding:13px}.btn.ora.on{background:var(--vt);color:var(--tx);box-shadow:inset 0 0 0 2px var(--ac)}
+.oc-ans{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--vt);font-size:15px;white-space:pre-wrap}.oc-ans small{color:var(--mut)}.oc-ans .sub{margin-top:6px}
+.oc.done{border-color:var(--ok)}
+.oc-a{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:12px;padding-top:8px;border-top:1px solid var(--bd)}.oc-a .link{font-size:14px;padding:6px 0}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:none;margin:0}
 body:not([data-tab="feed"]) #jsw,body:not([data-tab="feed"]) #map,body:not([data-tab="feed"]) #cd,body:not([data-tab="feed"]) #stats{display:none!important}
 body:not([data-tab="feed"]) header{padding-bottom:4px}
@@ -260,7 +270,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
   <button data-t="feed"><span aria-hidden="true">🏠</span>Início</button>
   <button data-t="bib"><span aria-hidden="true">📖</span>Bíblia</button>
   <button class="fab" id="add" aria-label="Dar o passo de hoje"><span aria-hidden="true">👣</span>Passo</button>
-  <button data-t="chat"><span aria-hidden="true">💬</span>Chat</button>
+  <button data-t="chat"><span aria-hidden="true">🙏</span>Oração</button>
   <button data-t="cfg"><span aria-hidden="true">🗺️</span>Mapa</button>
 </nav>
 
@@ -677,7 +687,7 @@ function hdr(){
 // Cada aba mostra só o que é dela: no topo, o nome da página e de qual jornada se trata
 function pageTitle(){
   var ctx=S.chs.length?S.ch.name+' · Caravana '+S.grp.name:S.grp?'Caravana '+S.grp.name:'';
-  var T={bib:['📖 Bíblia','Escolha a versão e o livro para ler.'],chat:['💬 Chat',ctx],cfg:['🗺️ Mapa da jornada',ctx]}[tab]||['',''];
+  var T={bib:['📖 Bíblia','Escolha a versão e o livro para ler.'],chat:[CV==='chat'?'💬 Chat':'🙏 Orações',S.grp?cvName(S.grp):''],cfg:['🗺️ Mapa da jornada',ctx]}[tab]||['',''];
   document.getElementById('cn').textContent=T[0];document.getElementById('cs').textContent=T[1];
 }
 function cvName(g){return /^caravana\b/i.test(g.name)?g.name:'Caravana '+g.name}
@@ -989,11 +999,8 @@ function roomLink(){
   return 'https://meet.jit.si/'+roomName()+'#userInfo.displayName='+q(nm(S.me))+'&config.subject='+q('🙏 Sala de oração · '+S.grp.name)+'&config.startWithVideoMuted=true&config.prejoinConfig.enabled=true';
 }
 function prayCard(){
-  return '<div class="card pray pcmp"><div class="row"><b class="grow">🙏 Sala de oração</b><a class="btn pbtn" id="pray" href="'+esc(roomLink())+'" target="_blank" rel="noopener">Entrar na sala</a></div>'+
-    '<div class="row" style="justify-content:space-between;gap:8px"><label class="chk"><input type="checkbox" id="paviso"'+(AVISO?' checked':'')+'> Avisar no chat que entrei</label><button class="link" id="phow" style="margin-top:6px">Como funciona?</button></div>'+
-    '<hr><button class="link" id="ptog" style="font-size:14px;font-weight:700" aria-expanded="'+PEDOPEN+'"><span id="pcnt" data-live="pcnt'+S.cur+'">Pedidos de oração</span> '+(PEDOPEN?'▴':'▾')+'</button>'+
-    '<div id="preqs" class="preqs" data-live="preqs'+S.cur+'"'+(PEDOPEN?'':' hidden')+'><div class="sub">Carregando…</div></div>'+
-    '<div class="row send" style="margin-top:8px"><textarea id="pin" class="grow" rows="1" data-keep placeholder="Escreva um pedido de oração…" maxlength="1500" enterkeyhint="enter"></textarea><button class="btn sbtn" id="psend">Enviar</button></div><div class="err" id="per"></div></div>'
+  return '<div class="card pray pcmp"><div class="row"><b class="grow">🎧 Sala de oração ao vivo</b><a class="btn pbtn" id="pray" href="'+esc(roomLink())+'" target="_blank" rel="noopener">Entrar na sala</a></div>'+
+    '<div class="row" style="justify-content:space-between;gap:8px"><label class="chk"><input type="checkbox" id="paviso"'+(AVISO?' checked':'')+'> Avisar no chat que entrei</label><button class="link" id="phow" style="margin-top:6px">Como funciona?</button></div></div>'
 }
 function prayHow(){
   showSheet('<h1>🙏 Sala de oração</h1><h2>Como funciona</h2><ol class="howto">'+
@@ -1009,24 +1016,142 @@ function prayIn(){
   var k='pd_pray_'+S.grp.id,last=0;try{last=+localStorage.getItem(k)||0}catch(e){}
   if(Date.now()-last<30*6e4)return;
   try{localStorage.setItem(k,String(Date.now()))}catch(e){}
-  sb.from('messages').insert({challenge_id:S.cur,body:'🙏 Entrei na sala de oração agora. Venha orar comigo! (aba Chat › Entrar na sala de oração)'}).then(function(){loadChat(true)});
+  sb.from('messages').insert({challenge_id:S.cur,body:'🙏 Entrei na sala de oração agora. Venha orar comigo! (aba Oração › Entrar na sala)'}).then(function(){loadChat(true)});
 }
-// ---- Pedidos de oração: ficam na tabela de mensagens, marcados pelo começo do texto ----
+// Pedidos antigos ficavam no chat com este começo; foram copiados para o mural (supabase/12-mural-de-oracao.sql)
 var PED='🙏 Pedido de oração: ';
 function isPed(m){return (m.body||'').indexOf(PED)===0}
-var PEDOPEN=false;
-function pedTog(){
-  PEDOPEN=!PEDOPEN;var l=document.getElementById('preqs'),t=document.getElementById('ptog');
-  if(l)l.hidden=!PEDOPEN;if(t){t.setAttribute('aria-expanded',PEDOPEN);t.lastChild.textContent=PEDOPEN?' ▴':' ▾'}
-}
+var CV='ora';try{CV=localStorage.getItem('pd_cv')==='chat'?'chat':'ora'}catch(e){}
 function chat(){
-  if(!S.chs.length)return noCh();
-  return prayCard()+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs" data-live="msgs'+S.cur+'"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
+  if(!S.grp)return noCh();
+  var seg='<div class="seg cvs">'+[['ora','🙏 Mural de oração'],['chat','💬 Chat']].map(function(x){return '<button data-cv="'+x[0]+'" class="'+(CV===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  if(CV==='ora')return seg+mural();
+  if(!S.chs.length)return seg+noCh();
+  return seg+'<div class="card"><b>💬 Chat da caravana</b><div class="sub">Converse com todos desta jornada.</div><div id="msgs" class="msgs" data-live="msgs'+S.cur+'"><div class="sub">Carregando…</div></div><div class="row send" style="margin-top:10px"><textarea id="cin" class="grow" rows="1" data-keep placeholder="Escreva para a caravana…" maxlength="2000" enterkeyhint="enter"></textarea><button class="btn sbtn" id="csend">Enviar</button></div><div class="err" id="cer"></div></div>'
+}
+// ---- Mural de oração: pedidos da caravana e pessoais; "Orar" marca que você está orando ----
+// OR.v: 'car' (caravana) ou 'pes' (meus pedidos) · OR.f: 'ped' (abertos), 'orando' (onde toquei em Orar), 'ate' (respondidos)
+var OR={v:'car',f:'ped',list:[],key:'',busy:false,ok:false,err:'',pend:{}},ORSEEN=0;
+try{ORSEEN=+localStorage.getItem('pd_orseen')||0}catch(e){}
+function orGet(id){return OR.list.filter(function(r){return r.id===id})[0]||null}
+function orBase(){var g=S.grp&&S.grp.id;return OR.list.filter(function(r){return OR.v==='pes'?r.user_id===S.me:!r.is_private&&r.group_id===g})}
+function orRows(f){var L=orBase();
+  if(f==='ate')return L.filter(function(r){return r.answered_at}).sort(function(a,b){return a.answered_at<b.answered_at?1:-1});
+  L=L.filter(function(r){return !r.answered_at});
+  return f==='orando'?L.filter(function(r){return r.who.indexOf(S.me)>=0}):L;
+}
+function orNovos(){var g=S.grp&&S.grp.id;return OR.list.filter(function(r){return r.answered_at&&Date.parse(r.answered_at)>ORSEEN&&r.user_id!==S.me&&!r.is_private&&r.group_id===g}).length}
+function pessoas(n,pass){return n+(n>1?' pessoas':' pessoa')+(pass?(n>1?' oraram':' orou'):' orando')}
+function mural(){
+  var pes=OR.v==='pes';if(pes&&OR.f==='orando')OR.f='ped';
+  var fl=(pes?[['ped','Abertos'],['ate','Respondidos']]:[['ped','Pedidos'],['orando','Orando'],['ate','Respondidos']]).map(function(x){
+    var n=orRows(x[0]).length,nov=!pes&&x[0]==='ate'&&OR.f!=='ate'?orNovos():0;
+    return '<button data-orf="'+x[0]+'" class="'+(OR.f===x[0]?'on':'')+'">'+x[1]+(OR.ok&&n?' <span class="cnt">'+n+'</span>':'')+(nov?' <span class="nov" title="Novidade">•</span>':'')+'</button>'}).join('');
+  var L=orRows(OR.f),vazio={ped:pes?'Você não tem pedidos abertos. Escreva um: pode ser só para você ou para a caravana orar junto.':'Nenhum pedido aberto na caravana. Se precisar de oração, peça aqui. 🙏',orando:'Toque em 🙏 Orar num pedido e ele aparece aqui, para você lembrar de orar.',ate:'Quando Deus responder um pedido, o testemunho aparece aqui. 🙌'}[OR.f];
+  var lista=!OR.ok?'<div class="card sub">'+(OR.err?'<span class="err">Não foi possível abrir o mural. '+esc(OR.err)+'</span>':'Carregando os pedidos…')+'</div>':L.length?L.map(orCard).join(''):'<div class="card sub oempty">'+vazio+'</div>';
+  return '<div class="card orv"><div class="orv-t">“Orem uns pelos outros… A oração de um justo é poderosa e eficaz.”</div><b>Tiago 5:16</b></div>'+
+    (S.chs.length?prayCard():'')+
+    '<div class="otabs">'+[['car','Caravana'],['pes','Meus pedidos']].map(function(x){return '<button data-orv="'+x[0]+'" class="'+(OR.v===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'+
+    '<div class="ofl">'+fl+'</div>'+
+    (OR.f==='ped'?'<button class="btn onew" data-ornew="1">✍️ '+(pes?'Escrever um pedido':'Pedir oração à caravana')+'</button>':'')+
+    '<div class="olist">'+lista+'</div>';
+}
+function orCard(r){
+  var me=r.user_id===S.me,n=r.who.length,eu=r.who.indexOf(S.me)>=0,done=!!r.answered_at,pend=OR.pend[r.id]!==undefined;
+  var h='<div class="card oc'+(done?' done':'')+'" data-orid="'+r.id+'"><div class="row oc-h">'+av(r.user_id)+'<div class="grow"><b>'+(me?'Você':esc(nm(r.user_id)))+'</b><div class="sub">'+ago(Date.parse(r.created_at))+(r.is_private?' · 🔒 só você vê':me&&OR.v==='pes'?' · 👥 na caravana':'')+'</div></div>'+
+    (!r.is_private&&n?'<button class="link oc-n" data-orwho="'+r.id+'">'+(done?'🙏 '+pessoas(n,1):'• '+pessoas(n))+'</button>':'')+'</div>'+
+    (r.title?'<div class="oc-t">'+esc(r.title)+'</div>':'')+'<div class="oc-b">'+esc(r.body)+'</div>';
+  if(done)h+='<div class="oc-ans"><b>🙌 Deus respondeu!</b> <small>'+ago(Date.parse(r.answered_at))+'</small>'+(r.testimony?'<div>'+esc(r.testimony)+'</div>':'')+(eu?'<div class="sub">Você orou por este pedido. Glória a Deus!</div>':'')+'</div>';
+  else if(!me&&!r.is_private)h+='<button class="btn ora'+(eu?' on':'')+'" data-ora="'+r.id+'" aria-pressed="'+eu+'"'+(pend?' disabled':'')+'>🙏 '+(eu?'Orando':'Orar')+'</button>';
+  var acts=[];
+  if(me){acts.push(done?'<button class="link" data-orreopen="'+r.id+'">↩️ Reabrir</button>':'<button class="link" data-ordone="'+r.id+'">🙌 Deus respondeu</button>');acts.push('<button class="link" data-oredit="'+r.id+'">✏️ Editar</button>');acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar</button>')}
+  else if(S.canEdit&&!r.is_private)acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar (líder)</button>');
+  return h+(acts.length?'<div class="oc-a">'+acts.join('')+'</div>':'')+'</div>';
+}
+async function loadPray(force){
+  if(tab!=='chat'||CV!=='ora'||!S.me||OR.busy)return;OR.busy=true;
+  try{
+    var r=await sb.from('prayer_requests').select('id,group_id,user_id,title,body,is_private,answered_at,testimony,created_at,prayer_intercessions(user_id)').order('created_at',{ascending:false}).limit(500);
+    if(r.error){OR.err=why(r.error);if(!OR.ok&&tab==='chat')render();return}
+    OR.err='';
+    var L=(r.data||[]).map(function(x){return{id:x.id,group_id:x.group_id,user_id:x.user_id,title:x.title,body:x.body,is_private:!!x.is_private,answered_at:x.answered_at,testimony:x.testimony,created_at:x.created_at,who:(x.prayer_intercessions||[]).map(function(p){return p.user_id})}});
+    // toque em "Orar" ainda a caminho do servidor: a tela continua mostrando o que a pessoa tocou
+    L.forEach(function(x){var on=OR.pend[x.id];if(on===undefined)return;x.who=x.who.filter(function(u){return u!==S.me});if(on)x.who.push(S.me)});
+    var miss={};L.forEach(function(x){[x.user_id].concat(x.who).forEach(function(u){if(!S.names[u])miss[u]=1})});
+    if(Object.keys(miss).length)await profs(Object.keys(miss));
+    var key=JSON.stringify(L);if(!force&&OR.ok&&key===OR.key)return;
+    OR.key=key;OR.list=L;OR.ok=true;
+    if(tab==='chat'&&CV==='ora'&&!document.getElementById('sh').classList.contains('show'))render();
+  }finally{OR.busy=false}
+}
+async function orToggle(id){
+  var r=orGet(id);if(!r||OR.pend[id]!==undefined||r.user_id===S.me)return;
+  var on=r.who.indexOf(S.me)<0;OR.pend[id]=on;
+  r.who=r.who.filter(function(u){return u!==S.me});if(on)r.who.push(S.me);render();
+  var res=on?await sb.from('prayer_intercessions').insert({request_id:id}):await sb.from('prayer_intercessions').delete().eq('request_id',id).eq('user_id',S.me);
+  delete OR.pend[id];
+  if(res.error&&!(on&&res.error.code==='23505')){
+    r=orGet(id);if(r){r.who=r.who.filter(function(u){return u!==S.me});if(!on)r.who.push(S.me)}
+    toast('Não foi possível '+(on?'marcar':'desmarcar')+'. '+why(res.error));
+  }else if(on)toast('🙏 Você está orando por '+(r.user_id===S.me?'este pedido':nm(r.user_id).split(' ')[0]));
+  OR.key='';render();
+}
+function orSheet(id){
+  var r=id?orGet(id):null,pes=r?r.is_private:OR.v==='pes';
+  showSheet('<h1>'+(r?'✏️ Editar pedido':'🙏 Pedido de oração')+'</h1>'+
+    '<label for="ort">Título (opcional)</label><input id="ort" maxlength="80" placeholder="Ex.: Pela minha prova" value="'+esc(r&&r.title||'')+'">'+
+    '<label for="orb">Seu pedido</label><textarea id="orb" rows="5" maxlength="1500" placeholder="Conte pelo que você quer oração…">'+esc(r?r.body:'')+'</textarea>'+
+    '<label class="chk"><input type="checkbox" id="orp"'+(pes?' checked':'')+'> 🔒 Só para mim (ninguém mais vê, nem a líder)</label>'+
+    '<div class="sub" style="margin-top:6px">Sem marcar, todos da '+esc(cvName(S.grp))+' veem e podem orar com você.</div>'+
+    '<div class="err" id="orer"></div><button class="btn" data-orsave="'+(id||'')+'">'+(r?'💾 Salvar':'Enviar pedido')+'</button><button class="btn g" id="x">Cancelar</button>');
+  var b=document.getElementById(r?'orb':'ort');if(b&&!r)setTimeout(function(){try{document.getElementById('orb').focus()}catch(e){}},50);
+}
+async function orSave(id,btn){
+  var t=val('ort').trim(),b=tidy(val('orb')).trim(),p=document.getElementById('orp').checked,er=document.getElementById('orer'),r=id?orGet(id):null;
+  if(!b){er.textContent='Escreva o seu pedido.';return}
+  var row={title:t||null,body:b,is_private:p};
+  if(!r||!r.group_id)row.group_id=S.grp?S.grp.id:null;
+  btn.disabled=true;er.textContent='';
+  var res=id?await sb.from('prayer_requests').update(row).eq('id',id).select('id'):await sb.from('prayer_requests').insert(row);
+  if(!res.error&&id&&res.data&&!res.data.length)res.error={message:'Este pedido não pode mais ser alterado.'};
+  if(res.error){btn.disabled=false;er.textContent='Não foi possível salvar. '+why(res.error);return}
+  closeSheet(true);if(!id){OR.v=p?'pes':'car';OR.f='ped'}
+  toast(id?'✓ Pedido atualizado':p?'✓ Pedido guardado só para você':'✓ Pedido enviado à caravana');
+  await loadPray(true);render();
+}
+function orDone(id){
+  var r=orGet(id);if(!r)return;
+  showSheet('<h1>🙌 Deus respondeu!</h1><div class="sub">'+(r.is_private?'Guarde aqui como Deus respondeu, para lembrar depois.':'Que alegria! Conte para a caravana como foi. Quem orou com você vai ver em Respondidos.')+'</div>'+
+    '<label for="ortes">Testemunho (opcional)</label><textarea id="ortes" rows="4" maxlength="1500" placeholder="Como Deus respondeu?"></textarea>'+
+    '<div class="err" id="orer"></div><button class="btn" data-ordsave="'+id+'">🙌 Marcar como respondido</button><button class="btn g" id="x">Cancelar</button>');
+}
+async function orAnswer(id,on,btn){
+  var row=on?{answered_at:new Date().toISOString(),testimony:tidy(val('ortes')).trim()||null}:{answered_at:null,testimony:null};
+  if(btn)btn.disabled=true;
+  var res=await sb.from('prayer_requests').update(row).eq('id',id);
+  if(res.error){if(btn)btn.disabled=false;var er=document.getElementById('orer');if(er)er.textContent='Não foi possível salvar. '+why(res.error);else toast('Não foi possível salvar. '+why(res.error));return}
+  if(on){closeSheet(true);OR.f='ate';toast('🙌 Glória a Deus!')}else{OR.f='ped';toast('Pedido reaberto')}
+  await loadPray(true);render();
+}
+async function orDel(id){
+  var r=orGet(id);if(!r)return;
+  if(!confirm(r.user_id===S.me?'Apagar este pedido de oração?':'Apagar o pedido de '+nm(r.user_id)+'? Ele some para toda a caravana.'))return;
+  var res=await sb.from('prayer_requests').delete().eq('id',id).select('id');
+  if(!res.error&&res.data&&!res.data.length)res.error={message:'Você não tem permissão para apagar este pedido.'};
+  if(res.error){toast('Não foi possível apagar. '+why(res.error));return}
+  OR.list=OR.list.filter(function(x){return x.id!==id});OR.key='';render();toast('Pedido apagado');
+}
+function orWho(id){
+  var r=orGet(id);if(!r)return;
+  var W=r.who.slice().sort(function(a,b){return nm(a).localeCompare(nm(b),'pt')});
+  showSheet('<h1>🙏 '+(r.answered_at?'Quem orou':'Quem está orando')+'</h1><div class="sub">'+esc(r.title||r.body.slice(0,60)+(r.body.length>60?'…':''))+'</div>'+
+    W.map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+
+    '<button class="btn g" id="x">Fechar</button>');
 }
 // Chat: a cada 5 s busca só as mensagens novas (antes eram as últimas 200 toda vez); a cada 2 min, a lista toda
 var CHT={cid:null,list:[],at:0};
 async function loadChat(force){
-  var e=document.getElementById('msgs');if(tab!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
+  var e=document.getElementById('msgs');if(tab!=='chat'||CV!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
   try{
     var cid=S.cur,inc=CHT.cid===cid&&CHT.list.length&&Date.now()-CHT.at<120000,q=sb.from('messages').select('id,user_id,body,created_at').eq('challenge_id',cid);
     var r=inc?await q.gte('created_at',CHT.list[CHT.list.length-1].created_at).order('created_at',{ascending:true}).limit(200):await q.order('created_at',{ascending:false}).limit(200);
@@ -1039,9 +1164,7 @@ async function loadChat(force){
     var miss=A.map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
     if(miss.length){await profs(miss);e=document.getElementById('msgs');if(!e)return}
     if(!force&&e.dataset.k===key)return;e.dataset.k=key;
-    var P=A.filter(isPed).reverse(),L=A.filter(function(m){return !isPed(m)}),pe=document.getElementById('preqs');
-    var pc=document.getElementById('pcnt');if(pc)pc.textContent='📜 Pedidos de oração ('+P.length+')';
-    if(pe)pe.innerHTML=P.length?P.map(function(m){return '<div class="preq"><b>'+(m.user_id===S.me?'Você':esc(nm(m.user_id)))+'</b>'+esc(m.body.slice(PED.length))+'<small>'+ago(Date.parse(m.created_at))+'</small></div>'}).join(''):'<div class="sub">Nenhum pedido ainda. Se precisar de oração, escreva aqui. 🙏</div>';
+    var L=A.filter(function(m){return !isPed(m)});
     e.innerHTML=L.length?L.map(function(m){var me=m.user_id===S.me;return '<div class="msg'+(me?' me':'')+'">'+(me?'':'<b>'+esc(nm(m.user_id))+'</b>')+esc(m.body)+'<small>'+hhmm(m.created_at)+'</small></div>'}).join(''):'<div class="sub">Nenhuma mensagem ainda. Diga olá para a caravana! 👋</div>';
     e.scrollTop=e.scrollHeight;
   }finally{chatBusy=false}
@@ -1051,14 +1174,6 @@ async function sendChat(){
   i.value='';grow(i);er.textContent='';
   var r=await sb.from('messages').insert({challenge_id:S.cur,body:b});
   if(r.error){i.value=b;er.textContent='Não foi possível enviar. '+why(r.error);return}
-  loadChat(true);
-}
-async function sendPed(){
-  var i=document.getElementById('pin'),b=i.value.trim(),er=document.getElementById('per');if(!b)return;
-  i.value='';grow(i);er.textContent='';
-  var r=await sb.from('messages').insert({challenge_id:S.cur,body:PED+b});
-  if(r.error){i.value=b;er.textContent='Não foi possível enviar. '+why(r.error);return}
-  if(!PEDOPEN)pedTog();
   loadChat(true);
 }
 async function sendComment(id,ci){
@@ -1073,7 +1188,7 @@ function after(){
   document.querySelectorAll('.vx[data-b]').forEach(function(e){if(e.dataset.ok)return;e.dataset.ok=1;
     bible(+e.dataset.b,+e.dataset.c).then(function(v){e.innerHTML=verses(v.slice(0,4))+(v.length>4?' …':'')}).catch(function(){e.textContent='Não foi possível carregar o texto. Verifique a conexão.'})
   });
-  if(tab==='chat')loadChat(true);
+  if(tab==='chat'){if(CV==='chat')loadChat(true);else{loadPray();if(OR.f==='ate'&&OR.ok){ORSEEN=Date.now();try{localStorage.setItem('pd_orseen',String(ORSEEN))}catch(e){}}}}
   if(tab==='bib'){
     var bx=document.getElementById('bibx');
     if(bx&&!bx.dataset.ok){var b=BIB.b,c=BIB.c;bible(b,c).then(function(v){var e=document.getElementById('bibx');if(e&&BIB.b===b&&BIB.c===c){e.innerHTML=verses(v,1);e.dataset.ok=1;
@@ -2078,8 +2193,18 @@ document.addEventListener('click',function(e){
   else if(d.wpost)postSheet(d.wpost,d.wu);
   else if(d.whoback)openWho(d.whoback);
   else if(t.id==='csend')sendChat();
-  else if(t.id==='psend')sendPed();
-  else if(t.id==='ptog')pedTog();
+  else if(d.cv){CV=d.cv;try{localStorage.setItem('pd_cv',CV)}catch(x){}render();scrollTo(0,0)}
+  else if(d.orv){OR.v=d.orv;OR.f='ped';render()}
+  else if(d.orf){OR.f=d.orf;render()}
+  else if(d.ora)orToggle(d.ora);
+  else if(d.ornew)orSheet();
+  else if(d.oredit)orSheet(d.oredit);
+  else if(d.orsave!==undefined)orSave(d.orsave,t);
+  else if(d.ordone)orDone(d.ordone);
+  else if(d.ordsave)orAnswer(d.ordsave,true,t);
+  else if(d.orreopen){if(confirm('Reabrir este pedido? O testemunho será apagado.'))orAnswer(d.orreopen,false)}
+  else if(d.ordel)orDel(d.ordel);
+  else if(d.orwho)orWho(d.orwho);
   else if(t.id==='phow')prayHow();
   else if(d.ed)editCh(d.ed);
   else if(d.ep){closeLb();editPost(d.ep)}
@@ -2127,7 +2252,7 @@ document.addEventListener('keydown',function(e){
   // Enter pula linha; Ctrl+Enter (ou Cmd+Enter) envia
   if(!(e.ctrlKey||e.metaKey))return;
   if(e.target.id==='cin'){e.preventDefault();sendChat()}
-  else if(e.target.id==='pin'){e.preventDefault();sendPed()}
+  else if(e.target.id==='orb'){e.preventDefault();var sv=document.querySelector('[data-orsave]');if(sv)sv.click()}
   else if(/^ci-/.test(e.target.id)){e.preventDefault();sendComment(e.target.id.slice(3))}
 });
 document.getElementById('sh').addEventListener('click',function(e){if(e.target.id==='sh')closeSheet()});
@@ -2158,6 +2283,7 @@ function init(){
   boot().then(function(){if(INV&&!S.me&&!S.linkErr&&gm==='in'){REG.step=1;gate('up')}});
   setInterval(function(){var t=iso(new Date()),nd=t!==TODAY;TODAY=t;if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show')){if(nd)loadData();else poll()}},30000);
   setInterval(function(){if(!document.hidden)loadChat()},5000);
+  setInterval(function(){if(!document.hidden)loadPray()},20000);
   // fotos guardadas no aparelho (sw.js): cada foto é baixada uma vez só, mesmo quando o link assinado muda
   try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 }

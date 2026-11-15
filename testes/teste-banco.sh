@@ -126,4 +126,37 @@ K2=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,stu
 K3=$(as ${U[1]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes) values('$C',current_date,1,5) returning id")
 $P -f supabase/9b-desfazer-lider-apaga-passo.sql >/dev/null && [ -z "$(as $L "delete from public.checkins where id='$K3' returning 1")" ] && ok "desfazer: a líder volta a não apagar"
 $P -f supabase/9-lider-apaga-passo.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+echo "11) Mural de oração (12-mural-de-oracao.sql)"
+as ${U[0]} "insert into public.messages(challenge_id,body) values('$C','🙏 Pedido de oração: pela minha mãe')" >/dev/null
+as ${U[0]} "insert into public.messages(challenge_id,body) values('$C','bom dia!')" >/dev/null
+$P -f supabase/12-mural-de-oracao.sql >/dev/null && $P -f supabase/12-mural-de-oracao.sql >/dev/null && ok "script roda (2x)"
+[ "$($P -At -c "select count(*)||':'||max(body) from public.prayer_requests")" = "1:pela minha mãe" ] && ok "pedido antigo do chat copiado uma vez só, sem o prefixo"
+R=$(as ${U[1]} "insert into public.prayer_requests(group_id,title,body) values('$G','Vestibular','Pela minha prova') returning id")
+RP=$(as ${U[1]} "insert into public.prayer_requests(group_id,body,is_private) values('$G','Só meu',true) returning id")
+[ "$(as ${U[2]} "select count(*) from public.prayer_requests where id='$R'")" = 1 ] && ok "a caravana vê o pedido"
+[ "$(as ${U[2]} "select count(*) from public.prayer_requests where id='$RP'")" = 0 ] && ok "pedido pessoal: ninguém mais vê (nem a líder)"
+[ "$(as $L "select count(*) from public.prayer_requests where id='$RP'")" = 0 ] && ok "a líder também não vê o pessoal"
+[ "$(as $FORA "select count(*) from public.prayer_requests")" = 0 ] && ok "quem é de fora não vê nada"
+fails $FORA "insert into public.prayer_requests(group_id,body) values('$G','invasor')" "de fora não escreve na caravana"
+fails ${U[2]} "insert into public.prayer_requests(user_id,group_id,body) values('${U[1]}','$G','em nome de outro')" "não escreve em nome de outra pessoa"
+as ${U[2]} "insert into public.prayer_intercessions(request_id) values('$R')" >/dev/null; as ${U[0]} "insert into public.prayer_intercessions(request_id) values('$R')" >/dev/null
+[ "$(as $L "select count(*) from public.prayer_intercessions where request_id='$R'")" = 2 ] && ok "2 orando, e todos veem o número"
+fails ${U[2]} "insert into public.prayer_intercessions(request_id) values('$R')" "cada pessoa conta uma vez só"
+fails ${U[1]} "insert into public.prayer_intercessions(request_id) values('$R')" "o autor não conta como orando no próprio pedido"
+fails $FORA "insert into public.prayer_intercessions(request_id) values('$R')" "de fora não ora (não vê o pedido)"
+fails ${U[2]} "insert into public.prayer_intercessions(request_id) values('$RP')" "ninguém ora no pessoal de outro"
+[ -z "$(as ${U[0]} "delete from public.prayer_intercessions where request_id='$R' and user_id='${U[2]}' returning 1")" ] && ok "não tira o Orar de outra pessoa"
+[ "$(as ${U[0]} "delete from public.prayer_intercessions where request_id='$R' returning 1")" = 1 ] && ok "tocar de novo desfaz o próprio Orar"
+[ -z "$(as ${U[2]} "update public.prayer_requests set body='mudei' where id='$R' returning 1")" ] && ok "outra pessoa não edita o pedido"
+[ "$(as ${U[1]} "update public.prayer_requests set answered_at=now(),testimony='Passei!' where id='$R' returning 1")" = 1 ] && ok "o autor marca como respondido com testemunho"
+fails ${U[0]} "insert into public.prayer_intercessions(request_id) values('$R')" "pedido respondido não recebe novo Orar"
+fails ${U[1]} "update public.prayer_requests set group_id='$G2',is_private=false where id='$RP'" "não muda o pedido para caravana alheia"
+[ -z "$(as ${U[2]} "delete from public.prayer_requests where id='$R' returning 1")" ] && ok "participante não apaga pedido de outro"
+[ -z "$(as $FORA "delete from public.prayer_requests where id='$R' returning 1")" ] && ok "líder de outra caravana não apaga"
+[ -z "$(as $L "delete from public.prayer_requests where id='$RP' returning 1")" ] && ok "a líder não apaga o pessoal de ninguém"
+[ "$(as $L "delete from public.prayer_requests where id='$R' returning 1")" = 1 ] && ok "a líder apaga pedido da caravana dela"
+[ "$($P -At -c "select count(*) from public.prayer_intercessions where request_id='$R'")" = 0 ] && ok "quem orava vai junto"
+[ "$(as ${U[1]} "delete from public.prayer_requests where id='$RP' returning 1")" = 1 ] && ok "o autor apaga o próprio"
+$P -f supabase/12b-desfazer-mural-de-oracao.sql >/dev/null && [ "$($P -At -c "select to_regclass('public.prayer_requests') is null")" = t ] && ok "desfazer tira as tabelas"
+$P -f supabase/12-mural-de-oracao.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

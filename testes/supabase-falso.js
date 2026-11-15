@@ -9,7 +9,7 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function novoServidor(opts = {}) {
   const O = Object.assign({ rosterRpc: true, maxRows: 1000, falhas: {}, atrasos: {} }, opts);
-  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
+  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, prayer_requests: {}, pi: [], objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
   const SO_LIDER = o => err('Por enquanto, só a líder pode criar ' + o + '. Peça o código de convite a ela.', '42501');
   const log = [];
   const member = (u, g) => DB.gm.some(m => m.user_id === u && m.group_id === g);
@@ -24,6 +24,9 @@ function novoServidor(opts = {}) {
         .map(k => Object.assign({}, k, { likes: DB.likes.filter(l => l.checkin_id === k.id).map(l => ({ user_id: l.user_id })), comments: Object.values(DB.comments).filter(c => c.checkin_id === k.id) }));
       case 'profiles': return Object.values(DB.profiles).filter(p => p.id === me || DB.gm.some(a => a.user_id === p.id && member(me, a.group_id))); // profiles_select
       case 'messages': return Object.values(DB.messages).filter(m => member(me, chGroup(m.challenge_id)));
+      case 'prayer_requests': return Object.values(DB.prayer_requests).filter(r => r.user_id === me || (!r.is_private && member(me, r.group_id))) // pr_select (supabase/12-mural-de-oracao.sql)
+        .map(r => Object.assign({}, r, { prayer_intercessions: DB.pi.filter(x => x.request_id === r.id).map(x => ({ user_id: x.user_id })) }));
+      case 'prayer_intercessions': { const vis = new Set(visible('prayer_requests', me).map(r => r.id)); return DB.pi.filter(x => vis.has(x.request_id)) }
       case 'comments': return Object.values(DB.comments);
       case 'likes': return DB.likes;
       default: return [];
@@ -86,6 +89,18 @@ function novoServidor(opts = {}) {
       if (t === 'challenges') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('jornadas'); if (!DB.gm.some(m => m.user_id === me && m.group_id === b.group_id && m.role === 'leader')) return err('rls', '42501'); b.id = id(); DB.challenges[b.id] = b; return { data: q.single ? b : [b], error: null } }
       if (t === 'messages') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.messages[b.id] = b; return { data: null, error: null } }
       if (t === 'comments') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.comments[b.id] = b; return { data: null, error: null } }
+      if (t === 'prayer_requests') { // pr_insert
+        if (!b.is_private && !member(me, b.group_id)) return err('new row violates row-level security policy for table "prayer_requests"', '42501');
+        if (!b.body || b.body.length > 1500) return err('violates check constraint', '23514');
+        b.id = id(); b.user_id = me; b.is_private = !!b.is_private; b.answered_at = null; b.testimony = b.testimony || null; b.created_at = new Date(Date.now() + Object.keys(DB.prayer_requests).length).toISOString();
+        DB.prayer_requests[b.id] = b; return { data: q.returning ? [b] : null, error: null };
+      }
+      if (t === 'prayer_intercessions') { // pi_insert
+        const r = DB.prayer_requests[b.request_id];
+        if (!r || r.is_private || r.answered_at || r.user_id === me || !member(me, r.group_id)) return err('new row violates row-level security policy for table "prayer_intercessions"', '42501');
+        if (DB.pi.some(x => x.request_id === r.id && x.user_id === me)) return err('duplicate key value violates unique constraint "prayer_intercessions_pkey"', '23505');
+        DB.pi.push({ request_id: r.id, user_id: me }); return { data: null, error: null };
+      }
       if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); return { data: null, error: null } }
       return err('tabela desconhecida');
     }
@@ -101,11 +116,24 @@ function novoServidor(opts = {}) {
         rows = rows.filter(r => r.id === me);
         const a = q.body.avatar_path; if (a != null && !new RegExp('^' + me + '/avatar-[0-9a-f]{8,40}\\.jpg$').test(a)) return err('new row for relation "profiles" violates check constraint "profiles_avatar_path_check"', '23514');
       }
+      if (t === 'prayer_requests') { // pr_update: só o autor
+        rows = rows.filter(r => r.user_id === me);
+        const b = Object.assign({}, q.body); delete b.prayer_intercessions;
+        rows.forEach(r => Object.assign(DB.prayer_requests[r.id], b));
+        return { data: rows.map(r => ({ id: r.id })), error: null };
+      }
       rows.forEach(r => Object.assign(DB[t === 'checkins' ? 'checkins' : t][r.id], q.body));
       return { data: rows.map(r => ({ id: r.id })), error: null };
     }
     if (q.op === 'delete') {
       if (t === 'group_members') { const gid = (q.filters.find(f => f[1] === 'group_id') || [])[2], uid = (q.filters.find(f => f[1] === 'user_id') || [])[2]; const m = DB.gm.find(x => x.group_id === gid && x.user_id === uid && (uid === me || DB.gm.some(l => l.group_id === gid && l.user_id === me && l.role === 'leader'))); if (m) DB.gm = DB.gm.filter(x => x !== m); return { data: m ? [{ user_id: m.user_id }] : [], error: null } } // gm_delete
+      if (t === 'prayer_requests') { // pr_delete: o autor, ou a líder da caravana (se não for pessoal)
+        const lider = r => !r.is_private && DB.gm.some(m => m.group_id === r.group_id && m.user_id === me && m.role === 'leader');
+        const rows = applyFilters(Object.values(DB.prayer_requests), q.filters).filter(r => r.user_id === me || lider(r));
+        rows.forEach(r => { delete DB.prayer_requests[r.id]; DB.pi = DB.pi.filter(x => x.request_id !== r.id) });
+        return { data: q.returning ? rows.map(r => ({ id: r.id })) : null, error: null };
+      }
+      if (t === 'prayer_intercessions') { DB.pi = DB.pi.filter(x => !(x.user_id === me && applyFilters([x], q.filters).length)); return { data: null, error: null } } // pi_delete
       if (t === 'likes') { DB.likes = DB.likes.filter(l => !(l.user_id === me && q.filters.some(f => f[1] === 'checkin_id' && f[2] === l.checkin_id))); return { data: null, error: null } }
       if (t === 'checkins') { // ck_delete (a própria) + ck_delete_leader (a líder da caravana; supabase/9-lider-apaga-passo.sql)
         const lider = k => { const c = DB.challenges[k.challenge_id]; return !O.semLiderApaga && c && DB.gm.some(m => m.group_id === c.group_id && m.user_id === me && m.role === 'leader') };
@@ -154,7 +182,8 @@ function novoServidor(opts = {}) {
   function entrar(u, g) { return rpc(u.id, 'join_group', { p_code: g.invite_code }) }
   function jornada(g, nome, ini = -3, fim = 12) { const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) }; const c = { id: id(), group_id: g.id, name: nome, description: '', start_date: d(ini), end_date: d(fim), goal_per_week: 7 }; DB.challenges[c.id] = c; return c }
   function publicacao(u, c, extra = {}) { const k = Object.assign({ id: id(), user_id: u.id, challenge_id: c.id, read_date: today(), book: 'Romanos', ref: '1', chapters: 1, study_minutes: 10, photo_path: 'antigo/' + id() + '.jpg', media_type: 'image', created_at: new Date().toISOString() }, extra); DB.checkins[k.id] = k; return k }
-  return { O, DB, log, handle, usuario, caravana, criador, entrar, jornada, publicacao, member };
+  function pedido(u, g, extra = {}) { const r = Object.assign({ id: id(), group_id: g.id, user_id: u.id, title: null, body: 'Pedido de ' + u.name, is_private: false, answered_at: null, testimony: null, created_at: new Date().toISOString() }, extra); DB.prayer_requests[r.id] = r; return r }
+  return { O, DB, log, handle, usuario, caravana, criador, entrar, jornada, publicacao, pedido, member };
 }
 
 // Código que roda DENTRO do navegador: imita a biblioteca supabase-js e manda tudo para o servidor falso.

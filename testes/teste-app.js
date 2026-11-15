@@ -332,7 +332,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     // 5) chat: depois da primeira vez, só pede as mensagens novas
     const msg = (u, body, s) => { const m = { id: require('crypto').randomUUID(), challenge_id: c.id, user_id: u.id, body, created_at: new Date(Date.now() - s * 1000).toISOString() }; S.DB.messages[m.id] = m };
     msg(A, 'Bom dia, caravana!', 60); msg(B, 'Bom dia!', 30);
-    await pb.click('nav [data-t="chat"]');
+    await pb.click('nav [data-t="chat"]'); await pb.click('[data-cv="chat"]'); // a aba Oração abre no mural; o chat fica ao lado
     exige(await esperar(() => pb.evaluate(() => (document.getElementById('msgs') || {}).textContent.includes('Bom dia, caravana!'))), 'o chat não abriu');
     const n2 = S.log.length; msg(A, 'Vamos orar às 20h', 0); await pb.evaluate(() => loadChat());
     exige(await esperar(() => pb.evaluate(() => document.getElementById('msgs').textContent.includes('Vamos orar às 20h'))), 'a mensagem nova não apareceu');
@@ -1082,7 +1082,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.click('[data-l]'); await esperar(() => S.DB.likes.length === 1);
     await pa.click('[data-cm]'); await pa.fill('[id^=ci-]', 'Amém, irmão!'); await pa.click('[data-cs]');
     await esperar(() => Object.keys(S.DB.comments).length === 1);
-    await pa.click('nav [data-t="chat"]'); await pa.fill('#cin', 'Olá caravana'); await pa.click('#csend');
+    await pa.click('nav [data-t="chat"]'); await pa.click('[data-cv="chat"]'); await pa.fill('#cin', 'Olá caravana'); await pa.click('#csend');
     await esperar(() => Object.keys(S.DB.messages).length === 1);
     await pb.evaluate(id => { S.cur = id; useCur(); render() }, c1.id); await recarregar(pb);
     await pb.click('[data-ep]'); await pb.waitForSelector('#mn'); await pb.fill('#mn', '33'); await pb.click('#ok');
@@ -1322,6 +1322,72 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(n4 === 3, 'entrou um 4º áudio');
     exige(partes.length === 4 && partes.filter(x => /\.(weba|m4a|ogg)$/.test(x)).length === 3 && nb === 3, 'publicação: ' + partes.join(' | ') + ' / tocadores ' + nb);
     return '3 áudios na publicação; fora da folha e abas não fecham; sair do app guarda; 4º recusado';
+  });
+
+  // ---------- Mural de oração ----------
+  await teste('Mural de oração: Orar/Orando com contagem, pessoal escondido, testemunho e líder apaga', async () => {
+    const S = novoServidor();
+    const L = S.usuario('Líder Ana'), A = S.usuario('Bia Souza'), B = S.usuario('Caio Lima');
+    const g = S.caravana(L, 'Oração'); S.entrar(A, g); S.entrar(B, g); const c = S.jornada(g, 'Salmos');
+    const F = S.usuario('De Fora'), g2 = S.caravana(F, 'Outra');
+    S.DB.messages.velho = { id: 'velho', challenge_id: c.id, user_id: A.id, body: '🙏 Pedido de oração: pedido antigo', created_at: new Date().toISOString() };
+    const pa = S.pedido(A, g, { title: 'Vestibular', body: 'Pela minha prova' }); S.pedido(F, g2, { body: 'de outra caravana' });
+    const [pgA, pgB, pgL] = await Promise.all([A, B, L].map(u => abrir(browser, base, S, u)));
+    const ir = async pg => { await pg.click('nav [data-t="chat"]'); await pg.waitForSelector('main .oc, main .oempty', { timeout: 6000 }) };
+    const carta = (pg, txt) => pg.evaluate(t => { const c = [...document.querySelectorAll('main .oc')].find(x => x.textContent.includes(t)); return c ? c.textContent : null }, txt);
+    for (const pg of [pgA, pgB, pgL]) await ir(pg);
+    exige(!/de outra caravana/.test(await pgB.textContent('main')), 'aparece pedido de outra caravana');
+    // B ora
+    await pgB.click(`[data-ora="${pa.id}"]`);
+    exige(await esperar(() => S.DB.pi.length === 1), 'Orar não gravou');
+    await esperar(async () => /Orando/.test(await pgB.textContent(`[data-ora="${pa.id}"]`)));
+    exige(/1 pessoa orando/.test(await carta(pgB, 'Vestibular')), 'contagem para B: ' + await carta(pgB, 'Vestibular'));
+    await pgB.click('[data-orf="orando"]'); exige(/Vestibular/.test(await pgB.textContent('main .olist')), 'não aparece em Orando');
+    await pgB.click('[data-orf="ped"]');
+    // A vê que estão orando e não tem botão Orar no próprio pedido
+    await pgA.evaluate(() => loadPray(true));
+    exige(await esperar(async () => /1 pessoa orando/.test(await carta(pgA, 'Vestibular') || '')), 'A não vê a contagem');
+    exige(!(await pgA.$(`[data-ora="${pa.id}"]`)), 'autor pode orar no próprio pedido');
+    await pgA.click(`[data-orwho="${pa.id}"]`); exige(/Caio Lima/.test(await pgA.textContent('#shc')), 'lista de quem ora sem o Caio'); await pgA.click('#shc #x');
+    // desfazer e refazer
+    await pgB.click(`[data-ora="${pa.id}"]`); exige(await esperar(() => S.DB.pi.length === 0), 'tocar de novo não desfez');
+    await esperar(async () => !!(await pgB.$(`[data-ora="${pa.id}"]:not([disabled])`)));
+    await pgB.click(`[data-ora="${pa.id}"]`); exige(await esperar(() => S.DB.pi.length === 1), 'não refez');
+    // A escreve um pedido para a caravana e um pessoal
+    await pgA.click('[data-ornew]'); await pgA.fill('#ort', 'Família'); await pgA.fill('#orb', 'Pela saúde da minha mãe'); await pgA.click('[data-orsave]');
+    exige(await esperar(() => Object.values(S.DB.prayer_requests).some(r => r.title === 'Família' && !r.is_private && r.group_id === g.id)), 'pedido da caravana não gravou');
+    await pgA.click('[data-ornew]'); await pgA.fill('#orb', 'Segredo meu'); await pgA.check('#orp'); await pgA.click('[data-orsave]');
+    exige(await esperar(() => Object.values(S.DB.prayer_requests).some(r => r.body === 'Segredo meu' && r.is_private)), 'pedido pessoal não gravou');
+    exige(await esperar(async () => /Segredo meu/.test(await pgA.textContent('main')) && /só você vê/.test(await pgA.textContent('main'))), 'A não vê o pessoal em Meus pedidos');
+    await pgB.evaluate(() => loadPray(true));
+    exige(await esperar(async () => /Família/.test(await pgB.textContent('main'))), 'B não vê o pedido novo');
+    exige(!/Segredo meu/.test(await pgB.textContent('main')), 'B vê o pedido pessoal de A');
+    // A marca como respondido
+    await pgA.click('[data-orv="car"]');
+    await pgA.click(`[data-ordone="${pa.id}"]`); await pgA.fill('#ortes', 'Passei em primeiro lugar!'); await pgA.click('[data-ordsave]');
+    exige(await esperar(() => !!S.DB.prayer_requests[pa.id].answered_at), 'não marcou como respondido');
+    await pgB.evaluate(() => loadPray(true)); await esperar(async () => !!(await pgB.$('[data-orf="ate"] .nov')));
+    exige(!!(await pgB.$('[data-orf="ate"] .nov')), 'sem aviso de novidade em Respondidos');
+    await pgB.click('[data-orf="ate"]');
+    const resp = await carta(pgB, 'Vestibular');
+    exige(resp && /Deus respondeu/.test(resp) && /primeiro lugar/.test(resp) && /Você orou/.test(resp) && /1 pessoa orou/.test(resp), 'Respondidos para B: ' + resp);
+    exige(!(await pgB.$('[data-orf="ate"] .nov')), 'novidade não sumiu depois de ver');
+    // líder apaga pedido de B; B não tem botão de apagar no de A
+    const pb = S.pedido(B, g, { body: 'Pedido do Caio' });
+    await pgB.click('[data-orf="ped"]'); await pgB.evaluate(() => loadPray(true));
+    exige(!(await pgB.$(`[data-ordel="${Object.values(S.DB.prayer_requests).find(r => r.title === 'Família').id}"]`)), 'participante pode apagar pedido de outra pessoa');
+    await pgL.evaluate(() => loadPray(true)); await esperar(async () => !!(await pgL.$(`[data-ordel="${pb.id}"]`)));
+    pgL.once('dialog', d => d.accept()); await pgL.click(`[data-ordel="${pb.id}"]`);
+    exige(await esperar(() => !S.DB.prayer_requests[pb.id]), 'a líder não apagou');
+    // chat continua funcionando, sem o pedido antigo no meio
+    await pgB.click('[data-cv="chat"]'); await pgB.waitForSelector('#cin');
+    await pgB.fill('#cin', 'Bom dia, caravana!'); await pgB.click('#csend');
+    exige(await esperar(async () => /Bom dia, caravana!/.test(await pgB.textContent('#msgs'))), 'mensagem não apareceu no chat');
+    exige(!/pedido antigo/.test(await pgB.textContent('#msgs')), 'pedido antigo aparece no chat');
+    const erros = [pgA, pgB, pgL].flatMap(p => p.erros);
+    await Promise.all([pgA, pgB, pgL].map(p => p.context().close()));
+    exige(!erros.length, 'erros no navegador: ' + erros.join(' | '));
+    return 'orar/desfazer, contagem e quem ora, pessoal escondido, testemunho com aviso, líder modera, chat intacto';
   });
 
   await browser.close(); srv.close();

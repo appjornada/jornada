@@ -1350,7 +1350,11 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(await esperar(async () => /Orando agora:.*Caio/.test(await pgA.textContent(`[data-orid="${pa.id}"]`).catch(() => ''))), 'A não vê quem está orando agora');
     exige(/Orando agora: você/.test(await pgB.textContent(`[data-orid="${pa.id}"]`)), 'B não vê que ele mesmo está orando agora');
     exige(!(await pgA.$(`[data-ora="${pa.id}"]`)), 'autor pode orar no próprio pedido');
-    await pgA.click(`[data-orwho="${pa.id}"]`); exige(/Caio Lima/.test(await pgA.textContent('#shc')), 'lista de quem ora sem o Caio'); await pgA.click('#shc #x');
+    await pgA.click(`[data-orid="${pa.id}"] .ocnt`);
+    await esperar(async () => /Quem orou/.test(await pgA.textContent('#shc').catch(() => '')));
+    const lista = await pgA.textContent('#shc');
+    exige(/Caio Lima/.test(lista) && /Quem orou \(1\)/.test(lista) && /orando agora/.test(lista), 'lista de quem orou (contador) errada: ' + lista);
+    await pgA.click('#shc #x');
     // desfazer e refazer
     // tocar de novo NÃO tira do contador: só renova "orando agora"
     await pgB.click(`[data-ora="${pa.id}"]`); await pgB.waitForTimeout(600);

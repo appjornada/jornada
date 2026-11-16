@@ -1099,7 +1099,7 @@ async function loadPray(force){
     var r=await sb.from('prayer_requests').select('id,group_id,user_id,title,body,is_private,answered_at,testimony,created_at,prayer_intercessions(user_id,prayed_at)').order('created_at',{ascending:false}).limit(500);
     if(r.error){OR.err=why(r.error);if(!OR.ok&&tab==='chat')render();return}
     OR.err='';
-    var L=(r.data||[]).map(function(x){return{id:x.id,group_id:x.group_id,user_id:x.user_id,title:x.title,body:x.body,is_private:!!x.is_private,answered_at:x.answered_at,testimony:x.testimony,created_at:x.created_at,who:(x.prayer_intercessions||[]).map(function(p){return p.user_id}),agora:(x.prayer_intercessions||[]).filter(function(p){return Date.now()-Date.parse(p.prayed_at)<AGORA_MS}).map(function(p){return p.user_id})}});
+    var L=(r.data||[]).map(function(x){return{id:x.id,group_id:x.group_id,user_id:x.user_id,title:x.title,body:x.body,is_private:!!x.is_private,answered_at:x.answered_at,testimony:x.testimony,created_at:x.created_at,who:(x.prayer_intercessions||[]).map(function(p){return p.user_id}),quando:(x.prayer_intercessions||[]).reduce(function(o,p){o[p.user_id]=p.prayed_at;return o},{}),agora:(x.prayer_intercessions||[]).filter(function(p){return Date.now()-Date.parse(p.prayed_at)<AGORA_MS}).map(function(p){return p.user_id})}});
     // toque em "Orar" ainda a caminho do servidor: a tela continua mostrando o que a pessoa tocou
     L.forEach(function(x){var on=OR.pend[x.id];if(on===undefined)return;x.who=x.who.filter(function(u){return u!==S.me});if(on)x.who.push(S.me)});
     var miss={};L.forEach(function(x){[x.user_id].concat(x.who).forEach(function(u){if(!S.names[u])miss[u]=1})});
@@ -1175,11 +1175,16 @@ async function orDel(id){
   if(res.error){toast('Não foi possível apagar. '+why(res.error));return}
   OR.list=OR.list.filter(function(x){return x.id!==id});OR.key='';render();toast('Pedido apagado');
 }
+// Lista de quem orou pelo pedido, da pessoa que orou mais recentemente para a mais antiga
 function orWho(id){
   var r=orGet(id);if(!r)return;
-  var W=r.who.slice().sort(function(a,b){return nm(a).localeCompare(nm(b),'pt')});
-  showSheet('<h1>🙏 '+(r.answered_at?'Quem orou':'Quem está orando')+'</h1><div class="sub">'+esc(r.title||r.body.slice(0,60)+(r.body.length>60?'…':''))+'</div>'+
-    W.map(function(u){return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b></div></div>'}).join('')+
+  var q=r.quando||{};
+  var W=r.who.slice().sort(function(a,b){return Date.parse(q[b]||0)-Date.parse(q[a]||0)});
+  var lista=W.length?W.map(function(u){
+    var agora=(r.agora||[]).indexOf(u)>=0;
+    return '<div class="rk">'+av(u)+'<div class="grow"><b>'+esc(nm(u))+(u===S.me?' (você)':'')+'</b><div class="sub">'+(agora?'🟢 orando agora':'orou '+(q[u]?ago(Date.parse(q[u])):''))+'</div></div></div>';
+  }).join(''):'<div class="sub">Ninguém orou por este pedido ainda.</div>';
+  showSheet('<h1>🙏 Quem orou ('+W.length+')</h1><div class="sub">'+esc(r.title||r.body.slice(0,60)+(r.body.length>60?'…':''))+'</div>'+lista+
     '<button class="btn g" id="x">Fechar</button>');
 }
 // Chat: a cada 5 s busca só as mensagens novas (antes eram as últimas 200 toda vez); a cada 2 min, a lista toda

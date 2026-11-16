@@ -1072,7 +1072,7 @@ function agoraLine(r){
 }
 // quem está orando renova o horário; sem isso sai do "agora" depois de 5 minutos
 function orBeat(){
-  if(!S.me||document.hidden)return;
+  if(!S.me||document.hidden||tab!=='chat'||CV!=='ora')return; // só conta enquanto a pessoa está na tela de oração
   OR.list.forEach(function(r){
     if(r.answered_at||OR.pend[r.id]!==undefined||(r.who||[]).indexOf(S.me)<0)return;
     sb.from('prayer_intercessions').update({prayed_at:new Date().toISOString()}).eq('request_id',r.id).eq('user_id',S.me).then(function(){});
@@ -1109,9 +1109,17 @@ async function loadPray(force){
     if(tab==='chat'&&CV==='ora'&&!document.getElementById('sh').classList.contains('show'))render();
   }finally{OR.busy=false}
 }
+// Quem já orou continua contado. Tocar de novo só diz que ainda está orando agora.
+function orRenova(r){
+  r.agora=(r.agora||[]).filter(function(u){return u!==S.me});r.agora.push(S.me);render();
+  sb.from('prayer_intercessions').update({prayed_at:new Date().toISOString()}).eq('request_id',r.id).eq('user_id',S.me).then(function(res){
+    if(res.error)toast('Não foi possível atualizar. '+why(res.error));else toast('🙏 Continue orando! Você já está contado.');
+  });
+}
 async function orToggle(id){
   var r=orGet(id);if(!r||OR.pend[id]!==undefined||r.user_id===S.me)return;
-  var on=r.who.indexOf(S.me)<0;OR.pend[id]=on;
+  if(r.who.indexOf(S.me)>=0){orRenova(r);return} // já orou: não sai do contador, só renova "orando agora"
+  var on=true;OR.pend[id]=on;
   r.who=r.who.filter(function(u){return u!==S.me});if(on)r.who.push(S.me);
   r.agora=(r.agora||[]).filter(function(u){return u!==S.me});if(on)r.agora.push(S.me);render();
   var res=on?await sb.from('prayer_intercessions').insert({request_id:id}):await sb.from('prayer_intercessions').delete().eq('request_id',id).eq('user_id',S.me);

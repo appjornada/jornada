@@ -1352,9 +1352,10 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(!(await pgA.$(`[data-ora="${pa.id}"]`)), 'autor pode orar no próprio pedido');
     await pgA.click(`[data-orwho="${pa.id}"]`); exige(/Caio Lima/.test(await pgA.textContent('#shc')), 'lista de quem ora sem o Caio'); await pgA.click('#shc #x');
     // desfazer e refazer
-    await pgB.click(`[data-ora="${pa.id}"]`); exige(await esperar(() => S.DB.pi.length === 0), 'tocar de novo não desfez');
-    await esperar(async () => !!(await pgB.$(`[data-ora="${pa.id}"]:not([disabled])`)));
-    await pgB.click(`[data-ora="${pa.id}"]`); exige(await esperar(() => S.DB.pi.length === 1), 'não refez');
+    // tocar de novo NÃO tira do contador: só renova "orando agora"
+    await pgB.click(`[data-ora="${pa.id}"]`); await pgB.waitForTimeout(600);
+    exige(S.DB.pi.length === 1 && S.DB.pi[0].user_id === B.id, 'tocar de novo tirou do contador');
+    exige((await pgB.textContent(`[data-orid="${pa.id}"] .ocnt`)).replace(/\s/g, '') === '1orou', 'contador caiu depois de tocar de novo');
     // A escreve um pedido para a caravana e um pessoal
     await pgA.click('[data-ornew]'); await pgA.fill('#ort', 'Família'); await pgA.fill('#orb', 'Pela saúde da minha mãe'); await pgA.click('[data-orsave]');
     exige(await esperar(() => Object.values(S.DB.prayer_requests).some(r => r.title === 'Família' && !r.is_private && r.group_id === g.id)), 'pedido da caravana não gravou');

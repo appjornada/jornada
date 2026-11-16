@@ -1347,6 +1347,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     // A vê que estão orando e não tem botão Orar no próprio pedido
     await pgA.evaluate(() => loadPray(true));
     exige(await esperar(async () => /1\s*orou/.test(await pgA.textContent(`[data-orid="${pa.id}"] .ocnt`).catch(() => ''))), 'A não vê o contador');
+    exige(await esperar(async () => /Orando agora:.*Caio/.test(await pgA.textContent(`[data-orid="${pa.id}"]`).catch(() => ''))), 'A não vê quem está orando agora');
+    exige(/Orando agora: você/.test(await pgB.textContent(`[data-orid="${pa.id}"]`)), 'B não vê que ele mesmo está orando agora');
     exige(!(await pgA.$(`[data-ora="${pa.id}"]`)), 'autor pode orar no próprio pedido');
     await pgA.click(`[data-orwho="${pa.id}"]`); exige(/Caio Lima/.test(await pgA.textContent('#shc')), 'lista de quem ora sem o Caio'); await pgA.click('#shc #x');
     // desfazer e refazer

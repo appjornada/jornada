@@ -246,6 +246,10 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .oc-ans{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--vt);font-size:15px;white-space:pre-wrap}.oc-ans small{color:var(--mut)}.oc-ans .sub{margin-top:6px}
 .oc.done{border-color:var(--ok)}
 .oc-a{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:12px;padding-top:8px;border-top:1px solid var(--bd)}.oc-a .link{font-size:14px;padding:6px 0}
+.oc-agora{margin-top:10px;font-size:14px;color:var(--mut);display:flex;align-items:center;gap:8px}
+.dot-on{width:9px;height:9px;border-radius:50%;background:#2e9e5b;flex:none;animation:oracao-pulso 2s infinite}
+@keyframes oracao-pulso{0%{box-shadow:0 0 0 0 rgba(46,158,91,.5)}70%{box-shadow:0 0 0 8px rgba(46,158,91,0)}100%{box-shadow:0 0 0 0 rgba(46,158,91,0)}}
+@media (prefers-reduced-motion:reduce){.dot-on{animation:none}}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:none;margin:0}
 body:not([data-tab="feed"]) #jsw,body:not([data-tab="feed"]) #map,body:not([data-tab="feed"]) #cd,body:not([data-tab="feed"]) #stats{display:none!important}
 body:not([data-tab="feed"]) header{padding-bottom:4px}
@@ -1035,6 +1039,7 @@ function chat(){
 }
 // ---- Mural de oração: pedidos da caravana e pessoais; "Orar" marca que você está orando ----
 // OR.v: 'car' (caravana) ou 'pes' (meus pedidos) · OR.f: 'ped' (abertos), 'orando' (onde toquei em Orar), 'ate' (respondidos)
+var AGORA_MS=5*60e3; // "orando agora": quem tocou em Orar nos últimos 5 minutos
 var OR={v:'car',f:'ped',list:[],key:'',busy:false,ok:false,err:'',pend:{}},ORSEEN=0;
 try{ORSEEN=+localStorage.getItem('pd_orseen')||0}catch(e){}
 function orGet(id){return OR.list.filter(function(r){return r.id===id})[0]||null}
@@ -1060,6 +1065,19 @@ function mural(){
     (OR.f==='ped'?'<button class="btn onew" data-ornew="1">✍️ '+(pes?'Escrever um pedido':'Pedir oração à caravana')+'</button>':'')+
     '<div class="olist">'+lista+'</div>';
 }
+function agoraLine(r){
+  var a=r.agora.map(function(u){return u===S.me?'você':nm(u).split(' ')[0]});
+  var t=a.length>3?a.slice(0,3).join(', ')+' e mais '+(a.length-3):a.length>1?a.slice(0,-1).join(', ')+' e '+a[a.length-1]:a[0];
+  return '<div class="oc-agora"><span class="dot-on" aria-hidden="true"></span><span>Orando agora: '+esc(t)+'</span></div>';
+}
+// quem está orando renova o horário; sem isso sai do "agora" depois de 5 minutos
+function orBeat(){
+  if(!S.me||document.hidden)return;
+  OR.list.forEach(function(r){
+    if(r.answered_at||OR.pend[r.id]!==undefined||(r.who||[]).indexOf(S.me)<0)return;
+    sb.from('prayer_intercessions').update({prayed_at:new Date().toISOString()}).eq('request_id',r.id).eq('user_id',S.me).then(function(){});
+  });
+}
 function orCard(r){
   var me=r.user_id===S.me,n=r.who.length,eu=r.who.indexOf(S.me)>=0,done=!!r.answered_at,pend=OR.pend[r.id]!==undefined;
   var h='<div class="card oc'+(done?' done':'')+'" data-orid="'+r.id+'"><div class="row oc-h">'+av(r.user_id)+'<div class="grow"><b>'+(me?'Você':esc(nm(r.user_id)))+'</b><div class="sub">'+ago(Date.parse(r.created_at))+(r.is_private?' · 🔒 só você vê':me&&OR.v==='pes'?' · 👥 na caravana':'')+'</div></div>'+
@@ -1069,6 +1087,7 @@ function orCard(r){
   else if(!r.is_private)h+='<div class="ora-row">'+(me?'<div class="ora-eu">🙏 Seu pedido</div>':'<button class="btn ora'+(eu?' on':'')+'" data-ora="'+r.id+'" aria-pressed="'+eu+'"'+(pend?' disabled':'')+'>🙏 '+(eu?'Orando':'Orar')+'</button>')+
     // contador ao lado do botão: quantas pessoas oraram (toque para ver quem)
     '<button class="ocnt" data-orwho="'+r.id+'"'+(n?'':' disabled')+' aria-label="'+pessoas(n,1)+'"><b>'+n+'</b><small>'+(n===1?'orou':'oraram')+'</small></button></div>';
+  if(!done&&r.agora&&r.agora.length)h+=agoraLine(r);
   var acts=[];
   if(me){acts.push(done?'<button class="link" data-orreopen="'+r.id+'">↩️ Reabrir</button>':'<button class="link" data-ordone="'+r.id+'">🙌 Deus respondeu</button>');acts.push('<button class="link" data-oredit="'+r.id+'">✏️ Editar</button>');acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar</button>')}
   else if(S.canEdit&&!r.is_private)acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar (líder)</button>');
@@ -1077,10 +1096,10 @@ function orCard(r){
 async function loadPray(force){
   if(tab!=='chat'||CV!=='ora'||!S.me||OR.busy)return;OR.busy=true;
   try{
-    var r=await sb.from('prayer_requests').select('id,group_id,user_id,title,body,is_private,answered_at,testimony,created_at,prayer_intercessions(user_id)').order('created_at',{ascending:false}).limit(500);
+    var r=await sb.from('prayer_requests').select('id,group_id,user_id,title,body,is_private,answered_at,testimony,created_at,prayer_intercessions(user_id,prayed_at)').order('created_at',{ascending:false}).limit(500);
     if(r.error){OR.err=why(r.error);if(!OR.ok&&tab==='chat')render();return}
     OR.err='';
-    var L=(r.data||[]).map(function(x){return{id:x.id,group_id:x.group_id,user_id:x.user_id,title:x.title,body:x.body,is_private:!!x.is_private,answered_at:x.answered_at,testimony:x.testimony,created_at:x.created_at,who:(x.prayer_intercessions||[]).map(function(p){return p.user_id})}});
+    var L=(r.data||[]).map(function(x){return{id:x.id,group_id:x.group_id,user_id:x.user_id,title:x.title,body:x.body,is_private:!!x.is_private,answered_at:x.answered_at,testimony:x.testimony,created_at:x.created_at,who:(x.prayer_intercessions||[]).map(function(p){return p.user_id}),agora:(x.prayer_intercessions||[]).filter(function(p){return Date.now()-Date.parse(p.prayed_at)<AGORA_MS}).map(function(p){return p.user_id})}});
     // toque em "Orar" ainda a caminho do servidor: a tela continua mostrando o que a pessoa tocou
     L.forEach(function(x){var on=OR.pend[x.id];if(on===undefined)return;x.who=x.who.filter(function(u){return u!==S.me});if(on)x.who.push(S.me)});
     var miss={};L.forEach(function(x){[x.user_id].concat(x.who).forEach(function(u){if(!S.names[u])miss[u]=1})});
@@ -1093,7 +1112,8 @@ async function loadPray(force){
 async function orToggle(id){
   var r=orGet(id);if(!r||OR.pend[id]!==undefined||r.user_id===S.me)return;
   var on=r.who.indexOf(S.me)<0;OR.pend[id]=on;
-  r.who=r.who.filter(function(u){return u!==S.me});if(on)r.who.push(S.me);render();
+  r.who=r.who.filter(function(u){return u!==S.me});if(on)r.who.push(S.me);
+  r.agora=(r.agora||[]).filter(function(u){return u!==S.me});if(on)r.agora.push(S.me);render();
   var res=on?await sb.from('prayer_intercessions').insert({request_id:id}):await sb.from('prayer_intercessions').delete().eq('request_id',id).eq('user_id',S.me);
   delete OR.pend[id];
   if(res.error&&!(on&&res.error.code==='23505')){
@@ -2290,6 +2310,7 @@ function init(){
   setInterval(function(){var t=iso(new Date()),nd=t!==TODAY;TODAY=t;if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show')){if(nd)loadData();else poll()}},30000);
   setInterval(function(){if(!document.hidden)loadChat()},5000);
   setInterval(function(){if(!document.hidden)loadPray()},20000);
+  setInterval(orBeat,2*60e3);
   // fotos guardadas no aparelho (sw.js): cada foto é baixada uma vez só, mesmo quando o link assinado muda
   try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 }

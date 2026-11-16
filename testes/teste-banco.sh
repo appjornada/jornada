@@ -159,4 +159,18 @@ fails ${U[1]} "update public.prayer_requests set group_id='$G2',is_private=false
 [ "$(as ${U[1]} "delete from public.prayer_requests where id='$RP' returning 1")" = 1 ] && ok "o autor apaga o próprio"
 $P -f supabase/12b-desfazer-mural-de-oracao.sql >/dev/null && [ "$($P -At -c "select to_regclass('public.prayer_requests') is null")" = t ] && ok "desfazer tira as tabelas"
 $P -f supabase/12-mural-de-oracao.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+echo "12) Orando agora (13-orando-agora.sql)"
+R2=$(as ${U[1]} "insert into public.prayer_requests(group_id,body) values('$G','Pela viagem') returning id")
+as ${U[0]} "insert into public.prayer_intercessions(request_id) values('$R2')" >/dev/null
+$P -c "update public.prayer_intercessions set created_at=now()-interval '1 day'" >/dev/null
+$P -f supabase/13-orando-agora.sql >/dev/null && $P -f supabase/13-orando-agora.sql >/dev/null && ok "script roda (2x)"
+[ "$($P -At -c "select bool_and(prayed_at < now()-interval '1 hour') from public.prayer_intercessions")" = t ] && ok "quem já orava antes não aparece como 'agora'"
+as ${U[2]} "insert into public.prayer_intercessions(request_id) values('$R2')" >/dev/null
+[ "$($P -At -c "select prayed_at > now()-interval '1 minute' from public.prayer_intercessions where request_id='$R2' and user_id='${U[2]}'")" = t ] && ok "Orar marca o horário de agora"
+[ "$(as ${U[0]} "update public.prayer_intercessions set prayed_at='2999-01-01' where request_id='$R2' returning prayed_at > now()-interval '1 minute' and prayed_at <= now()")" = t ] && ok "'orando de novo' usa a hora do servidor (não dá para ficar 'agora' para sempre)"
+[ -z "$(as ${U[0]} "update public.prayer_intercessions set prayed_at=now() where user_id='${U[2]}' returning 1")" ] && ok "não atualiza o horário de outra pessoa"
+fails ${U[0]} "update public.prayer_intercessions set request_id='$R' where request_id='$R2'" "não troca o pedido da oração"
+fails ${U[0]} "update public.prayer_intercessions set user_id='${U[2]}' where request_id='$R2'" "não troca a pessoa"
+$P -f supabase/13b-desfazer-orando-agora.sql >/dev/null && [ "$($P -At -c "select count(*) from information_schema.columns where table_name='prayer_intercessions' and column_name='prayed_at'")" = 0 ] && ok "desfazer tira a coluna"
+$P -f supabase/13-orando-agora.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

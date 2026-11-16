@@ -238,6 +238,10 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .onew{margin:12px 0}
 .oc .oc-h{align-items:flex-start}.oc-h b{font-size:17px}.oc-n{flex:none;font-size:14px;color:var(--mut);padding:4px 0}
 .oc-t{font-weight:700;font-size:16px;margin-top:10px}.oc-b{margin-top:4px;font-size:16px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.ora-row{display:flex;gap:10px;align-items:stretch;margin-top:14px}.ora-row .btn.ora{flex:1;margin-top:0}
+.ora-eu{flex:1;display:flex;align-items:center;justify-content:center;border-radius:99px;background:var(--bg);border:1px dashed var(--bd);color:var(--mut);font-weight:600}
+.ocnt{flex:none;min-width:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--ac);border-radius:16px;background:var(--card,transparent);color:var(--tx);cursor:pointer;padding:4px 8px;line-height:1.05}
+.ocnt b{font-size:22px}.ocnt small{font-size:12px;color:var(--mut)}.ocnt:disabled{cursor:default;opacity:.6;border-color:var(--bd)}
 .btn.ora{margin-top:14px;border-radius:99px;padding:13px}.btn.ora.on{background:var(--vt);color:var(--tx);box-shadow:inset 0 0 0 2px var(--ac)}
 .oc-ans{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--vt);font-size:15px;white-space:pre-wrap}.oc-ans small{color:var(--mut)}.oc-ans .sub{margin-top:6px}
 .oc.done{border-color:var(--ok)}
@@ -1059,10 +1063,12 @@ function mural(){
 function orCard(r){
   var me=r.user_id===S.me,n=r.who.length,eu=r.who.indexOf(S.me)>=0,done=!!r.answered_at,pend=OR.pend[r.id]!==undefined;
   var h='<div class="card oc'+(done?' done':'')+'" data-orid="'+r.id+'"><div class="row oc-h">'+av(r.user_id)+'<div class="grow"><b>'+(me?'Você':esc(nm(r.user_id)))+'</b><div class="sub">'+ago(Date.parse(r.created_at))+(r.is_private?' · 🔒 só você vê':me&&OR.v==='pes'?' · 👥 na caravana':'')+'</div></div>'+
-    (!r.is_private&&n?'<button class="link oc-n" data-orwho="'+r.id+'">'+(done?'🙏 '+pessoas(n,1):'• '+pessoas(n))+'</button>':'')+'</div>'+
+    (!r.is_private&&n&&done?'<button class="link oc-n" data-orwho="'+r.id+'">🙏 '+pessoas(n,1)+'</button>':'')+'</div>'+
     (r.title?'<div class="oc-t">'+esc(r.title)+'</div>':'')+'<div class="oc-b">'+esc(r.body)+'</div>';
   if(done)h+='<div class="oc-ans"><b>🙌 Deus respondeu!</b> <small>'+ago(Date.parse(r.answered_at))+'</small>'+(r.testimony?'<div>'+esc(r.testimony)+'</div>':'')+(eu?'<div class="sub">Você orou por este pedido. Glória a Deus!</div>':'')+'</div>';
-  else if(!me&&!r.is_private)h+='<button class="btn ora'+(eu?' on':'')+'" data-ora="'+r.id+'" aria-pressed="'+eu+'"'+(pend?' disabled':'')+'>🙏 '+(eu?'Orando':'Orar')+'</button>';
+  else if(!r.is_private)h+='<div class="ora-row">'+(me?'<div class="ora-eu">🙏 Seu pedido</div>':'<button class="btn ora'+(eu?' on':'')+'" data-ora="'+r.id+'" aria-pressed="'+eu+'"'+(pend?' disabled':'')+'>🙏 '+(eu?'Orando':'Orar')+'</button>')+
+    // contador ao lado do botão: quantas pessoas oraram (toque para ver quem)
+    '<button class="ocnt" data-orwho="'+r.id+'"'+(n?'':' disabled')+' aria-label="'+pessoas(n,1)+'"><b>'+n+'</b><small>'+(n===1?'orou':'oraram')+'</small></button></div>';
   var acts=[];
   if(me){acts.push(done?'<button class="link" data-orreopen="'+r.id+'">↩️ Reabrir</button>':'<button class="link" data-ordone="'+r.id+'">🙌 Deus respondeu</button>');acts.push('<button class="link" data-oredit="'+r.id+'">✏️ Editar</button>');acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar</button>')}
   else if(S.canEdit&&!r.is_private)acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar (líder)</button>');

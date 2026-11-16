@@ -1341,12 +1341,12 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pgB.click(`[data-ora="${pa.id}"]`);
     exige(await esperar(() => S.DB.pi.length === 1), 'Orar não gravou');
     await esperar(async () => /Orando/.test(await pgB.textContent(`[data-ora="${pa.id}"]`)));
-    exige(/1 pessoa orando/.test(await carta(pgB, 'Vestibular')), 'contagem para B: ' + await carta(pgB, 'Vestibular'));
+    exige((await pgB.textContent(`[data-orid="${pa.id}"] .ocnt`)).replace(/\s/g, '') === '1orou', 'contador para B: ' + await carta(pgB, 'Vestibular'));
     await pgB.click('[data-orf="orando"]'); exige(/Vestibular/.test(await pgB.textContent('main .olist')), 'não aparece em Orando');
     await pgB.click('[data-orf="ped"]');
     // A vê que estão orando e não tem botão Orar no próprio pedido
     await pgA.evaluate(() => loadPray(true));
-    exige(await esperar(async () => /1 pessoa orando/.test(await carta(pgA, 'Vestibular') || '')), 'A não vê a contagem');
+    exige(await esperar(async () => /1\s*orou/.test(await pgA.textContent(`[data-orid="${pa.id}"] .ocnt`).catch(() => ''))), 'A não vê o contador');
     exige(!(await pgA.$(`[data-ora="${pa.id}"]`)), 'autor pode orar no próprio pedido');
     await pgA.click(`[data-orwho="${pa.id}"]`); exige(/Caio Lima/.test(await pgA.textContent('#shc')), 'lista de quem ora sem o Caio'); await pgA.click('#shc #x');
     // desfazer e refazer

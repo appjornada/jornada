@@ -1356,10 +1356,22 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(/Caio Lima/.test(lista) && /Quem orou \(1\)/.test(lista) && /orando agora/.test(lista), 'lista de quem orou (contador) errada: ' + lista);
     await pgA.click('#shc #x');
     // desfazer e refazer
-    // tocar de novo NÃO tira do contador: só renova "orando agora"
-    await pgB.click(`[data-ora="${pa.id}"]`); await pgB.waitForTimeout(600);
-    exige(S.DB.pi.length === 1 && S.DB.pi[0].user_id === B.id, 'tocar de novo tirou do contador');
-    exige((await pgB.textContent(`[data-orid="${pa.id}"] .ocnt`)).replace(/\s/g, '') === '1orou', 'contador caiu depois de tocar de novo');
+    // tocar de novo TERMINA a oração: o botão volta, mas o contador continua
+    await pgB.click(`[data-ora="${pa.id}"]`);
+    exige(await esperar(() => S.DB.pi[0].praying === false), 'tocar de novo não terminou a oração');
+    exige(S.DB.pi.length === 1 && S.DB.pi[0].user_id === B.id, 'terminar tirou do contador');
+    await esperar(async () => /Orar de novo/.test(await pgB.textContent(`[data-ora="${pa.id}"]`)));
+    exige(/Orar de novo/.test(await pgB.textContent(`[data-ora="${pa.id}"]`)), 'o botão não voltou');
+    exige((await pgB.textContent(`[data-orid="${pa.id}"] .ocnt`)).replace(/\s/g, '') === '1orou', 'contador caiu ao terminar');
+    exige(!/Orando agora/.test(await pgB.textContent(`[data-orid="${pa.id}"]`)), 'continua orando agora depois de terminar');
+    await pgA.evaluate(() => loadPray(true));
+    exige(await esperar(async () => !/Orando agora/.test(await pgA.textContent(`[data-orid="${pa.id}"]`))), 'A ainda vê o Caio orando agora');
+    exige(/1\s*orou/.test(await pgA.textContent(`[data-orid="${pa.id}"] .ocnt`)), 'A viu o contador cair');
+    // orar de novo
+    await esperar(async () => !!(await pgB.$(`[data-ora="${pa.id}"]:not([disabled])`)));
+    await pgB.click(`[data-ora="${pa.id}"]`);
+    exige(await esperar(() => S.DB.pi[0].praying === true), 'orar de novo não voltou a orando agora');
+    exige(S.DB.pi.length === 1, 'orar de novo contou a pessoa duas vezes');
     // A escreve um pedido para a caravana e um pessoal
     await pgA.click('[data-ornew]'); await pgA.fill('#ort', 'Família'); await pgA.fill('#orb', 'Pela saúde da minha mãe'); await pgA.click('[data-orsave]');
     exige(await esperar(() => Object.values(S.DB.prayer_requests).some(r => r.title === 'Família' && !r.is_private && r.group_id === g.id)), 'pedido da caravana não gravou');

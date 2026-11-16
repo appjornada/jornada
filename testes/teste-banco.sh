@@ -173,4 +173,16 @@ fails ${U[0]} "update public.prayer_intercessions set request_id='$R' where requ
 fails ${U[0]} "update public.prayer_intercessions set user_id='${U[2]}' where request_id='$R2'" "não troca a pessoa"
 $P -f supabase/13b-desfazer-orando-agora.sql >/dev/null && [ "$($P -At -c "select count(*) from information_schema.columns where table_name='prayer_intercessions' and column_name='prayed_at'")" = 0 ] && ok "desfazer tira a coluna"
 $P -f supabase/13-orando-agora.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+echo "13) Terminar a oração (14-terminar-oracao.sql)"
+$P -f supabase/14-terminar-oracao.sql >/dev/null && $P -f supabase/14-terminar-oracao.sql >/dev/null && ok "script roda (2x)"
+[ "$($P -At -c "select praying from public.prayer_intercessions where request_id='$R2' and user_id='${U[2]}'")" = t ] && ok "quem orou há pouco continua 'orando agora'"
+$P -c "set session_replication_role=replica; update public.prayer_intercessions set prayed_at=now()-interval '1 hour' where request_id='$R2' and user_id='${U[0]}'" >/dev/null # sem o gatilho, para simular quem orou há 1 hora
+[ "$(as ${U[0]} "update public.prayer_intercessions set praying=false where request_id='$R2' returning praying::text||':'||(prayed_at < now()-interval '30 minutes')::text")" = "false:true" ] && ok "terminar guarda a hora em que orou"
+[ "$($P -At -c "select count(*) from public.prayer_intercessions where request_id='$R2' and user_id='${U[0]}'")" = 1 ] && ok "terminar não tira do contador"
+[ "$(as ${U[0]} "update public.prayer_intercessions set praying=true where request_id='$R2' returning praying::text||':'||(prayed_at > now()-interval '1 minute')::text")" = "true:true" ] && ok "orar de novo volta a 'orando agora' com a hora do servidor"
+R3=$(as ${U[1]} "insert into public.prayer_requests(group_id,body) values('$G','Pelo emprego') returning id")
+[ "$(as ${U[0]} "insert into public.prayer_intercessions(request_id,praying) values('$R3',false) returning praying")" = t ] && ok "Orar sempre começa 'orando agora'"
+[ -z "$(as ${U[0]} "update public.prayer_intercessions set praying=false where user_id='${U[2]}' returning 1")" ] && ok "não termina a oração de outra pessoa"
+$P -f supabase/14b-desfazer-terminar-oracao.sql >/dev/null && [ "$($P -At -c "select count(*) from information_schema.columns where table_name='prayer_intercessions' and column_name='praying'")" = 0 ] && ok "desfazer tira a coluna"
+$P -f supabase/14-terminar-oracao.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

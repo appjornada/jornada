@@ -25,7 +25,7 @@ function novoServidor(opts = {}) {
       case 'profiles': return Object.values(DB.profiles).filter(p => p.id === me || DB.gm.some(a => a.user_id === p.id && member(me, a.group_id))); // profiles_select
       case 'messages': return Object.values(DB.messages).filter(m => member(me, chGroup(m.challenge_id)));
       case 'prayer_requests': return Object.values(DB.prayer_requests).filter(r => r.user_id === me || (!r.is_private && member(me, r.group_id))) // pr_select (supabase/12-mural-de-oracao.sql)
-        .map(r => Object.assign({}, r, { prayer_intercessions: DB.pi.filter(x => x.request_id === r.id).map(x => ({ user_id: x.user_id, prayed_at: x.prayed_at })) }));
+        .map(r => Object.assign({}, r, { prayer_intercessions: DB.pi.filter(x => x.request_id === r.id).map(x => ({ user_id: x.user_id, prayed_at: x.prayed_at, praying: x.praying !== false })) }));
       case 'prayer_intercessions': { const vis = new Set(visible('prayer_requests', me).map(r => r.id)); return DB.pi.filter(x => vis.has(x.request_id)) }
       case 'comments': return Object.values(DB.comments);
       case 'likes': return DB.likes;
@@ -99,7 +99,7 @@ function novoServidor(opts = {}) {
         const r = DB.prayer_requests[b.request_id];
         if (!r || r.is_private || r.answered_at || r.user_id === me || !member(me, r.group_id)) return err('new row violates row-level security policy for table "prayer_intercessions"', '42501');
         if (DB.pi.some(x => x.request_id === r.id && x.user_id === me)) return err('duplicate key value violates unique constraint "prayer_intercessions_pkey"', '23505');
-        DB.pi.push({ request_id: r.id, user_id: me, prayed_at: new Date().toISOString() }); return { data: null, error: null };
+        DB.pi.push({ request_id: r.id, user_id: me, prayed_at: new Date().toISOString(), praying: true }); return { data: null, error: null };
       }
       if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); return { data: null, error: null } }
       return err('tabela desconhecida');
@@ -107,7 +107,7 @@ function novoServidor(opts = {}) {
     if (q.op === 'update') {
       if (t === 'prayer_intercessions') { // pi_update: só a própria linha; o horário é sempre o do servidor (supabase/13-orando-agora.sql)
         const rows = applyFilters(DB.pi, q.filters).filter(x => x.user_id === me);
-        rows.forEach(x => { x.prayed_at = new Date().toISOString() });
+        rows.forEach(x => { if (q.body.praying === false) x.praying = false; else { x.praying = true; x.prayed_at = new Date().toISOString() } }); // 14-terminar-oracao.sql
         return { data: null, error: null };
       }
       let rows = applyFilters(visible(t, me), q.filters);

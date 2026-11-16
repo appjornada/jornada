@@ -1116,9 +1116,16 @@ function orCard(r){
   else if(S.canEdit&&!r.is_private)acts.push('<button class="link" data-ordel="'+r.id+'">🗑️ Apagar (líder)</button>');
   return h+(acts.length?'<div class="oc-a">'+acts.join('')+'</div>':'')+'</div>';
 }
+// Mural de oração: a cada 20 s só pergunta se mudou (supabase/17-consumo.sql, 32 letras); baixa os pedidos quando
+// mudou, quando a pessoa age ou a cada 2 min (o "orando agora" vence com o tempo)
+var PV=null,NOPV=false,PVAT=0;
 async function loadPray(force){
   if(tab!=='chat'||CV!=='ora'||!S.me||OR.busy)return;OR.busy=true;
   try{
+    var nv=null;
+    if(!NOPV){var pv=await sb.rpc('pray_version').then(function(r){return r},function(){return{error:{}}});
+      if(pv.error){if(pv.error.code==='PGRST202')NOPV=true}else nv=pv.data;
+      if(!force&&OR.ok&&nv&&nv===PV&&Date.now()-PVAT<120000)return}
     var r=await sb.from('prayer_requests').select('id,group_id,user_id,title,body,is_private,answered_at,testimony,created_at,prayer_intercessions(user_id,prayed_at,praying)').order('created_at',{ascending:false}).limit(500);
     if(r.error){OR.err=why(r.error);if(!OR.ok&&tab==='chat')render();return}
     OR.err='';
@@ -1127,6 +1134,7 @@ async function loadPray(force){
     L.forEach(function(x){var on=OR.pend[x.id];if(on===undefined)return;if(x.who.indexOf(S.me)<0)x.who.push(S.me);x.agora=x.agora.filter(function(u){return u!==S.me});if(on)x.agora.push(S.me)});
     var miss={};L.forEach(function(x){[x.user_id].concat(x.who).forEach(function(u){if(!S.names[u])miss[u]=1})});
     if(Object.keys(miss).length)await profs(Object.keys(miss));
+    PV=nv;PVAT=Date.now();
     var key=JSON.stringify(L);if(!force&&OR.ok&&key===OR.key)return;
     OR.key=key;OR.list=L;OR.ok=true;
     if(tab==='chat'&&CV==='ora'&&!document.getElementById('sh').classList.contains('show'))render();
@@ -2443,6 +2451,11 @@ async function poll(){
   if(FV&&!NOFV){var v=await feedVer();if(v&&v===FV)return}
   return loadData();
 }
+// Mural incremental (supabase/17-consumo.sql): baixa todas as publicações só ao abrir, a cada 15 min ou quando muda
+// a lista de jornadas. Fora isso, só as que mudaram (updated_at muda também com Amém e comentário).
+// Se a impressão digital mudou e nada veio, algo foi apagado (ou um nome mudou): aí baixa tudo.
+var FEED={rows:null,key:'',max:'',full:0},NOINC=false,FEEDFULL=15*6e4,FEEDQ='*,likes(user_id),comments(id,user_id,body,created_at)';
+function feedSort(a,b){return a.created_at<b.created_at?1:a.created_at>b.created_at?-1:a.id<b.id?-1:a.id>b.id?1:0}
 async function loadData(){
   if(!S.grp)return;
   var my=++LD,stale=function(){return my!==LD},fv=null;
@@ -2461,16 +2474,35 @@ async function loadData(){
       S.cur=ch?ch.id:null;
     }
     useCur();fv=feedVer(); // depois de saber as jornadas e antes de baixar as publicações
-    var ids=S.all.map(function(x){return x.id}),rows=[],seen=new Set();
-    if(ids.length){
+    var ids=S.all.map(function(x){return x.id}),rows=[],seen=new Set(),key=ids.slice().sort().join(',');
+    var inc=!NOINC&&!!FEED.rows&&FEED.key===key&&!!FEED.max&&Date.now()-FEED.full<FEEDFULL;
+    if(ids.length&&inc){
+      var since=new Date(Date.parse(FEED.max)-6e4).toISOString(),chg=[]; // 1 min de folga para gravações que terminaram fora de ordem
+      for(var f2=0;f2<20000;f2+=1000){
+        var q2=await withTimeout(sb.from('checkins').select(FEEDQ).in('challenge_id',ids).gte('updated_at',since).order('updated_at',{ascending:true}).order('id',{ascending:true}).range(f2,f2+999),30000);
+        if(stale())return;
+        if(q2.error){if(/updated_at/.test(q2.error.message||'')||q2.error.code==='42703'){NOINC=true;inc=false;break}throw q2.error}
+        chg=chg.concat(q2.data||[]);if(!q2.data||q2.data.length<1000)break;
+      }
+      if(inc){
+        var novo=chg.filter(function(r){var o=FEED.rows.get(r.id);return !o||JSON.stringify(o)!==JSON.stringify(r)});
+        if(!novo.length)inc=false;
+        else{novo.forEach(function(r){FEED.rows.set(r.id,r)});rows=Array.from(FEED.rows.values()).sort(feedSort)}
+      }
+    }
+    if(ids.length&&!inc){
       for(var from=0;from<20000;from+=1000){
-        var k=await withTimeout(sb.from('checkins').select('*,likes(user_id),comments(id,user_id,body,created_at)').in('challenge_id',ids).order('created_at',{ascending:false}).order('id',{ascending:true}).range(from,from+999),30000);
+        var k=await withTimeout(sb.from('checkins').select(FEEDQ).in('challenge_id',ids).order('created_at',{ascending:false}).order('id',{ascending:true}).range(from,from+999),30000);
         if(stale())return;
         if(k.error)throw k.error;
         (k.data||[]).forEach(function(r){if(!seen.has(r.id)){seen.add(r.id);rows.push(r)}});
         if(!k.data||k.data.length<1000)break;
       }
+      FEED={rows:new Map(rows.map(function(r){return [r.id,r]})),key:key,max:'',full:Date.now()};
+      if(rows.length&&rows[0].updated_at===undefined)NOINC=true; // banco sem a coluna: continua baixando tudo, como antes
     }
+    if(!ids.length)FEED={rows:null,key:'',max:'',full:0};
+    rows.forEach(function(r){if(r.updated_at&&r.updated_at>FEED.max)FEED.max=r.updated_at});
     await loadRosters();if(stale())return;
     // nomes: só de quem aparece (antes baixava os nomes de todos os usuários do app)
     var want={};rows.forEach(function(p){want[p.user_id]=1;(p.comments||[]).forEach(function(c){want[c.user_id]=1})});if(S.me)want[S.me]=1;

@@ -1611,6 +1611,48 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'domingo→segunda: 10 min na semana velha e 20 min na nova; quarta→quinta: 10 + 10, contando 2 dias';
   });
 
+  // ---------- Menos consumo (supabase/17-consumo.sql) ----------
+  await teste('Mural incremental: Amém e comentário de outra pessoa baixam só a publicação que mudou; apagada some; mural de oração só pergunta se mudou', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), L = S.usuario('Lia'), g = S.caravana(L, 'G'); S.entrar(A, g); S.entrar(B, g); const c = S.jornada(g, 'Romanos em 16 dias');
+    const ks = []; for (let i = 0; i < 30; i++) ks.push(S.publicacao(i % 2 ? B : L, c, { created_at: new Date(Date.now() - (i + 1) * 6e4).toISOString() }));
+    const pa = await abrir(browser, base, S, A), pb = await abrir(browser, base, S, B), pl = await abrir(browser, base, S, L);
+    const cargas = (de, so) => S.log.slice(de).filter(x => x.me === A.id && x.t === 'checkins' && x.op === 'select' && x.f.startsWith('in') && (so === 'inc' ? x.f.includes('gte') : !x.f.includes('gte') && !x.f.includes('eq')));
+    let m = S.log.length;
+    await pb.evaluate(id => sb.from('likes').insert({ checkin_id: id }), ks[3].id);
+    await pa.evaluate(() => poll());
+    exige(cargas(m, 'inc').length === 1 && cargas(m, 'full').length === 0, 'Amém: ' + cargas(m, 'inc').length + ' incrementais, ' + cargas(m, 'full').length + ' completas');
+    exige(await pa.evaluate(id => S.posts.find(p => p.id === id).likes.length, ks[3].id) === 1, 'o Amém não apareceu para a Ana');
+    m = S.log.length;
+    await pb.evaluate(id => sb.from('comments').insert({ checkin_id: id, body: 'Glória!' }), ks[5].id);
+    await pa.evaluate(() => poll());
+    exige(cargas(m, 'inc').length === 1 && cargas(m, 'full').length === 0, 'comentário baixou tudo');
+    exige(await pa.evaluate(id => S.posts.find(p => p.id === id).cm.length, ks[5].id) === 1, 'o comentário não apareceu');
+    exige(await pa.evaluate(() => S.posts.length) === 30, 'perdeu publicações na carga incremental');
+    // a líder apaga um passo: a impressão muda, nada novo vem → baixa tudo e o passo some
+    m = S.log.length;
+    await pl.evaluate(id => sb.from('checkins').delete().eq('id', id), ks[7].id);
+    await pa.evaluate(() => poll());
+    exige(cargas(m, 'full').length === 1, 'apagado não provocou carga completa');
+    exige(!(await pa.evaluate(id => S.posts.some(p => p.id === id), ks[7].id)), 'passo apagado continua no mural');
+    // sem mudança nenhuma: nem pergunta pelas publicações
+    m = S.log.length; await pa.evaluate(() => poll());
+    exige(cargas(m, 'inc').length + cargas(m, 'full').length === 0, 'sem mudança baixou publicações');
+    // mural de oração: a cada 20 s só a impressão digital, até algo mudar
+    S.pedido(B, g, { body: 'Pela viagem' });
+    await pa.evaluate(() => { tab = 'chat'; CV = 'ora'; render() }); await pa.waitForSelector('.oc');
+    m = S.log.length; await pa.evaluate(() => loadPray()); await pa.evaluate(() => loadPray());
+    const ped = de => S.log.slice(de).filter(x => x.me === A.id && x.t === 'prayer_requests' && x.op === 'select').length;
+    exige(ped(m) === 0, 'mural de oração baixou os pedidos sem mudança: ' + ped(m));
+    S.pedido(B, g, { body: 'Pelo emprego' });
+    await pa.evaluate(() => loadPray());
+    exige(ped(m) === 1, 'pedido novo não foi baixado');
+    exige(/Pelo emprego/.test(await pa.textContent('main')), 'pedido novo não apareceu');
+    const erros = pa.erros.concat(pb.erros, pl.erros);
+    await Promise.all([pa, pb, pl].map(p => p.context().close()));
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'Amém e comentário: 1 carga só do que mudou; apagado: carga completa; sem mudança: nada; mural de oração: só a impressão';
+  });
+
   await browser.close(); srv.close();
   const ok = resultados.filter(r => r.ok).length;
   console.log('\n' + ok + ' de ' + resultados.length + ' testes passaram');

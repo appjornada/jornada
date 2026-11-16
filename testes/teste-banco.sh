@@ -227,4 +227,26 @@ N1=$($P -At -c "select count(*) from public.prayer_requests")
 $P -f supabase/15b-desfazer-meu-momento-de-oracao.sql >/dev/null && [ "$($P -At -c "select to_regclass('public.prayer_sessions') is null and to_regclass('public.prayer_shares') is null")" = t ] && ok "desfazer tira as tabelas"
 [ "$($P -At -c "select count(*) from public.prayer_requests")" = "$N1" ] && ok "desfazer não mexe no mural"
 $P -f supabase/15-meu-momento-de-oracao.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
+echo "15) Menos consumo (17-consumo.sql)"
+$P -f supabase/17-consumo.sql >/dev/null && $P -f supabase/17-consumo.sql >/dev/null && ok "script roda (2x)"
+K5=$(as ${U[0]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes,client_key) values('$C',current_date,1,5,'k-15') returning id")
+fails ${U[0]} "insert into public.checkins(challenge_id,read_date,chapters,study_minutes,client_key) values('$C',current_date,1,5,'k-15')" "mesma chave não duplica a publicação"
+velho(){ $P -c "set session_replication_role=replica; update public.checkins set updated_at=now()-interval '1 day' where id='$K5'" >/dev/null; }
+mudou(){ [ "$($P -At -c "select updated_at > now()-interval '1 minute' from public.checkins where id='$K5'")" = t ]; }
+velho; as ${U[1]} "insert into public.likes(checkin_id) values('$K5')" >/dev/null; mudou && ok "Amém de outra pessoa marca a publicação como mudada"
+velho; as ${U[1]} "delete from public.likes where checkin_id='$K5'" >/dev/null; mudou && ok "tirar o Amém também"
+velho; as ${U[2]} "insert into public.comments(checkin_id,body) values('$K5','Amém!')" >/dev/null; mudou && ok "comentário também"
+velho; as ${U[0]} "update public.checkins set note='nova' where id='$K5'" >/dev/null; mudou && ok "editar a publicação também"
+[ -z "$(as ${U[1]} "update public.checkins set updated_at=now() where id='$K5' returning 1")" ] && ok "quem não é dona continua sem editar a publicação"
+as ${U[1]} "update public.checkins set note='invasao' where id='$K5'" >/dev/null; [ "$($P -At -c "select note from public.checkins where id='$K5'")" = nova ] && ok "regras de edição continuam iguais (nada muda para quem não é dona)"
+as ${U[1]} "insert into public.likes(checkin_id) values('$K5')" >/dev/null
+[ "$(as ${U[0]} "delete from public.checkins where id='$K5' returning 1")" = 1 ] && ok "apagar publicação com Amém e comentário continua funcionando"
+PV=$(as ${U[0]} "select public.pray_version()"); [ ${#PV} = 32 ] && ok "impressão do mural de oração: 32 letras"
+[ "$(as ${U[0]} "select public.pray_version()")" = "$PV" ] && ok "sem mudança, a mesma impressão"
+R4=$(as ${U[1]} "insert into public.prayer_requests(group_id,body) values('$G','Pela família') returning id")
+[ "$(as ${U[0]} "select public.pray_version()")" != "$PV" ] && ok "muda com pedido novo"
+[ "$(as $FORA "select public.pray_version()")" != "$(as ${U[0]} "select public.pray_version()")" ] && ok "quem é de fora não enxerga os pedidos (impressão diferente)"
+if $P -At -c "set role anon; select public.pray_version()" >/dev/null 2>&1; then echo "  ✘ anônimo usou a função"; exit 1; else ok "quem não entrou no app não usa"; fi
+$P -f supabase/17b-desfazer-consumo.sql >/dev/null && [ "$($P -At -c "select count(*) from information_schema.columns where table_name='checkins' and column_name='updated_at'")" = 0 ] && ok "desfazer tira o carimbo e a função"
+$P -f supabase/17-consumo.sql >/dev/null && ok "pode aplicar de novo depois de desfazer"
 echo "TODOS OS TESTES DO BANCO PASSARAM"

@@ -46,6 +46,9 @@ function novoServidor(opts = {}) {
     return rows;
   }
   const err = (message, code) => ({ data: null, error: { message, code } });
+  // checkins.updated_at muda com edição, Amém e comentário (supabase/17-consumo.sql); sempre crescente, como o relógio do banco
+  let ultimo = 0; const agoraMs = () => { ultimo = Math.max(Date.now(), ultimo + 1); return new Date(ultimo).toISOString() };
+  const toque = cid => { if (DB.checkins[cid] && !O.semUpdatedAt) DB.checkins[cid].updated_at = agoraMs() };
   // Meu momento de oração: as mesmas regras do gatilho e das restrições do banco (supabase/15-meu-momento-de-oracao.sql)
   const sec = t => new Date(Math.floor(Date.parse(t) / 1000) * 1000).toISOString();
   const agora = () => new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
@@ -94,14 +97,14 @@ function novoServidor(opts = {}) {
         if (!member(me, chGroup(b.challenge_id)) || !ch || b.read_date < ch.start_date || b.read_date > ch.end_date) return err('new row violates row-level security policy for table "checkins"', '42501'); // ck_insert
         if (b.client_key && Object.values(DB.checkins).some(k => k.user_id === me && k.client_key === b.client_key)) return err('duplicate key value violates unique constraint "checkins_user_client_key"', '23505');
         if (O.semClientKey && 'client_key' in b) return err("Could not find the 'client_key' column of 'checkins' in the schema cache", 'PGRST204');
-        b.id = id(); b.created_at = new Date(Date.now() + Object.keys(DB.checkins).length).toISOString();
+        b.id = id(); b.created_at = new Date(Date.now() + Object.keys(DB.checkins).length).toISOString(); b.updated_at = agoraMs();
         DB.checkins[b.id] = b;
         if (O.falhas['checkins:insert:depois'] > 0) { O.falhas['checkins:insert:depois']--; return new Promise(() => {}) } // gravou, mas a resposta se perdeu
         return { data: q.returning ? (q.single ? b : [b]) : null, error: null };
       }
       if (t === 'challenges') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('jornadas'); if (!DB.gm.some(m => m.user_id === me && m.group_id === b.group_id && m.role === 'leader')) return err('rls', '42501'); b.id = id(); DB.challenges[b.id] = b; return { data: q.single ? b : [b], error: null } }
       if (t === 'messages') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.messages[b.id] = b; return { data: null, error: null } }
-      if (t === 'comments') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.comments[b.id] = b; return { data: null, error: null } }
+      if (t === 'comments') { b.id = id(); b.user_id = me; b.created_at = new Date().toISOString(); DB.comments[b.id] = b; toque(b.checkin_id); return { data: null, error: null } }
       if (t === 'prayer_requests') { // pr_insert
         if (!b.is_private && !member(me, b.group_id)) return err('new row violates row-level security policy for table "prayer_requests"', '42501');
         if (!b.body || b.body.length > 1500) return err('violates check constraint', '23514');
@@ -114,7 +117,7 @@ function novoServidor(opts = {}) {
         if (DB.pi.some(x => x.request_id === r.id && x.user_id === me)) return err('duplicate key value violates unique constraint "prayer_intercessions_pkey"', '23505');
         DB.pi.push({ request_id: r.id, user_id: me, prayed_at: new Date().toISOString(), praying: true }); return { data: null, error: null };
       }
-      if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); return { data: null, error: null } }
+      if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); toque(b.checkin_id); return { data: null, error: null } }
       if (t === 'prayer_sessions') { // ps_insert + gatilho ps_regras
         const r = { id: b.id || id(), user_id: b.user_id || me, status: b.status || 'active', started_at: sec(b.started_at), ended_at: b.ended_at ? sec(b.ended_at) : null, created_at: new Date().toISOString() };
         if (r.user_id !== me) return err('new row violates row-level security policy for table "prayer_sessions"', '42501');
@@ -172,6 +175,7 @@ function novoServidor(opts = {}) {
         return { data: rows.map(r => ({ id: r.id })), error: null };
       }
       rows.forEach(r => Object.assign(DB[t === 'checkins' ? 'checkins' : t][r.id], q.body));
+      if (t === 'checkins') rows.forEach(r => toque(r.id)); // gatilho ck_updated_at (supabase/17-consumo.sql)
       return { data: rows.map(r => ({ id: r.id })), error: null };
     }
     if (q.op === 'delete') {
@@ -185,7 +189,7 @@ function novoServidor(opts = {}) {
         return { data: q.returning ? rows.map(r => ({ id: r.id })) : null, error: null };
       }
       if (t === 'prayer_intercessions') { DB.pi = DB.pi.filter(x => !(x.user_id === me && applyFilters([x], q.filters).length)); return { data: null, error: null } } // pi_delete
-      if (t === 'likes') { DB.likes = DB.likes.filter(l => !(l.user_id === me && q.filters.some(f => f[1] === 'checkin_id' && f[2] === l.checkin_id))); return { data: null, error: null } }
+      if (t === 'likes') { q.filters.forEach(f => { if (f[1] === 'checkin_id' && DB.likes.some(l => l.user_id === me && l.checkin_id === f[2])) toque(f[2]) }); DB.likes = DB.likes.filter(l => !(l.user_id === me && q.filters.some(f => f[1] === 'checkin_id' && f[2] === l.checkin_id))); return { data: null, error: null } }
       if (t === 'checkins') { // ck_delete (a própria) + ck_delete_leader (a líder da caravana; supabase/9-lider-apaga-passo.sql)
         const lider = k => { const c = DB.challenges[k.challenge_id]; return !O.semLiderApaga && c && DB.gm.some(m => m.group_id === c.group_id && m.user_id === me && m.role === 'leader') };
         const rows = applyFilters(Object.values(DB.checkins), q.filters).filter(k => k.user_id === me || lider(k));
@@ -204,6 +208,7 @@ function novoServidor(opts = {}) {
       const dados = JSON.stringify([ks, visible('challenges', me).filter(c => gs.includes(String(c.group_id))), DB.gm.filter(m => gs.includes(String(m.group_id)) && member(me, m.group_id)), visible('profiles', me)]);
       return { data: crypto.createHash('md5').update(dados).digest('hex'), error: null };
     }
+    if (name === 'pray_version') return O.semPrayVersion ? err('Could not find the function public.pray_version without parameters in the schema cache', 'PGRST202') : { data: crypto.createHash('md5').update(JSON.stringify([visible('prayer_requests', me), visible('prayer_intercessions', me)])).digest('hex'), error: null };
     if (name === 'can_create') return O.semListaCriadores ? err('Could not find the function public.can_create without parameters in the schema cache', 'PGRST202') : { data: DB.criadores.has(me), error: null };
     if (name === 'create_group') { if (!O.semListaCriadores && !DB.criadores.has(me)) return SO_LIDER('caravanas'); const g = { id: id(), name: a.p_name, invite_code: crypto.randomBytes(3).toString('hex').toUpperCase() }; DB.groups[g.id] = g; DB.gm.push({ group_id: g.id, user_id: me, role: 'leader' }); return { data: g.id, error: null } }
     if (name === 'join_group') { const g = Object.values(DB.groups).find(x => x.invite_code === String(a.p_code).trim().toUpperCase()); if (!g) return err('Código inválido'); if (!member(me, g.id)) DB.gm.push({ group_id: g.id, user_id: me, role: 'member' }); return { data: g.id, error: null } }
@@ -232,7 +237,7 @@ function novoServidor(opts = {}) {
   function criador(u) { DB.criadores.add(u.id) }
   function entrar(u, g) { return rpc(u.id, 'join_group', { p_code: g.invite_code }) }
   function jornada(g, nome, ini = -3, fim = 12) { const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) }; const c = { id: id(), group_id: g.id, name: nome, description: '', start_date: d(ini), end_date: d(fim), goal_per_week: 7 }; DB.challenges[c.id] = c; return c }
-  function publicacao(u, c, extra = {}) { const k = Object.assign({ id: id(), user_id: u.id, challenge_id: c.id, read_date: today(), book: 'Romanos', ref: '1', chapters: 1, study_minutes: 10, photo_path: 'antigo/' + id() + '.jpg', media_type: 'image', created_at: new Date().toISOString() }, extra); DB.checkins[k.id] = k; return k }
+  function publicacao(u, c, extra = {}) { const k = Object.assign({ id: id(), user_id: u.id, challenge_id: c.id, read_date: today(), book: 'Romanos', ref: '1', chapters: 1, study_minutes: 10, photo_path: 'antigo/' + id() + '.jpg', media_type: 'image', created_at: new Date().toISOString() }, extra); if (!k.updated_at) k.updated_at = k.created_at; DB.checkins[k.id] = k; return k }
   function pedido(u, g, extra = {}) { const r = Object.assign({ id: id(), group_id: g.id, user_id: u.id, title: null, body: 'Pedido de ' + u.name, is_private: false, answered_at: null, testimony: null, created_at: new Date().toISOString() }, extra); DB.prayer_requests[r.id] = r; return r }
   return { O, DB, log, handle, usuario, caravana, criador, entrar, jornada, publicacao, pedido, member };
 }

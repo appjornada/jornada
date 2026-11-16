@@ -250,6 +250,29 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .dot-on{width:9px;height:9px;border-radius:50%;background:#2e9e5b;flex:none;animation:oracao-pulso 2s infinite}
 @keyframes oracao-pulso{0%{box-shadow:0 0 0 0 rgba(46,158,91,.5)}70%{box-shadow:0 0 0 8px rgba(46,158,91,0)}100%{box-shadow:0 0 0 0 rgba(46,158,91,0)}}
 @media (prefers-reduced-motion:reduce){.dot-on{animation:none}}
+/* Meu momento de oração */
+.mo .mo-h b{font-size:17px}.mo .mo-h .link{font-size:14px;padding:8px 0;min-height:36px}
+.mo-run{text-align:center;margin:12px 0 2px}
+.mo-on{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.mo-clk{font:700 46px/1.1 var(--ft);font-variant-numeric:tabular-nums;letter-spacing:.02em;margin:6px 0 2px}
+.mo-rec{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--vt);font-size:15px}
+.mo-res{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.mo-res>div{background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:8px 12px}
+.mo-res small{display:block;font-size:13px;color:var(--mut)}.mo-res b{font-size:18px;font-variant-numeric:tabular-nums}
+.mo-st{margin-top:10px;font-size:15px}
+.mo-ok{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--vt);font-weight:700}
+.mo-pend{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px dashed var(--mut);font-size:14px}.mo-pend .link{font-size:14px;font-weight:700}
+.mo-shs{margin-top:6px}.mo-shs .link{font-size:14px}
+.btn.o.mo-c{text-align:center;font-weight:700}
+.mo-ft{font-size:13px;color:var(--mut);margin-top:10px}.mo-er{margin-top:8px}
+.mo-it{border-top:1px solid var(--bd);padding:12px 0}.mo-it .mo-d{font-size:16px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mo-ia{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;margin-top:6px}.mo-ia .link{font-size:14px;padding:6px 0}.mo-ia .mo-shs{margin:0;font-size:14px}
+.mo-tag{font-size:13px;color:var(--mut)}.mo-list{margin-top:12px}
+#mopill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:8px;background:var(--card);color:var(--tx);border:2px solid var(--ac);border-radius:99px;padding:8px 16px;font:600 15px var(--ft);box-shadow:var(--sh),0 4px 14px #0003;min-height:44px;white-space:nowrap;cursor:pointer}
+#mopill[hidden]{display:none}#mopill b{font-variant-numeric:tabular-nums}
+body.mo-pad{padding-bottom:170px}
+.msg.sys{align-self:center;max-width:94%;background:var(--vt);border-style:dashed;border-radius:12px;text-align:center;font-size:14px}
+.msg.sys .link{font-size:13px;margin-left:4px}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:none;margin:0}
 body:not([data-tab="feed"]) #jsw,body:not([data-tab="feed"]) #map,body:not([data-tab="feed"]) #cd,body:not([data-tab="feed"]) #stats{display:none!important}
 body:not([data-tab="feed"]) header{padding-bottom:4px}
@@ -1031,7 +1054,7 @@ var PED='🙏 Pedido de oração: ';
 function isPed(m){return (m.body||'').indexOf(PED)===0}
 var CV='ora';try{CV=localStorage.getItem('pd_cv')==='chat'?'chat':'ora'}catch(e){}
 function chat(){
-  if(!S.grp)return noCh();
+  if(!S.grp)return moCard()+noCh();
   var seg='<div class="seg cvs">'+[['ora','🙏 Mural de oração'],['chat','💬 Chat']].map(function(x){return '<button data-cv="'+x[0]+'" class="'+(CV===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   if(CV==='ora')return seg+mural();
   if(!S.chs.length)return seg+noCh();
@@ -1059,7 +1082,7 @@ function mural(){
   var L=orRows(OR.f),vazio={ped:pes?'Você não tem pedidos abertos. Escreva um: pode ser só para você ou para a caravana orar junto.':'Nenhum pedido aberto na caravana. Se precisar de oração, peça aqui. 🙏',orando:'Toque em 🙏 Orar num pedido e ele aparece aqui, para você lembrar de orar.',ate:'Quando Deus responder um pedido, o testemunho aparece aqui. 🙌'}[OR.f];
   var lista=!OR.ok?'<div class="card sub">'+(OR.err?'<span class="err">Não foi possível abrir o mural. '+esc(OR.err)+'</span>':'Carregando os pedidos…')+'</div>':L.length?L.map(orCard).join(''):'<div class="card sub oempty">'+vazio+'</div>';
   return '<div class="card orv"><div class="orv-t">“Orem uns pelos outros… A oração de um justo é poderosa e eficaz.”</div><b>Tiago 5:16</b></div>'+
-    (S.chs.length?prayCard():'')+
+    moCard()+(S.chs.length?prayCard():'')+
     '<div class="otabs">'+[['car','Caravana'],['pes','Meus pedidos']].map(function(x){return '<button data-orv="'+x[0]+'" class="'+(OR.v===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'+
     '<div class="ofl">'+fl+'</div>'+
     (OR.f==='ped'?'<button class="btn onew" data-ornew="1">✍️ '+(pes?'Escrever um pedido':'Pedir oração à caravana')+'</button>':'')+
@@ -1184,8 +1207,309 @@ function orWho(id){
   showSheet('<h1>🙏 Quem orou ('+W.length+')</h1><div class="sub">'+esc(r.title||r.body.slice(0,60)+(r.body.length>60?'…':''))+'</div>'+lista+
     '<button class="btn g" id="x">Fechar</button>');
 }
+// ---- Meu momento de oração: oração individual com cronômetro (supabase/15-meu-momento-de-oracao.sql) ----
+// • PRIVADO: o banco só deixa a própria pessoa ler as suas orações. Duração, totais e dias não vão para
+//   ranking, mural, chat nem para outra pessoa (nem a líder). Compartilhar é opcional, oração por oração,
+//   e mostra só o nome e a hora em que começou.
+// • O tempo vem SEMPRE dos horários gravados (início e fim). O relógio na tela só mostra a diferença:
+//   bloquear a tela, trocar de app, recarregar ou fechar o app não muda a conta. Nada é gravado a cada segundo:
+//   só ao começar, encerrar, descartar ou excluir.
+// • O que ainda não chegou ao servidor fica guardado neste aparelho, separado por conta (pd_mo_<id da pessoa>),
+//   e é reenviado sozinho quando a internet volta. O id da oração é criado aqui: reenviar nunca duplica.
+// • Dias e semanas pelo relógio do celular, como a "leitura de hoje" do app; semana de segunda a domingo.
+//   Uma oração que passa da meia-noite conta em cada dia a parte que caiu nele; no histórico é uma só.
+// • Duração: segundos inteiros; na tela sempre arredondada para baixo (45 s · 12 min · 1 h 05 min).
+var MO={act:null,q:{},rows:[],sh:{},ok:false,err:'',at:0,more:false,busy:false,syncP:null,last:null,shBusy:{},retry:null,tk:null,ver:0};
+var MOMAX=864e5,MOREV=2*36e5,MOPG=60; // até 24 h por oração; a partir de 2 h abertas pergunta a hora em que terminou
+var DSEM=['dom','seg','ter','qua','qui','sex','sáb'];
+function moKey(){return 'pd_mo_'+S.me}
+function moSave(){if(!S.me)return;try{localStorage.setItem(moKey(),JSON.stringify({act:MO.act&&{id:MO.act.id,s:MO.act.s,srv:MO.act.srv},q:MO.q}))}catch(e){}}
+function moLocal(rec){
+  var o=null;try{o=JSON.parse(localStorage.getItem(moKey())||'null')}catch(e){}
+  MO.q=o&&o.q&&typeof o.q==='object'?o.q:{};
+  MO.act=o&&o.act&&o.act.id?{id:o.act.id,s:+o.act.s,srv:!!o.act.srv,rec:!!rec}:null;
+  moTick();
+}
+function moReset(){clearInterval(MO.tk);clearTimeout(MO.retry);MO={act:null,q:{},rows:[],sh:{},ok:false,err:'',at:0,more:false,busy:false,syncP:null,last:null,shBusy:{},retry:null,tk:null,ver:0};moPill()}
+function moUuid(){try{if(crypto.randomUUID)return crypto.randomUUID()}catch(e){}var b=new Uint8Array(16);crypto.getRandomValues(b);b[6]=b[6]&15|64;b[8]=b[8]&63|128;var h=Array.from(b,function(x){return (x<16?'0':'')+x.toString(16)}).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}
+function moSec(t){return Math.floor(t/1000)*1000}
+function p2(n){return (n<10?'0':'')+n}
+function moDur(t){t=Math.max(0,Math.floor(t));if(t<60)return t+' s';var m=Math.floor(t/60);if(m<60)return m+' min';var h=Math.floor(m/60);m=m%60;return h+' h'+(m?' '+p2(m)+' min':'')}
+function moClk(ms){var t=Math.max(0,Math.floor(ms/1000));return p2(Math.floor(t/3600))+':'+p2(Math.floor(t%3600/60))+':'+p2(t%60)}
+function moHora(t){var d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())}
+function moOntem(){var y=new Date();y.setDate(y.getDate()-1);return iso(y)}
+function moDia(t){var d=new Date(t),k=iso(d);if(k===TODAY)return 'Hoje';if(k===moOntem())return 'Ontem';return DSEM[d.getDay()]+', '+d.getDate()+' '+MES[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'')}
+function moQuando(t){var d=moDia(t);return (d==='Hoje'||d==='Ontem'?d.toLowerCase():'em '+d)+' às '+moHora(t)}
+// orações concluídas: as do servidor + as encerradas aqui que ainda não chegaram (pendentes), sem as descartadas ou excluídas
+function moDone(){
+  var m={};
+  MO.rows.forEach(function(r){if(r.status==='done')m[r.id]={id:r.id,s:Date.parse(r.started_at),e:Date.parse(r.ended_at),pend:false}});
+  for(var k in MO.q){var p=MO.q[k];if(p.k==='del')delete m[k];else if(p.k==='end'&&!m[k])m[k]={id:k,s:p.s,e:p.e,pend:true}}
+  return Object.keys(m).map(function(k){return m[k]}).sort(function(a,b){return b.s-a.s});
+}
+// segundos de cada dia: uma oração que passa da meia-noite conta em cada dia a parte que caiu nele
+function moDays(s,e,o){var t=s;while(t<e){var d=new Date(t),nx=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime(),f=Math.min(e,nx),k=iso(d);o[k]=(o[k]||0)+Math.round((f-t)/1000);t=f}return o}
+function moWeek(){var d=new Date(),w=(d.getDay()+6)%7;return iso(new Date(d.getFullYear(),d.getMonth(),d.getDate()-w))} // segunda-feira desta semana
+function moStats(){
+  var by={},w0=moWeek(),sem=0,dias=0;moDone().forEach(function(x){moDays(x.s,x.e,by)});
+  for(var k in by)if(k>=w0&&k<=TODAY&&by[k]>0){sem+=by[k];dias++}
+  return{hoje:by[TODAY]||0,sem:sem,dias:dias}
+}
+function moPendN(){return Object.keys(MO.q).length}
+function moCard(){
+  var a=MO.act,st=moStats(),np=moPendN(),h='<div class="card mo" id="mo"><div class="row mo-h"><b class="grow">🕊️ Meu momento de oração</b><button class="link" data-mo="hist">Meu histórico</button></div>';
+  if(a){
+    h+='<div class="mo-run"><div class="mo-on"><span class="dot-on" aria-hidden="true"></span>'+(a.rec?'Oração em andamento':'Em oração')+'</div>'+
+      '<div class="mo-clk" data-mot role="timer">'+moClk(Date.now()-a.s)+'</div>'+
+      '<div class="sub">Começou '+moQuando(a.s)+'</div></div>';
+    if(a.rec)h+='<div class="mo-rec">Esta oração ficou aberta desde '+moQuando(a.s)+'. Você quer continuar ou encerrar?</div>'+
+      '<button class="btn" data-mo="cont">Continuar orando</button><button class="btn o mo-c" data-mo="end">Encerrar oração</button>';
+    else h+='<button class="btn" data-mo="end">Encerrar oração</button>';
+    h+='<button class="btn g" data-mo="disc">'+(a.rec?'Descartar esta oração':'Descartar (comecei sem querer)')+'</button>';
+  }else{
+    h+='<div class="sub">Reserve um tempo para estar com Deus.</div>'+moLast()+
+      '<button class="btn" data-mo="start">🙏 '+(MO.last?'Começar outro momento':'Começar a orar')+'</button>';
+  }
+  h+='<div class="mo-res"><div><small>Hoje</small><b>'+(st.hoje?moDur(st.hoje):'—')+'</b></div><div><small>Nesta semana</small><b>'+(st.sem?moDur(st.sem):'—')+'</b></div></div>'+
+    '<div class="mo-st">'+(a?'🟢 Em oração agora':st.hoje?'✓ Oração registrada hoje':'Seu momento de hoje pode começar agora.')+(st.dias?' · '+st.dias+(st.dias>1?' dias':' dia')+' nesta semana':'')+'</div>';
+  if(np&&!(MO.last&&MO.q[MO.last]))h+='<div class="mo-pend" role="status">⏳ '+(np>1?np+' registros pendentes':'1 registro pendente')+' de sincronização. Fica guardado neste aparelho até a internet voltar. <button class="link" data-mo="retry">Tentar agora</button></div>';
+  if(MO.err)h+='<div class="sub mo-er">'+esc(MO.err)+'</div>';
+  return h+'<div class="mo-ft">🔒 Só você vê estes tempos. Semana de segunda a domingo.</div></div>';
+}
+// confirmação do momento que acabou de terminar
+function moLast(){
+  var id=MO.last;if(!id)return '';var x=moDone().filter(function(y){return y.id===id})[0];if(!x)return '';
+  var d=moDur((x.e-x.s)/1000);
+  if(MO.q[id])return '<div class="mo-pend" role="status">⏳ Seu momento de oração ('+d+') está guardado neste aparelho e <b>pendente de sincronização</b>. Ele será enviado quando a internet voltar. <button class="link" data-mo="retry">Tentar agora</button></div>';
+  return '<div class="mo-ok" role="status">✓ Seu momento de oração foi registrado · '+d+'</div>'+moShareBtn(id,1);
+}
+function moShareBtn(id,big){
+  if(!S.grp&&!MO.sh[id])return '';
+  if(MO.shBusy[id])return '<div class="sub mo-shs">Um instante…</div>';
+  if(MO.sh[id])return '<div class="sub mo-shs">👥 Compartilhado com a caravana · <button class="link" data-mo="unsh:'+id+'">Remover compartilhamento</button></div>';
+  return big?'<button class="btn o mo-c" data-mo="share:'+id+'">👥 Compartilhar este momento</button><div class="sub mo-shs">Se quiser: a caravana vê só que você reservou um momento de oração e a hora em que começou. O tempo não aparece.</div>'
+    :'<button class="link" data-mo="share:'+id+'">👥 Compartilhar</button>';
+}
+// indicador discreto em qualquer tela enquanto a oração está aberta
+function moVis(){return tab==='chat'&&(CV==='ora'||!S.grp)}
+function moPill(){
+  var e=document.getElementById('mopill'),a=MO.act,on=!!a&&!!S.me&&!moVis()&&!document.body.classList.contains('gate');
+  document.body.classList.toggle('mo-pad',on);
+  if(!on){if(e)e.hidden=true;return}
+  if(!e){e=document.createElement('button');e.id='mopill';e.setAttribute('data-mo','go');document.body.appendChild(e)}
+  var tx=(a.rec?'Oração em andamento':'Em oração');
+  e.hidden=false;e.setAttribute('aria-label',tx+'. Toque para abrir.');
+  var h='<span class="dot-on" aria-hidden="true"></span>'+tx+' · <b data-mot>'+moClk(Date.now()-a.s)+'</b>';if(e.innerHTML!==h)e.innerHTML=h;
+}
+function moTick(){
+  if(!MO.act){clearInterval(MO.tk);MO.tk=null;moPill();return}
+  if(!MO.tk)MO.tk=setInterval(function(){if(!MO.act){clearInterval(MO.tk);MO.tk=null;return}if(document.hidden)return;var t=moClk(Date.now()-MO.act.s);document.querySelectorAll('[data-mot]').forEach(function(e){if(e.textContent!==t)e.textContent=t})},1000);
+  moPill();
+}
+function moChange(){MO.ver++;moSave();moTick()}
+function moStart(){
+  if(MO.act||!S.me)return; // duplo toque: a segunda vez já encontra a oração aberta
+  var s=moSec(Date.now()),id=moUuid();
+  MO.act={id:id,s:s,srv:false,rec:false};MO.q[id]={k:'start',id:id,s:s};MO.last=null;MO.t0=Date.now();moChange();render();moSync();
+}
+function moCont(){if(MO.act){MO.act.rec=false;render()}}
+function moEndAsk(){var a=MO.act;if(!a||Date.now()-(MO.t0||0)<1500)return; // segundo toque do "Começar" não encerra
+  if(a.rec||Date.now()-a.s>=MOREV)moReview();else moFinish(Date.now())}
+function moFinish(e){
+  var a=MO.act;if(!a)return;
+  e=Math.max(moSec(e),a.s+1000);
+  MO.q[a.id]={k:'end',id:a.id,s:a.s,e:e,srv:a.srv};MO.act=null;MO.last=a.id;moChange();closeSheet(true);render();
+  moSync().then(function(){if(MO.last!==a.id)return;toast(MO.q[a.id]?'⏳ Guardado no aparelho. Será enviado quando a internet voltar.':'🙏 Seu momento de oração foi registrado')});
+}
+function moDisc(){
+  var a=MO.act;if(!a)return;
+  if(!confirm('Descartar esta oração? Ela não será registrada nem contada.'))return;
+  MO.q[a.id]={k:'del',id:a.id};MO.act=null;moChange();closeSheet(true);render();toast('Oração descartada');moSync();
+}
+function moDel(id){
+  if(!confirm('Excluir esta oração do seu histórico?'+(MO.sh[id]?' O compartilhamento com a caravana também sai.':'')+' Não dá para desfazer.'))return;
+  MO.q[id]={k:'del',id:id};if(MO.last===id)MO.last=null;moChange();render();toast('Oração excluída');moSync().then(function(){if(!MO.q[id]){delete MO.sh[id];CHT.shAt=0;render()}});
+}
+// encerrar uma oração esquecida aberta: a pessoa diz quando terminou (nunca antes do início nem no futuro)
+function dtl(t){return new Date(t-new Date(t).getTimezoneOffset()*6e4).toISOString().slice(0,16)}
+function moReview(){
+  var a=MO.act;if(!a)return;var now=Date.now(),lim=now-a.s>MOMAX;
+  showSheet('<h1>🙏 Encerrar oração</h1><div class="sub">Começou '+moQuando(a.s)+'.</div><h2>Quando você terminou de orar?</h2>'+
+    '<label class="chk"><input type="radio" name="moq" id="moag"'+(lim?' disabled':' checked')+'> Agora, às '+moHora(now)+' <span class="sub">('+moDur((now-a.s)/1000)+')</span></label>'+
+    (lim?'<div class="sub">Já passaram mais de 24 horas desde o início. Escolha a hora em que você terminou.</div>':'')+
+    '<label class="chk"><input type="radio" name="moq" id="moou"'+(lim?' checked':'')+'> Em outro horário</label>'+
+    '<input type="datetime-local" id="moet" aria-label="Dia e hora em que terminou" min="'+dtl(a.s)+'" max="'+dtl(Math.min(now,a.s+MOMAX))+'" style="margin-top:8px">'+
+    '<div class="sub" id="modur" aria-live="polite"></div><div class="err" id="moer" role="alert"></div>'+
+    '<button class="btn" data-mo="fim">Registrar oração</button><button class="btn g" data-mo="disc">Descartar esta oração</button><button class="btn g" id="x">Voltar</button>');
+}
+function moRevVal(){
+  var a=MO.act;if(!a)return{err:'Esta oração já foi encerrada.'};
+  var now=Date.now(),ag=document.getElementById('moag');
+  if(ag&&ag.checked)return now-a.s>MOMAX?{err:'Uma oração pode ter no máximo 24 horas. Escolha a hora em que terminou.'}:{e:now};
+  var v=val('moet');if(!v)return{err:'Escolha o dia e a hora em que você terminou.'};
+  var e=new Date(v).getTime();if(isNaN(e))return{err:'Horário inválido.'};
+  if(e<=a.s)return{err:'O término precisa ser depois do início ('+moHora(a.s)+').'};
+  if(e>now+60e3)return{err:'O término não pode estar no futuro.'};
+  if(e-a.s>MOMAX)return{err:'Uma oração pode ter no máximo 24 horas.'};
+  return{e:Math.min(e,now)};
+}
+function moRevPrev(){var r=moRevVal(),d=document.getElementById('modur'),er=document.getElementById('moer');if(er)er.textContent='';if(d)d.textContent=r.e&&MO.act?'Duração: '+moDur((moSec(r.e)-MO.act.s)/1000):''}
+function moFim(){var r=moRevVal();if(r.err){var er=document.getElementById('moer');if(er)er.textContent=r.err;return}moFinish(r.e)}
+// ---- envio ao servidor (fila guardada no aparelho; cada envio pode ser repetido sem duplicar) ----
+function moNet(e){return !e||!e.code||!/^([0-9A-Z]{5}|PGRST\d+)$/.test(String(e.code))} // sem código do banco = problema de internet
+function moWhy(e){return String(e&&e.code)==='23514'?'O horário não foi aceito: o término precisa ser depois do início e a oração pode ter até 24 horas.':why(e)}
+async function moCall(q){try{return await withTimeout(q,15000)}catch(e){return{error:{message:String(e&&e.message||e)}}}}
+function moRow(x){if(!x)return;var i=MO.rows.findIndex(function(r){return r.id===x.id});if(i>=0)MO.rows[i]=x;else MO.rows.unshift(x)}
+function moGone(id){MO.rows=MO.rows.filter(function(r){return r.id!==id});delete MO.sh[id]}
+var MOC='id,status,started_at,ended_at';
+async function moOp(op){
+  var r,iso2=function(t){return new Date(t).toISOString()};
+  if(op.k==='start'){
+    r=await moCall(sb.from('prayer_sessions').insert({id:op.id,started_at:iso2(op.s),status:'active'}).select(MOC));
+    if(!r.error){var x=r.data&&r.data[0];moRow(x);if(x&&MO.act&&MO.act.id===op.id){MO.act.srv=true;MO.act.s=Date.parse(x.started_at)}return 'ok'}
+    if(moNet(r.error))return 'net';
+    if(r.error.code!=='23505')return moWhy(r.error);
+    var g=await moCall(sb.from('prayer_sessions').select(MOC).eq('id',op.id));
+    if(g.error)return moNet(g.error)?'net':moWhy(g.error);
+    if(g.data&&g.data.length){moRow(g.data[0]);if(MO.act&&MO.act.id===op.id)MO.act.srv=true;return 'ok'} // já tinha chegado (a resposta se perdeu)
+    // já havia outra oração aberta (outro aparelho ou aba): fica valendo a que já estava
+    var o=await moCall(sb.from('prayer_sessions').select(MOC).eq('user_id',S.me).eq('status','active').limit(1));
+    if(o.error)return moNet(o.error)?'net':moWhy(o.error);
+    var y=o.data&&o.data[0];
+    if(y){moRow(y);if(MO.act&&MO.act.id===op.id){MO.act={id:y.id,s:Date.parse(y.started_at),srv:true,rec:false};moTick();toast('Você já tinha uma oração aberta, desde '+moQuando(Date.parse(y.started_at))+'. Ela continua aqui.')}}
+    return 'ok';
+  }
+  if(op.k==='end'){
+    var row={status:'done',ended_at:iso2(op.e)};
+    for(var i=0;i<2;i++){
+      r=await moCall(sb.from('prayer_sessions').update(row).eq('id',op.id).select(MOC));
+      if(r.error)return moNet(r.error)?'net':moWhy(r.error);
+      if(r.data&&r.data.length){moRow(r.data[0]);return 'ok'} // se outro aparelho encerrou antes, fica o primeiro registro
+      if(op.srv){moGone(op.id);if(MO.last===op.id)MO.last=null;toast('Esta oração tinha sido descartada em outro aparelho.');return 'ok'}
+      // o começo nunca chegou ao servidor (sem internet): manda a oração inteira, já concluída
+      r=await moCall(sb.from('prayer_sessions').insert({id:op.id,started_at:iso2(op.s),status:'done',ended_at:row.ended_at}).select(MOC));
+      if(!r.error){moRow(r.data&&r.data[0]);return 'ok'}
+      if(moNet(r.error))return 'net';
+      if(r.error.code!=='23505')return moWhy(r.error);
+    }
+    return 'Não foi possível salvar. Tente de novo.';
+  }
+  if(op.k==='del'){
+    r=await moCall(sb.from('prayer_sessions').delete().eq('id',op.id));
+    if(r.error)return moNet(r.error)?'net':moWhy(r.error);
+    moGone(op.id);return 'ok';
+  }
+  return 'ok';
+}
+function moSync(){
+  if(MO.syncP)return MO.syncP;
+  if(!S.me||!moPendN())return Promise.resolve();
+  MO.syncP=(async function(){
+    var tent={},net=false,err='';
+    try{
+      for(var n=0;n<30;n++){
+        var ids=Object.keys(MO.q).filter(function(k){return !tent[k]}).sort(function(x,y){return (MO.q[x].s||0)-(MO.q[y].s||0)});
+        if(!ids.length)break;
+        var k=ids[0],op=MO.q[k];tent[k]=1;
+        var r=await moOp(op);
+        if(r==='net'){net=true;break}
+        if(MO.q[k]===op){if(r==='ok')delete MO.q[k];else{op.err=r;err=r}}
+        else delete tent[k]; // mudou durante o envio (ex.: encerrou enquanto o começo subia): manda a versão nova
+        MO.ver++;moSave();
+      }
+    }finally{MO.syncP=null}
+    MO.err=err?'Não foi possível salvar: '+err:'';
+    clearTimeout(MO.retry);MO.retry=null;
+    if(moPendN())MO.retry=setTimeout(moSync,net?20000:60000);
+    moSave();moTick();if(loaded)render();
+  })();
+  return MO.syncP;
+}
+// ---- leitura (só as próprias orações; poucas linhas e só quando precisa) ----
+async function moLoad(force){
+  if(!S.me||MO.busy)return;if(!force&&MO.ok&&Date.now()-MO.at<60e3)return;
+  MO.busy=true;var v=MO.ver,me=S.me;
+  try{
+    var r=await moCall(sb.from('prayer_sessions').select(MOC).eq('user_id',me).order('started_at',{ascending:false}).limit(MOPG));
+    if(S.me!==me)return;
+    if(r.error){MO.err=moNet(r.error)?'Sem conexão agora: o resumo mostra o que está neste aparelho.':'Não foi possível abrir seu histórico. '+moWhy(r.error);return}
+    var sh=await moCall(sb.from('prayer_shares').select('session_id,group_id').eq('user_id',me).limit(1000));
+    if(S.me!==me)return;
+    if(v!==MO.ver){MO.at=0;return} // mudou algo aqui enquanto lia: lê de novo depois
+    MO.err='';MO.rows=r.data||[];MO.more=MO.rows.length>=MOPG;MO.ok=true;MO.at=Date.now();
+    if(!sh.error){MO.sh={};(sh.data||[]).forEach(function(x){MO.sh[x.session_id]=x.group_id})}
+    moFit();
+  }finally{MO.busy=false;if(loaded)render()}
+}
+// junta o que está no aparelho com o que está no servidor (outro aparelho pode ter começado ou encerrado)
+function moFit(){
+  var sa=MO.rows.filter(function(r){return r.status==='active'})[0]||null,a=MO.act;
+  if(a&&MO.q[a.id])return; // ainda enviando: o envio decide
+  if(a){
+    if(sa&&sa.id===a.id){a.s=Date.parse(sa.started_at);a.srv=true;return}
+    if(!a.srv){MO.q[a.id]={k:'start',id:a.id,s:a.s};moSave();moSync();return}
+    MO.act=null; // foi encerrada ou descartada em outro aparelho
+  }
+  if(sa&&!MO.q[sa.id])MO.act={id:sa.id,s:Date.parse(sa.started_at),srv:true,rec:true};
+  moSave();moTick();
+}
+async function moMore(){
+  if(MO.busy)return;MO.busy=true;
+  try{
+    var r=await moCall(sb.from('prayer_sessions').select(MOC).eq('user_id',S.me).order('started_at',{ascending:false}).range(MO.rows.length,MO.rows.length+MOPG-1));
+    if(r.error){toast(moNet(r.error)?'Sem conexão. Tente de novo.':'Não foi possível carregar. '+moWhy(r.error));return}
+    (r.data||[]).forEach(function(x){if(!MO.rows.some(function(y){return y.id===x.id}))MO.rows.push(x)});MO.more=(r.data||[]).length>=MOPG;
+  }finally{MO.busy=false;render()}
+}
+async function moShare(id){
+  if(!S.grp||MO.shBusy[id]||MO.sh[id])return;MO.shBusy[id]=1;render();
+  var r=await moCall(sb.from('prayer_shares').insert({session_id:id,group_id:S.grp.id}));
+  delete MO.shBusy[id];
+  if(r.error&&r.error.code!=='23505'){render();toast(moNet(r.error)?'Sem conexão. O momento não foi compartilhado; tente de novo quando a internet voltar.':'Não foi possível compartilhar. '+moWhy(r.error));return}
+  MO.sh[id]=S.grp.id;CHT.shAt=0;render();toast('👥 Compartilhado com a caravana');
+}
+async function moUnshare(id){
+  if(MO.shBusy[id])return;MO.shBusy[id]=1;render();
+  var r=await moCall(sb.from('prayer_shares').delete().eq('session_id',id));
+  delete MO.shBusy[id];
+  if(r.error){render();toast(moNet(r.error)?'Sem conexão. Tente de novo quando a internet voltar.':'Não foi possível remover. '+moWhy(r.error));return}
+  delete MO.sh[id];CHT.shAt=0;render();toast('Compartilhamento removido');
+  if(tab==='chat'&&CV==='chat')loadChat(true);
+}
+// histórico privado
+function moHist(){showSheet(moHistHtml());moLoad()}
+function moHistHtml(){
+  var L=moDone(),st=moStats();
+  var it=L.length?L.map(function(x){
+    var dd=iso(new Date(x.e))!==iso(new Date(x.s));
+    return '<div class="mo-it" data-moit="'+x.id+'"><div class="row"><div class="grow"><b>'+moDia(x.s)+'</b><div class="sub">Começou às '+moHora(x.s)+(dd?' · passou da meia-noite':'')+'</div></div><b class="mo-d">'+moDur((x.e-x.s)/1000)+'</b></div>'+
+      '<div class="mo-ia">'+(x.pend?'<span class="mo-tag">⏳ pendente de sincronização</span>':moShareBtn(x.id,0))+'<button class="link" data-mo="del:'+x.id+'">🗑️ Excluir</button></div></div>';
+  }).join(''):'<div class="sub" style="margin:14px 0">'+(MO.ok||!MO.err?'Nenhum momento de oração registrado ainda. Quando você orar, ele aparece aqui.':esc(MO.err))+'</div>';
+  return '<div id="mohist"><h1>🕊️ Meu histórico de oração</h1><div class="sub">🔒 Só você vê. Semana de segunda a domingo.</div>'+
+    '<div class="mo-res"><div><small>Hoje</small><b>'+(st.hoje?moDur(st.hoje):'—')+'</b></div><div><small>Nesta semana</small><b>'+(st.sem?moDur(st.sem):'—')+'</b></div></div>'+
+    '<div class="mo-st">'+(st.dias?st.dias+(st.dias>1?' dias':' dia')+' com oração nesta semana':'Seu momento de hoje pode começar agora.')+'</div>'+
+    '<div class="mo-list">'+it+'</div>'+(MO.more?'<button class="btn o mo-c" data-mo="more">Mostrar mais antigas</button>':'')+
+    '<button class="btn g" id="x">Fechar</button></div>';
+}
+function moHistRefresh(){var c=document.getElementById('shc');if(!c||!c.querySelector('#mohist')||!document.getElementById('sh').classList.contains('show'))return;var tp=document.createElement('template');tp.innerHTML=moHistHtml();morphKids(c,tp.content)}
+// texto da atividade compartilhada (aparece no chat da caravana): sem duração e sem hora de término
+function moShTxt(u,s){var d=new Date(s),k=iso(d),dia=k===TODAY?'hoje':k===moOntem()?'ontem':'em '+p2(d.getDate())+'/'+p2(d.getMonth()+1);return nm(u)+' reservou um momento de oração '+dia+', às '+d.getHours()+'h'+(d.getMinutes()?p2(d.getMinutes()):'')+'.'}
+function moClick(v){
+  var i=v.indexOf(':'),k=i<0?v:v.slice(0,i),id=i<0?'':v.slice(i+1);
+  if(k==='start')moStart();else if(k==='end')moEndAsk();else if(k==='cont')moCont();else if(k==='disc')moDisc();
+  else if(k==='fim')moFim();else if(k==='hist')moHist();else if(k==='more')moMore();else if(k==='retry'){MO.err='';moSync();render()}
+  else if(k==='share')moShare(id);else if(k==='unsh')moUnshare(id);else if(k==='del')moDel(id);
+  else if(k==='go'){if(closeSheet()===false)return;tab='chat';if(S.grp){CV='ora';try{localStorage.setItem('pd_cv',CV)}catch(x){}}render();var m=document.getElementById('mo');if(m&&m.scrollIntoView)m.scrollIntoView({block:'start'})}
+}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-mo]');if(b&&!b.disabled)moClick(b.getAttribute('data-mo'))});
+document.addEventListener('input',function(e){if(e.target.id==='moet'){var o=document.getElementById('moou');if(o)o.checked=true;moRevPrev()}});
+document.addEventListener('change',function(e){if(e.target.name==='moq')moRevPrev()});
+// outra aba do mesmo aparelho começou, encerrou ou descartou: acompanha
+window.addEventListener('storage',function(e){if(!S.me||e.key!==moKey())return;var r=MO.act&&MO.act.rec;moLocal(false);if(MO.act&&r)MO.act.rec=true;MO.ver++;MO.at=0;if(loaded)render();moLoad(true)});
+window.addEventListener('online',function(){moSync()});
+document.addEventListener('visibilitychange',function(){if(document.hidden||!S.me)return;moSync();if(moVis()||MO.act)moLoad()});
 // Chat: a cada 5 s busca só as mensagens novas (antes eram as últimas 200 toda vez); a cada 2 min, a lista toda
-var CHT={cid:null,list:[],at:0};
+var CHT={cid:null,list:[],at:0,sh:[],shAt:0,shG:null};
 async function loadChat(force){
   var e=document.getElementById('msgs');if(tab!=='chat'||CV!=='chat'||!S.cur||!e||chatBusy)return;chatBusy=true;
   try{
@@ -1195,13 +1519,22 @@ async function loadChat(force){
     if(r.error){e.innerHTML='<div class="err">Não foi possível abrir a conversa. '+esc(why(r.error))+'</div>';return}
     if(S.cur!==cid)return;
     if(inc){var ids={};CHT.list.forEach(function(m){ids[m.id]=1});(r.data||[]).forEach(function(m){if(!ids[m.id])CHT.list.push(m)});CHT.list=CHT.list.slice(-200)}
-    else CHT={cid:cid,list:(r.data||[]).slice().reverse(),at:Date.now()};
+    else{CHT.cid=cid;CHT.list=(r.data||[]).slice().reverse();CHT.at=Date.now()}
     var A=CHT.list.slice(),key=A.length+':'+(A.length?A[A.length-1].id:'');
-    var miss=A.map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
+    // momentos de oração compartilhados com a caravana (Meu momento de oração): a cada 2 min ou logo depois de compartilhar
+    var gid=S.grp&&S.grp.id;
+    if(gid&&(CHT.shG!==gid||Date.now()-CHT.shAt>120000)){CHT.shAt=Date.now();CHT.shG=gid;
+      var sr=await sb.from('prayer_shares').select('session_id,user_id,started_at,created_at').eq('group_id',gid).order('created_at',{ascending:false}).limit(50);
+      CHT.sh=sr.error?[]:(sr.data||[]);e=document.getElementById('msgs');if(!e)return}
+    var SH=CHT.shG===gid?CHT.sh:[];
+    var miss=A.concat(SH).map(function(m){return m.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});
     if(miss.length){await profs(miss);e=document.getElementById('msgs');if(!e)return}
+    key+=':'+SH.map(function(x){return x.session_id}).join(',')+':'+TODAY;
     if(!force&&e.dataset.k===key)return;e.dataset.k=key;
-    var L=A.filter(function(m){return !isPed(m)});
-    e.innerHTML=L.length?L.map(function(m){var me=m.user_id===S.me;return '<div class="msg'+(me?' me':'')+'">'+(me?'':'<b>'+esc(nm(m.user_id))+'</b>')+esc(m.body)+'<small>'+hhmm(m.created_at)+'</small></div>'}).join(''):'<div class="sub">Nenhuma mensagem ainda. Diga olá para a caravana! 👋</div>';
+    var L=A.filter(function(m){return !isPed(m)}).concat(SH.map(function(x){return{sh:x,created_at:x.created_at}})).sort(function(a,b){return a.created_at<b.created_at?-1:a.created_at>b.created_at?1:0});
+    e.innerHTML=L.length?L.map(function(m){
+      if(m.sh)return '<div class="msg sys">🙏 '+esc(moShTxt(m.sh.user_id,Date.parse(m.sh.started_at)))+(m.sh.user_id===S.me?' <button class="link" data-mo="unsh:'+esc(m.sh.session_id)+'">Remover</button>':'')+'</div>';
+      var me=m.user_id===S.me;return '<div class="msg'+(me?' me':'')+'">'+(me?'':'<b>'+esc(nm(m.user_id))+'</b>')+esc(m.body)+'<small>'+hhmm(m.created_at)+'</small></div>'}).join(''):'<div class="sub">Nenhuma mensagem ainda. Diga olá para a caravana! 👋</div>';
     e.scrollTop=e.scrollHeight;
   }finally{chatBusy=false}
 }
@@ -1224,6 +1557,7 @@ function after(){
   document.querySelectorAll('.vx[data-b]').forEach(function(e){if(e.dataset.ok)return;e.dataset.ok=1;
     bible(+e.dataset.b,+e.dataset.c).then(function(v){e.innerHTML=verses(v.slice(0,4))+(v.length>4?' …':'')}).catch(function(){e.textContent='Não foi possível carregar o texto. Verifique a conexão.'})
   });
+  if(moVis())moLoad();
   if(tab==='chat'){if(CV==='chat')loadChat(true);else{loadPray();if(OR.f==='ate'&&OR.ok){ORSEEN=Date.now();try{localStorage.setItem('pd_orseen',String(ORSEEN))}catch(e){}}}}
   if(tab==='bib'){
     var bx=document.getElementById('bibx');
@@ -1251,7 +1585,7 @@ function render(){
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e)e.value=keep[id]});
   if(fid&&keep[fid]!==undefined){var f=document.getElementById(fid);if(f)f.focus()}
   document.querySelectorAll('nav [data-t]').forEach(function(b){b.classList.toggle('on',b.dataset.t===tab)});
-  refreshPostSheet();
+  refreshPostSheet();moPill();moHistRefresh();
   after();
 }
 // Atualização seletiva da tela: compara o que está na tela com o novo conteúdo e troca só o que mudou
@@ -1947,6 +2281,7 @@ async function boot(){
   var r=await sb.auth.getSession(),ses=r.data&&r.data.session;
   if(!ses){S.me=null;if(gm!=='mail'&&gm!=='forgot')gate('in',S.linkErr);S.linkErr='';return}
   S.me=ses.user.id;
+  moLocal(true);moLoad(true).then(moSync); // oração aberta neste aparelho ou em outro
   var md=ses.user.user_metadata||{};S.myJ=Array.isArray(md.jornadas)?md.jornadas.slice():[];
   if(S.recovery){gate('newpw');return}
   if(await phoneOn()){
@@ -2276,7 +2611,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='ts')telSend();
   else if(t.id==='tv')telVerify();
   else if(t.id==='tch'){TEL.sent=false;telGate()}
-  else if(d.out){try{localStorage.removeItem('pd_su')}catch(e){}SU={};sb.auth.signOut().then(function(){S.me=null;S.grp=null;S.groups=[];S.chs=[];S.all=[];S.myJ=[];S.posts=[];S.cur=null;S.asked=false;TEL={n:'',sent:false};loaded=false;closeSheet();gate('in')})}
+  else if(d.out){try{localStorage.removeItem('pd_su')}catch(e){}SU={};moReset();sb.auth.signOut().then(function(){S.me=null;S.grp=null;S.groups=[];S.chs=[];S.all=[];S.myJ=[];S.posts=[];S.cur=null;S.asked=false;TEL={n:'',sent:false};loaded=false;closeSheet();gate('in')})}
   else if(d.copy){try{navigator.clipboard.writeText(S.grp.invite_code);t.textContent='Copiado!'}catch(x){}}
 });
 document.addEventListener('click',function(e){var a=e.target.closest('a#pray');if(a)prayIn();var im=e.target.closest('img.media[data-full]');if(im&&im.dataset.full)showSheet('<img src="'+esc(im.dataset.full)+'" alt="'+esc(im.alt)+'" style="width:100%;border-radius:12px"><button class="btn g" id="x">Fechar</button>')});

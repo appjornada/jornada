@@ -1409,6 +1409,208 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'orar/desfazer, contagem e quem ora, pessoal escondido, testemunho com aviso, líder modera, chat intacto';
   });
 
+  // ---------- Meu momento de oração (supabase/15-meu-momento-de-oracao.sql) ----------
+  const TZ = { timezoneId: 'America/Sao_Paulo' };
+  const irMo = async pg => { await pg.evaluate(() => { closeSheet(true); tab = 'chat'; if (S.grp) CV = 'ora'; render() }); await pg.waitForSelector('#mo') };
+  const moTxt = pg => pg.textContent('#mo');
+  const sessoes = (S, u) => Object.values(S.DB.ps).filter(r => r.user_id === u.id);
+  const fazSessao = (S, u, ini, seg, extra = {}) => { const id = require('crypto').randomUUID(), s = new Date(Math.floor(ini / 1000) * 1000); S.DB.ps[id] = Object.assign({ id, user_id: u.id, status: 'done', started_at: s.toISOString(), ended_at: new Date(+s + seg * 1000).toISOString(), created_at: s.toISOString() }, extra); return id };
+  const oculto = (pg, h) => pg.evaluate(h => { Object.defineProperty(document, 'hidden', { value: h, configurable: true }); document.dispatchEvent(new Event('visibilitychange')) }, h);
+
+  await teste('Meu momento de oração: começar, encerrar, várias no mesmo dia, tela bloqueada, duplo toque e histórico', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pg = await abrir(browser, base, S, A, Object.assign({ relogio: Date.now() - 3 * 36e5 }, TZ));
+    await irMo(pg);
+    exige(/Seu momento de hoje pode começar agora/.test(await moTxt(pg)), 'sem a mensagem acolhedora do dia sem registro');
+    exige(!!(await pg.$('#pray')) && !!(await pg.$('[data-orv="car"]')), 'sala de oração ou mural sumiram da aba Oração');
+    await pg.dblclick('[data-mo="start"]'); // duplo toque
+    await pg.evaluate(() => moStart()); // e mais um toque
+    exige(await esperar(() => sessoes(S, A).length === 1 && sessoes(S, A)[0].status === 'active'), 'não gravou a oração em andamento');
+    await new Promise(r => setTimeout(r, 400));
+    exige(sessoes(S, A).length === 1, 'duplo toque criou ' + sessoes(S, A).length + ' orações');
+    exige(/Em oração/.test(await moTxt(pg)) && await pg.$('[data-mo="end"]'), 'tela não mostra "Em oração" com "Encerrar oração"');
+    // tela bloqueada / app em segundo plano por 10 minutos: os relógios internos não rodam, o horário do celular anda
+    await oculto(pg, true); await pg.clock.fastForward('10:00'); await oculto(pg, false);
+    await pg.clock.runFor(1100);
+    const clk = await pg.textContent('#mo .mo-clk');
+    exige(/^00:10:0\d$/.test(clk), 'cronômetro depois de 10 min em segundo plano: ' + clk);
+    // navega pelo app: indicador discreto
+    await pg.click('nav [data-t="feed"]');
+    exige(await pg.isVisible('#mopill') && /Em oração/.test(await pg.textContent('#mopill')), 'sem indicador da oração em andamento fora da aba');
+    await pg.click('#mopill'); await pg.waitForSelector('#mo [data-mo="end"]');
+    exige(!(await pg.isVisible('#mopill')), 'indicador continua aparecendo na própria aba');
+    await pg.click('#mo [data-mo="end"]');
+    exige(await esperar(() => sessoes(S, A)[0].status === 'done'), 'não encerrou no servidor');
+    const d1 = Math.floor((Date.parse(sessoes(S, A)[0].ended_at) - Date.parse(sessoes(S, A)[0].started_at)) / 1000);
+    exige(d1 >= 600 && d1 <= 606, 'duração gravada errada: ' + d1 + ' s');
+    exige(await esperar(async () => /foi registrado/.test(await moTxt(pg))), 'sem a confirmação "foi registrado"');
+    // outra oração no mesmo dia
+    await pg.click('[data-mo="start"]'); exige(await esperar(() => sessoes(S, A).length === 2), 'não começou a segunda');
+    await pg.clock.fastForward('05:00'); await pg.click('#mo [data-mo="end"]');
+    exige(await esperar(() => sessoes(S, A).every(r => r.status === 'done')), 'a segunda não encerrou');
+    exige(await esperar(async () => /Hoje\s*15 min/.test(await pg.textContent('#mo .mo-res'))), 'soma do dia errada: ' + await pg.textContent('#mo .mo-res'));
+    exige(/Oração registrada hoje · 1 dia nesta semana/.test(await moTxt(pg)), 'situação de hoje: ' + await moTxt(pg));
+    await pg.click('[data-mo="hist"]'); await pg.waitForSelector('#mohist');
+    const its = await pg.$$eval('.mo-it', e => e.map(x => x.textContent.replace(/\s+/g, ' ')));
+    exige(its.length === 2 && /5 min/.test(its[0]) && /10 min/.test(its[1]) && its.every(t => /Hoje/.test(t) && /Começou às \d\d:\d\d/.test(t)), 'histórico: ' + its.join(' | '));
+    exige(!pg.erros.length, 'erros: ' + pg.erros.join(' | '));
+    await pg.context().close();
+    return '2 orações (10 + 5 min) somadas em 15 min; 1 linha por toque duplo; tempo certo com o app em segundo plano';
+  });
+
+  await teste('Meu momento de oração: recarregar recupera; oração esquecida pede a hora do fim; outro aparelho; descartar', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pg = await abrir(browser, base, S, A, TZ); pg.on('dialog', d => d.accept());
+    await irMo(pg); await pg.click('[data-mo="start"]');
+    exige(await esperar(() => sessoes(S, A).length === 1), 'não começou');
+    await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded);
+    exige(await esperar(() => pg.isVisible('#mopill')), 'sem aviso da oração em andamento ao reabrir');
+    await irMo(pg);
+    exige(await esperar(async () => /Oração em andamento/.test(await moTxt(pg))) && await pg.$('[data-mo="cont"]') && await pg.$('#mo [data-mo="end"]') && await pg.$('#mo [data-mo="disc"]'), 'reabrir não oferece continuar, encerrar e descartar');
+    await pg.click('[data-mo="cont"]');
+    exige(/Em oração/.test(await moTxt(pg)) && !(await pg.$('[data-mo="cont"]')), 'continuar não voltou para "Em oração"');
+    // esqueceu o cronômetro aberto: começou há 5 horas
+    const id = sessoes(S, A)[0].id, ini = Math.floor((Date.now() - 5 * 36e5) / 1000) * 1000; S.DB.ps[id].started_at = new Date(ini).toISOString();
+    await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await irMo(pg);
+    exige(await esperar(async () => /05:00:0\d/.test(await pg.textContent('#mo .mo-clk'))), 'cronômetro não usa o horário gravado no servidor');
+    await pg.click('#mo [data-mo="end"]'); await pg.waitForSelector('#moet');
+    exige(sessoes(S, A)[0].status === 'active', 'encerrou sem perguntar a hora (oração esquecida)');
+    const dt = t => pg.evaluate(t => dtl(t), t);
+    await pg.click('#moou'); await pg.fill('#moet', await dt(ini - 10 * 6e4)); await pg.click('[data-mo="fim"]');
+    exige(/depois do início/.test(await pg.textContent('#moer')), 'aceitou término antes do início');
+    await pg.fill('#moet', await dt(Date.now() + 2 * 36e5)); await pg.click('[data-mo="fim"]');
+    exige(/futuro/.test(await pg.textContent('#moer')), 'aceitou término no futuro');
+    exige(sessoes(S, A)[0].status === 'active', 'gravou com horário inválido');
+    await pg.fill('#moet', await dt(ini + 30 * 6e4)); await pg.click('[data-mo="fim"]');
+    exige(await esperar(() => sessoes(S, A)[0].status === 'done'), 'não encerrou com o horário corrigido');
+    const d = (Date.parse(sessoes(S, A)[0].ended_at) - ini) / 1000;
+    const esp = (Math.floor((ini + 30 * 6e4) / 6e4) * 6e4 - ini) / 1000; // o campo escolhe hora e minuto
+    exige(d === esp, 'duração corrigida: ' + d + ' s (esperado ' + esp + ')');
+    exige(await esperar(async () => new RegExp('registrado · ' + Math.floor(esp / 60) + ' min').test(await moTxt(pg))), 'confirmação sem a duração corrigida');
+    // outro aparelho começou uma oração: este aparelho mostra e deixa descartar
+    const id2 = require('crypto').randomUUID(); S.DB.ps[id2] = { id: id2, user_id: A.id, status: 'active', started_at: new Date(Math.floor(Date.now() / 1000) * 1000 - 6e4).toISOString(), ended_at: null };
+    const pg2 = await abrir(browser, base, S, A, TZ); pg2.on('dialog', d => d.accept()); await irMo(pg2);
+    exige(await esperar(async () => /Oração em andamento/.test(await moTxt(pg2))), 'outro aparelho não mostra a oração em andamento');
+    await pg2.click('#mo [data-mo="disc"]');
+    exige(await esperar(() => !S.DB.ps[id2]), 'descartar não apagou');
+    exige(await esperar(async () => /Hoje\s*(29|30) min/.test(await pg2.textContent('#mo .mo-res'))), 'descartar mexeu no total: ' + await pg2.textContent('#mo .mo-res'));
+    const erros = pg.erros.concat(pg2.erros);
+    await pg.context().close(); await pg2.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'recuperou ao recarregar; fim corrigido para 30 min (recusou antes do início e futuro); descartar sem mudar o total';
+  });
+
+  await teste('Meu momento de oração sem internet: fica pendente (sem dizer que salvou), reenvia sem duplicar; duas abas; dois aparelhos; contas separadas', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); S.jornada(g, 'Romanos em 16 dias');
+    const pg = await abrir(browser, base, S, A, TZ); await irMo(pg);
+    S.O.falhas['prayer_sessions:insert'] = Array(40).fill('antes'); S.O.falhas['prayer_sessions:update'] = Array(40).fill('antes');
+    await pg.click('[data-mo="start"]'); await pg.waitForTimeout(400);
+    exige(/Em oração/.test(await moTxt(pg)), 'sem internet não começou na tela');
+    await pg.waitForTimeout(1100); await pg.click('#mo [data-mo="end"]');
+    exige(await esperar(async () => /pendente de sincronização/.test(await moTxt(pg))), 'não avisou que está pendente');
+    exige(!/foi registrado/.test(await moTxt(pg)), 'disse que salvou sem ter salvado');
+    exige(!sessoes(S, A).length, 'gravou sem internet?');
+    await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await irMo(pg);
+    exige(/pendente de sincronização/.test(await moTxt(pg)), 'pendência sumiu ao recarregar');
+    S.O.falhas = {};
+    await pg.click('[data-mo="retry"]');
+    exige(await esperar(() => sessoes(S, A).length === 1 && sessoes(S, A)[0].status === 'done'), 'não reenviou quando a internet voltou');
+    exige(await esperar(async () => !/pendente/.test(await moTxt(pg))), 'continua pendente depois de salvar');
+    // gravou, mas a resposta se perdeu: tentar de novo não duplica
+    S.O.falhas['prayer_sessions:insert:depois'] = 1;
+    await pg.click('[data-mo="start"]'); exige(await esperar(() => sessoes(S, A).length === 2), 'não chegou ao servidor');
+    await pg.waitForTimeout(300); await pg.click('[data-mo="retry"]');
+    exige(await esperar(async () => !(await pg.evaluate(() => moPendN()))), 'nova tentativa não resolveu');
+    exige(sessoes(S, A).length === 2, 'nova tentativa duplicou');
+    await pg.waitForTimeout(1200); await pg.click('#mo [data-mo="end"]'); exige(await esperar(() => sessoes(S, A).every(r => r.status === 'done')), 'não encerrou');
+    // duas abas no mesmo aparelho
+    const tab2 = await pg.context().newPage(); tab2.erros = []; tab2.on('pageerror', e => tab2.erros.push(e.message));
+    await tab2.goto(base + '/'); await tab2.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await irMo(tab2);
+    await pg.click('[data-mo="start"]'); exige(await esperar(() => sessoes(S, A).length === 3), 'aba 1 não começou');
+    exige(await esperar(async () => /Em oração/.test(await moTxt(tab2))), 'aba 2 não mostra a oração começada na aba 1');
+    await tab2.waitForTimeout(1300); await tab2.click('#mo [data-mo="end"]');
+    exige(await esperar(() => sessoes(S, A).every(r => r.status === 'done')), 'aba 2 não encerrou');
+    exige(await esperar(async () => !(await pg.evaluate(() => !!MO.act))), 'aba 1 continua "Em oração"');
+    exige(sessoes(S, A).length === 3, 'duas abas criaram linhas a mais: ' + sessoes(S, A).length);
+    // dois aparelhos tocam em Começar ao mesmo tempo: fica uma só
+    const cel = await abrir(browser, base, S, A, TZ); await irMo(cel);
+    await Promise.all([pg.evaluate(() => moStart()), cel.evaluate(() => moStart())]);
+    exige(await esperar(async () => !(await pg.evaluate(() => moPendN())) && !(await cel.evaluate(() => moPendN()))), 'aparelhos não terminaram de enviar');
+    exige(sessoes(S, A).filter(r => r.status === 'active').length === 1 && sessoes(S, A).length === 4, 'dois aparelhos: ' + sessoes(S, A).length + ' linhas');
+    exige(await pg.evaluate(() => MO.act && MO.act.id) === await cel.evaluate(() => MO.act && MO.act.id), 'os dois aparelhos não mostram a mesma oração');
+    // outra conta no mesmo aparelho não vê a oração nem as pendências da Ana
+    await pg.evaluate(id => { localStorage.setItem('fake_me', id) }, B.id);
+    await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await irMo(pg);
+    await pg.waitForTimeout(300);
+    exige(!(await pg.evaluate(() => !!MO.act)) && !/Em oração|andamento/.test(await moTxt(pg)) && !(await pg.isVisible('#mopill')), 'a oração da Ana apareceu na conta da Bia');
+    exige(/Seu momento de hoje pode começar agora/.test(await moTxt(pg)), 'resumo da Bia mostra dados da Ana: ' + await moTxt(pg));
+    const erros = pg.erros.concat(tab2.erros, cel.erros);
+    await pg.context().close(); await cel.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'pendente sem internet e salvo depois; resposta perdida sem duplicar; abas e aparelhos ficam com 1 oração; conta da Bia limpa';
+  });
+
+  await teste('Meu momento de oração: excluir e descartar recalculam; compartilhar só quando pede, sem duração; outra pessoa não lê nem mexe', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); const c = S.jornada(g, 'Romanos em 16 dias');
+    const h1 = fazSessao(S, A, Date.now() - 3 * 36e5, 600), h2 = fazSessao(S, A, Date.now() - 2 * 36e5, 600), velho = fazSessao(S, A, Date.now() - 3 * 864e5, 900);
+    const pa = await abrir(browser, base, S, A, TZ); pa.on('dialog', d => d.accept()); await irMo(pa);
+    exige(await esperar(async () => /Hoje\s*20 min/.test(await pa.textContent('#mo .mo-res'))), 'total de hoje: ' + await pa.textContent('#mo .mo-res'));
+    exige(!Object.keys(S.DB.psh).length, 'compartilhou sem pedir');
+    await pa.click('[data-mo="start"]'); await pa.waitForTimeout(1600); await pa.click('#mo [data-mo="disc"]');
+    exige(await esperar(() => sessoes(S, A).length === 3 && !sessoes(S, A).some(r => r.status === 'active')), 'descartar deixou rastro');
+    exige(await esperar(async () => /Hoje\s*20 min/.test(await pa.textContent('#mo .mo-res'))), 'descartar mudou o total');
+    await pa.click('[data-mo="hist"]'); await pa.waitForSelector('#mohist');
+    await pa.click(`[data-mo="share:${h1}"]`); exige(await esperar(() => !!S.DB.psh[h1]), 'não compartilhou');
+    await pa.click(`[data-mo="share:${velho}"]`); exige(await esperar(() => !!S.DB.psh[velho]), 'não compartilhou o antigo');
+    exige(Object.keys(S.DB.psh[h1]).sort().join() === 'created_at,group_id,session_id,started_at,user_id', 'compartilhamento com campos a mais: ' + Object.keys(S.DB.psh[h1]));
+    const pb = await abrir(browser, base, S, B, TZ); await pb.evaluate(() => { tab = 'chat'; CV = 'chat'; render() }); await pb.waitForSelector('#msgs');
+    const v = new Date(Date.parse(S.DB.ps[velho].started_at)), dv = String(v.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }));
+    exige(await esperar(async () => /Ana reservou um momento de oração hoje, às \d+h/.test(await pb.textContent('#msgs'))), 'Bia não vê o momento compartilhado: ' + await pb.textContent('#msgs'));
+    const chat = await pb.textContent('#msgs');
+    exige(chat.includes('reservou um momento de oração em ' + dv), 'registro antigo sem a data certa: ' + chat);
+    exige(!/min\b|\d+ s\b|termin/.test(chat), 'chat mostra duração ou término: ' + chat);
+    // Bia não lê nem mexe nas orações da Ana
+    const r = await pb.evaluate(async ([a, b]) => {
+      const s = await sb.from('prayer_sessions').select('*'); const u = await sb.from('prayer_sessions').update({ status: 'done', ended_at: new Date().toISOString() }).eq('id', a).select('id');
+      const d = await sb.from('prayer_sessions').delete().eq('id', a); const sh = await sb.from('prayer_shares').insert({ session_id: b, group_id: S.grp.id }); await sb.from('prayer_shares').delete().eq('session_id', a);
+      return { lidas: s.data.length, alteradas: u.data.length, shErr: !!sh.error };
+    }, [h1, h2]);
+    exige(r.lidas === 0 && r.alteradas === 0 && r.shErr, 'Bia acessou as orações da Ana: ' + JSON.stringify(r));
+    exige(!!S.DB.ps[h1] && !!S.DB.psh[h1] && !S.DB.psh[h2], 'Bia apagou ou compartilhou algo da Ana');
+    // Ana exclui a oração compartilhada: some o compartilhamento e o total cai
+    await pa.click(`[data-mo="del:${h1}"]`);
+    exige(await esperar(() => !S.DB.ps[h1] && !S.DB.psh[h1]), 'excluir não apagou a oração e o compartilhamento');
+    exige(await esperar(async () => /Hoje\s*10 min/.test(await pa.textContent('#mohist .mo-res'))), 'total depois de excluir: ' + await pa.textContent('#mohist .mo-res'));
+    await pa.click(`[data-mo="unsh:${velho}"]`); exige(await esperar(() => !S.DB.psh[velho]), 'não removeu o compartilhamento');
+    exige(!!S.DB.ps[velho], 'remover o compartilhamento apagou a oração');
+    await pb.evaluate(() => { CHT.shAt = 0; return loadChat(true) });
+    exige(await esperar(async () => !/reservou/.test(await pb.textContent('#msgs'))), 'compartilhamento removido continua no chat');
+    const erros = pa.erros.concat(pb.erros);
+    await pa.context().close(); await pb.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'compartilhou só ao tocar, sem duração; data certa no antigo; Bia sem acesso; excluir leva o compartilhamento junto';
+  });
+
+  await teste('Meu momento de oração: meia-noite e virada de semana (segunda a domingo)', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const T = s => Date.parse(s + '-03:00');
+    fazSessao(S, A, T('2026-11-15T23:30:00'), 50 * 60); // domingo 23:30 → segunda 00:20 (troca de semana)
+    fazSessao(S, A, T('2026-11-11T23:50:00'), 20 * 60); // quarta 23:50 → quinta 00:10
+    const pg = await abrir(browser, base, S, A, Object.assign({ relogio: T('2026-11-16T10:00:00') }, TZ)); await irMo(pg);
+    exige(await esperar(async () => /Hoje\s*20 min\s*Nesta semana\s*20 min/.test(await pg.textContent('#mo .mo-res'))), 'segunda-feira: ' + await pg.textContent('#mo .mo-res'));
+    exige(/1 dia nesta semana/.test(await moTxt(pg)), 'dias na segunda: ' + await moTxt(pg));
+    await pg.click('[data-mo="hist"]'); await pg.waitForSelector('#mohist');
+    const its = await pg.$$eval('.mo-it', e => e.map(x => x.textContent.replace(/\s+/g, ' ')));
+    exige(its.length === 2 && /Ontem/.test(its[0]) && /passou da meia-noite/.test(its[0]) && /50 min/.test(its[0]), 'histórico: ' + its.join(' | '));
+    await pg.context().close();
+    const p2 = await abrir(browser, base, S, A, Object.assign({ relogio: T('2026-11-12T12:00:00') }, TZ)); await irMo(p2);
+    exige(await esperar(async () => /Hoje\s*10 min\s*Nesta semana\s*20 min/.test(await p2.textContent('#mo .mo-res'))), 'quinta-feira: ' + await p2.textContent('#mo .mo-res'));
+    exige(/2 dias nesta semana/.test(await moTxt(p2)), 'dias na quinta: ' + await moTxt(p2));
+    const erros = pg.erros.concat(p2.erros); await p2.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'domingo→segunda: 10 min na semana velha e 20 min na nova; quarta→quinta: 10 + 10, contando 2 dias';
+  });
+
   await browser.close(); srv.close();
   const ok = resultados.filter(r => r.ok).length;
   console.log('\n' + ok + ' de ' + resultados.length + ' testes passaram');

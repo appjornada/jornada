@@ -9,7 +9,7 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function novoServidor(opts = {}) {
   const O = Object.assign({ rosterRpc: true, maxRows: 1000, falhas: {}, atrasos: {} }, opts);
-  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, prayer_requests: {}, pi: [], objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
+  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, prayer_requests: {}, pi: [], ps: {}, psh: {}, objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
   const SO_LIDER = o => err('Por enquanto, só a líder pode criar ' + o + '. Peça o código de convite a ela.', '42501');
   const log = [];
   const member = (u, g) => DB.gm.some(m => m.user_id === u && m.group_id === g);
@@ -27,6 +27,8 @@ function novoServidor(opts = {}) {
       case 'prayer_requests': return Object.values(DB.prayer_requests).filter(r => r.user_id === me || (!r.is_private && member(me, r.group_id))) // pr_select (supabase/12-mural-de-oracao.sql)
         .map(r => Object.assign({}, r, { prayer_intercessions: DB.pi.filter(x => x.request_id === r.id).map(x => ({ user_id: x.user_id, prayed_at: x.prayed_at, praying: x.praying !== false })) }));
       case 'prayer_intercessions': { const vis = new Set(visible('prayer_requests', me).map(r => r.id)); return DB.pi.filter(x => vis.has(x.request_id)) }
+      case 'prayer_sessions': return Object.values(DB.ps).filter(r => r.user_id === me).map(psOut); // ps_select: só a própria pessoa (supabase/15-meu-momento-de-oracao.sql)
+      case 'prayer_shares': return Object.values(DB.psh).filter(r => r.user_id === me || member(me, r.group_id)); // psh_select
       case 'comments': return Object.values(DB.comments);
       case 'likes': return DB.likes;
       default: return [];
@@ -44,6 +46,17 @@ function novoServidor(opts = {}) {
     return rows;
   }
   const err = (message, code) => ({ data: null, error: { message, code } });
+  // Meu momento de oração: as mesmas regras do gatilho e das restrições do banco (supabase/15-meu-momento-de-oracao.sql)
+  const sec = t => new Date(Math.floor(Date.parse(t) / 1000) * 1000).toISOString();
+  const agora = () => new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
+  function psOut(r) { return Object.assign({}, r, { duration_s: r.ended_at ? Math.floor((Date.parse(r.ended_at) - Date.parse(r.started_at)) / 1000) : null }) }
+  function psCheck(r) {
+    if (!['active', 'done'].includes(r.status) || (r.status === 'active') !== (r.ended_at == null)) return 'prayer_sessions_estado';
+    if (r.ended_at && Date.parse(r.ended_at) <= Date.parse(r.started_at)) return 'prayer_sessions_ordem';
+    if (r.ended_at && Date.parse(r.ended_at) - Date.parse(r.started_at) > 864e5) return 'prayer_sessions_maximo';
+    return '';
+  }
+  function psDepois(op, res) { const k = 'prayer_sessions:' + op + ':depois'; if (O.falhas[k] > 0) { O.falhas[k]--; return err('Failed to fetch') } return res } // gravou, mas a resposta se perdeu
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // internet lenta: o servidor responde com os dados do momento da consulta, mas a resposta chega atrasada
@@ -102,6 +115,25 @@ function novoServidor(opts = {}) {
         DB.pi.push({ request_id: r.id, user_id: me, prayed_at: new Date().toISOString(), praying: true }); return { data: null, error: null };
       }
       if (t === 'likes') { DB.likes.push({ checkin_id: b.checkin_id, user_id: me }); return { data: null, error: null } }
+      if (t === 'prayer_sessions') { // ps_insert + gatilho ps_regras
+        const r = { id: b.id || id(), user_id: b.user_id || me, status: b.status || 'active', started_at: sec(b.started_at), ended_at: b.ended_at ? sec(b.ended_at) : null, created_at: new Date().toISOString() };
+        if (r.user_id !== me) return err('new row violates row-level security policy for table "prayer_sessions"', '42501');
+        if (r.started_at > agora()) r.started_at = agora();
+        if (r.ended_at && r.ended_at > agora()) r.ended_at = agora();
+        if (Date.parse(r.started_at) < Date.now() - 30 * 864e5) return err('Horário de início muito antigo.', '23514');
+        const c = psCheck(r); if (c) return err('new row for relation "prayer_sessions" violates check constraint "' + c + '"', '23514');
+        if (DB.ps[r.id]) return err('duplicate key value violates unique constraint "prayer_sessions_pkey"', '23505');
+        if (r.status === 'active' && Object.values(DB.ps).some(x => x.user_id === me && x.status === 'active')) return err('duplicate key value violates unique constraint "prayer_sessions_um_ativo"', '23505');
+        DB.ps[r.id] = r; return psDepois('insert', { data: q.returning ? [psOut(r)] : null, error: null });
+      }
+      if (t === 'prayer_shares') { // psh_insert + gatilho psh_regras
+        const sx = DB.ps[b.session_id];
+        if (!sx || sx.user_id !== me || sx.status !== 'done') return err('Só dá para compartilhar uma oração sua já concluída.', '42501');
+        if (!member(me, b.group_id)) return err('new row violates row-level security policy for table "prayer_shares"', '42501');
+        if (DB.psh[b.session_id]) return err('duplicate key value violates unique constraint "prayer_shares_pkey"', '23505');
+        const r = { session_id: sx.id, user_id: me, group_id: b.group_id, started_at: sx.started_at, created_at: new Date().toISOString() };
+        DB.psh[r.session_id] = r; return { data: q.returning ? [r] : null, error: null };
+      }
       return err('tabela desconhecida');
     }
     if (q.op === 'update') {
@@ -109,6 +141,18 @@ function novoServidor(opts = {}) {
         const rows = applyFilters(DB.pi, q.filters).filter(x => x.user_id === me);
         rows.forEach(x => { if (q.body.praying === false) x.praying = false; else { x.praying = true; x.prayed_at = new Date().toISOString() } }); // 14-terminar-oracao.sql
         return { data: null, error: null };
+      }
+      if (t === 'prayer_sessions') { // ps_update (só status e ended_at) + gatilho: concluída não muda mais
+        if (Object.keys(q.body).some(k => !['status', 'ended_at'].includes(k))) return err('permission denied for table prayer_sessions', '42501');
+        const rows = applyFilters(Object.values(DB.ps).filter(r => r.user_id === me), q.filters), novos = [];
+        for (const r of rows) {
+          if (r.status === 'done') { novos.push(r); continue }
+          const n = Object.assign({}, r, q.body); if (n.ended_at) { n.ended_at = sec(n.ended_at); if (n.ended_at > agora()) n.ended_at = agora() }
+          const c = psCheck(n); if (c) return err('new row for relation "prayer_sessions" violates check constraint "' + c + '"', '23514');
+          novos.push(n);
+        }
+        novos.forEach(n => { DB.ps[n.id] = n });
+        return psDepois('update', { data: q.returning ? novos.map(psOut) : null, error: null });
       }
       let rows = applyFilters(visible(t, me), q.filters);
       if (t === 'checkins') { // ck_update (a própria) + ck_update_leader com a trava ck_guard_leader (supabase/11-lider-corrige-passo.sql)
@@ -132,6 +176,8 @@ function novoServidor(opts = {}) {
     }
     if (q.op === 'delete') {
       if (t === 'group_members') { const gid = (q.filters.find(f => f[1] === 'group_id') || [])[2], uid = (q.filters.find(f => f[1] === 'user_id') || [])[2]; const m = DB.gm.find(x => x.group_id === gid && x.user_id === uid && (uid === me || DB.gm.some(l => l.group_id === gid && l.user_id === me && l.role === 'leader'))); if (m) DB.gm = DB.gm.filter(x => x !== m); return { data: m ? [{ user_id: m.user_id }] : [], error: null } } // gm_delete
+      if (t === 'prayer_sessions') { const rows = applyFilters(Object.values(DB.ps).filter(r => r.user_id === me), q.filters); rows.forEach(r => { delete DB.ps[r.id]; delete DB.psh[r.id] }); return psDepois('delete', { data: q.returning ? rows.map(r => ({ id: r.id })) : null, error: null }) } // ps_delete (+ compartilhamento junto)
+      if (t === 'prayer_shares') { const rows = applyFilters(Object.values(DB.psh).filter(r => r.user_id === me), q.filters); rows.forEach(r => { delete DB.psh[r.session_id] }); return { data: null, error: null } } // psh_delete
       if (t === 'prayer_requests') { // pr_delete: o autor, ou a líder da caravana (se não for pessoal)
         const lider = r => !r.is_private && DB.gm.some(m => m.group_id === r.group_id && m.user_id === me && m.role === 'leader');
         const rows = applyFilters(Object.values(DB.prayer_requests), q.filters).filter(r => r.user_id === me || lider(r));

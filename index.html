@@ -285,6 +285,7 @@ body:not([data-tab="feed"]) header{padding-bottom:4px}
 @keyframes pisca{50%{opacity:.25}}
 .chip.sug{border:2px dashed var(--ac);color:var(--act);font-weight:700}
 .chip.lk{opacity:.4;border-style:dashed;cursor:not-allowed}
+.card.nova{border:2px solid var(--ac)}
 .howto{padding-left:22px;margin:12px 0}.howto li{margin:10px 0}
 </style>
 </head>
@@ -467,13 +468,27 @@ function books(t){
 }
 function chaps(bs){var L=[];bs.forEach(function(b){for(var c=1;c<=NC[b];c++)L.push({b:b,c:c})});return L}
 var PL={};
+// ---- Cronograma dia a dia (opcional): fica na descrição da jornada como [cronograma: 1; 2; 6-7; …] ----
+// Cada item é um dia, a partir da partida. Sem cronograma, os capítulos são divididos por igual entre os dias.
+function cronoOf(desc){var m=String(desc||'').match(/\[cronograma:([^\]]*)\]/i);if(!m)return null;var d=m[1].split(';').map(function(x){return x.trim()});return d.length&&d.every(function(x){return x})?d:null}
+function descShow(desc){return String(desc||'').replace(/\s*\[cronograma:[^\]]*\]\s*/ig,' ').trim()}
 function plan(c){
   var k=c.name+'|'+(c.desc||'')+'|'+c.start+'|'+c.end;
-  if(!(k in PL)){var L=chaps(books(c.name+' '+(c.desc||'')));PL[k]=L.length?{L:L,n:diff(c.start,c.end)+1}:null}
+  if(!(k in PL)){
+    var cr=cronoOf(c.desc),bs=books(c.name+' '+descShow(c.desc));
+    if(cr&&bs.length){
+      var days=cr.map(function(seg){return chOfPost({book:BOOKS[bs[0]],ref:seg}).map(function(q){var y=q.split(':');return{b:+y[0],c:+y[1]}})}),L=[],di=[],seen={};
+      days.forEach(function(d,i){d.forEach(function(x){var q=x.b+':'+x.c;if(!seen[q]){seen[q]=1;L.push(x);di.push(i)}})});
+      PL[k]=L.length?{L:L,n:days.length,di:di,crono:true}:null;
+    }else{
+      var L2=chaps(bs),n2=diff(c.start,c.end)+1;
+      PL[k]=L2.length?{L:L2,n:n2,di:L2.map(function(x,j){return Math.floor(j*n2/L2.length)})}:null;
+    }
+  }
   return PL[k]
 }
 // Capítulos do dia i (0 = primeiro dia), distribuídos por igual ao longo do prazo
-function dayRead(c,i){var P=plan(c);if(!P)return[];var m=P.L.length,n=P.n;return P.L.filter(function(x,j){return Math.floor(j*n/m)===i})}
+function dayRead(c,i){var P=plan(c);if(!P)return[];return P.L.filter(function(x,j){return P.di[j]===i})}
 // Total de passos até a Terra Prometida
 // Total de passos até a Terra Prometida: 1 passo por capítulo do roteiro
 function totalSteps(c){var P=plan(c);return P?P.L.length:diff(c.start,c.end)+1}
@@ -662,7 +677,7 @@ function steps(u,cid){return doneCh(u,cid||S.cur).n}
 // Dias com leitura (qualquer quantidade de capítulos)
 function daysIn(u,cid){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid)o[p.date]=1});return Object.keys(o)}
 // Capítulos do roteiro que já deveriam ter sido lidos até o dia d e ainda não foram
-function behind(u,c,d){var P=plan(c);if(!P)return[];var i=diff(c.start,d),m=P.L.length,n=P.n,set=doneCh(u,c.id).set;return P.L.filter(function(x,j){return Math.floor(j*n/m)<=i&&!set[x.b+':'+x.c]})}
+function behind(u,c,d){var P=plan(c);if(!P)return[];var i=diff(c.start,d),set=doneCh(u,c.id).set;return P.L.filter(function(x,j){return P.di[j]<=i&&!set[x.b+':'+x.c]})}
 // Capítulos registrados no dia (para a meta do dia, que não é obrigatória)
 function chDay(u,cid,d){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.date===d)chOfPost(p).forEach(function(k){o[k]=1})});return Object.keys(o).length}
 function jStatus(c){
@@ -833,6 +848,11 @@ function post(p,pre){
     '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" '+(pre?'data-cif="'+pre+'ci-'+p.id+'"':'data-cm="'+p.id+'"')+'>💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':S.canEdit?'<button class="like" data-ep="'+p.id+'">✏️ Corrigir</button>':'')+'</div>'+
     (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="'+pre+'ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'" data-ci="'+pre+'ci-'+p.id+'">Enviar</button></div></div>':'')+'</div>'
 }
+// Jornada em andamento de que a pessoa ainda não participa (ex.: começou uma fase nova): convite com 1 toque
+function novaCard(){
+  var A=S.all.filter(function(x){return TODAY>=x.start&&TODAY<=x.end&&!isMine(x.id)&&x.id!==S.cur});
+  return A.map(function(c){var g=grpOf(c.gid);return '<div class="card nova"><b>📖 Nova jornada: '+esc(c.name)+'</b><div class="sub">'+(g?'Caravana '+esc(g.name)+' · ':'')+fd(c.start)+' a '+fd(c.end)+'. Toque para participar e ver a leitura de cada dia.</div><button class="btn" data-pj="'+c.id+'">👣 Participar desta jornada</button></div>'}).join('')
+}
 function feed(){
   var h='';
   if(S.err)h+='<div class="card err" role="status">'+esc(S.err)+'</div>';
@@ -841,7 +861,7 @@ function feed(){
   if(!S.grp)return h+noCh();
   if(!S.chs.length)return h+hcCard()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>';
   if(S.cur&&!isMine(S.cur))return h+hcCard()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}).map(post).join('');
-  h+=hcCard()+today()+statsHtml()+revidCard();
+  h+=hcCard()+novaCard()+today()+statsHtml()+revidCard();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>';
   var lim=S.feedN||FEEDN,mais=l.length-lim;
@@ -956,7 +976,7 @@ function cfg(){
   var pf=profCard(),top=S.avp[S.me]?'':pf,bot=S.avp[S.me]?pf:'';
   if(!S.grp)return noCh()+pf+out;
   var inv='<div class="card"><b>📲 Chame alguém para a caravana</b><div class="sub">Quem abrir o link cria a conta e já entra direto nesta jornada.</div>'+waBtn()+'<button class="btn g" id="shi">Outras formas de compartilhar</button><div class="sub" style="margin-top:8px">Código da caravana, para quem já tem o app:</div><div style="font-size:30px;font-weight:800;letter-spacing:.15em;text-align:center;margin:6px 0">'+esc(S.grp.invite_code)+'</div><button class="link" data-copy="1">Copiar código</button></div>'+(S.canNew?'<div class="card"><b>Outras jornadas</b><div class="sub">Entre em outra caravana ou comece uma jornada nova.</div><div class="two"><button class="btn o" data-o="code" style="text-align:center">Tenho um código</button><button class="btn o" data-o="new" style="text-align:center">Nova jornada</button></div></div>':'<div class="card"><b>Outra caravana</b><div class="sub">Recebeu o código de convite de outra caravana? Toque abaixo para entrar.</div><button class="btn o" data-o="code" style="text-align:center">Tenho um código</button></div>')+out;
-  var L=S.chs.map(function(c){var st=TODAY<c.start?'em breve':TODAY>c.end?'encerrada':'em andamento',P=plan(c);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">'+fd(c.start)+' a '+fd(c.end)+' · '+c.goal+' dias/sem · '+st+(P?' · '+P.L.length+' capítulos':'')+(c.desc?'<br>'+esc(c.desc):'')+'</div></div>'+'<div style="margin-top:4px">'+(isMine(c.id)?'<span class="tag" style="color:var(--ok)">✓ Você participa</span>':'<button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button>')+'</div></div>'+(S.canEdit?'<div style="text-align:right"><button class="link" data-ed="'+c.id+'">Editar</button><br><button class="link" style="color:var(--mut)" data-d="'+c.id+'">Excluir</button></div>':'')+'</div>'}).join('')||'<div class="sub">Nenhuma jornada ainda.</div>';
+  var L=S.chs.map(function(c){var st=TODAY<c.start?'em breve':TODAY>c.end?'encerrada':'em andamento',P=plan(c);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">'+fd(c.start)+' a '+fd(c.end)+' · '+c.goal+' dias/sem · '+st+(P?' · '+P.L.length+' capítulos':'')+(descShow(c.desc)?'<br>'+esc(descShow(c.desc)):'')+(P&&P.crono?'<br>📅 Cronograma dia a dia':'')+'</div></div>'+'<div style="margin-top:4px">'+(isMine(c.id)?'<span class="tag" style="color:var(--ok)">✓ Você participa</span>':'<button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button>')+'</div></div>'+(S.canEdit?'<div style="text-align:right"><button class="link" data-ed="'+c.id+'">Editar</button><br><button class="link" style="color:var(--mut)" data-d="'+c.id+'">Excluir</button></div>':'')+'</div>'}).join('')||'<div class="sub">Nenhuma jornada ainda.</div>';
   var f=canMake()?'<div class="card"><b>Traçar nova jornada nesta caravana</b><label>Nome</label><input id="fc" data-keep placeholder="ex.: Evangelho de João em 21 dias"><label>Descrição ou plano (opcional)</label><input id="fd" data-keep placeholder="ex.: 1 capítulo por dia"><div class="two"><div><label>Partida</label><input type="date" id="fs" value="'+TODAY+'"></div><div><label>Chegada</label><input type="date" id="fe" value="'+addD(TODAY,29)+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="fg" min="1" max="7" value="5"><div class="err" id="fer"></div><button class="btn" id="sv">Traçar jornada</button></div>':'<div class="card sub">Só o líder pode traçar e editar jornadas nesta caravana.</div>';
   var tp=canMake()?'<div class="card"><b>Roteiros prontos</b><div class="sub" style="margin-bottom:6px">Toque em Usar para preencher o formulário abaixo.</div>'+TPL.map(function(m,i){return '<div class="rk"><div class="grow"><b>'+m.n+'</b><div class="sub">'+m.d+' · '+m.days+' dias</div></div><button class="link" data-tp="'+i+'">Usar</button></div>'}).join('')+'</div>':'';
   var oth=S.all.filter(function(c){return S.grp&&c.gid!==S.grp.id&&!isMine(c.id)&&c.end>=TODAY});
@@ -1652,7 +1672,7 @@ function openSheet(pre){
 // Capítulos já registrados ficam travados para não contarem duas vezes.
 var MAXSEL=30;
 // ---- Não andar à frente: só libera os capítulos do roteiro até hoje (atrasados + os de hoje) ----
-function unlockOf(c,k){var P=plan(c);if(!P)return null;var m=P.L.length,n=P.n;for(var j=0;j<m;j++){var x=P.L[j];if(x.b+':'+x.c===k)return addD(c.start,Math.floor(j*n/m))}return null}
+function unlockOf(c,k){var P=plan(c);if(!P)return null;for(var j=0;j<P.L.length;j++){var x=P.L[j];if(x.b+':'+x.c===k)return addD(c.start,P.di[j])}return null}
 function locked(k){if(S.edit&&(S.editKeys||[]).indexOf(k)>=0)return false;if(livre(S.ch,k))return false;var u=unlockOf(S.ch,k);return !!u&&u>TODAY}
 // ---- Regras de uma jornada, pedidas pela caravana ----
 // Conhecendo as Cartas: 1, 2 e 3 João podem ser lidos antes do dia do roteiro, mas cada pessoa tem no máximo 2 passos por dia desde a partida
@@ -1670,7 +1690,7 @@ function stepFor(d){
     var i=diff(S.ch.start,d),R=dayRead(S.ch,i),m=P.L.length,n=P.n,avail=P.L.filter(function(x){return !rd[x.b+':'+x.c]});
     S.pbs={};P.L.forEach(function(x){S.pbs[x.b]=1});
     // sugestão: o que o roteiro pede até esse dia e ainda não foi lido (atrasados + os do dia)
-    S.sug=P.L.filter(function(x,j){return Math.floor(j*n/m)<=i&&!rd[x.b+':'+x.c]}).map(function(x){return x.b+':'+x.c});
+    S.sug=P.L.filter(function(x,j){return P.di[j]<=i&&!rd[x.b+':'+x.c]}).map(function(x){return x.b+':'+x.c});
     if(R.length)h+='<div class="sub">Meta do dia: <b>'+refOf(R)+'</b> ('+R.length+(R.length>1?' capítulos':' capítulo')+'). A meta não é obrigatória: cada capítulo que você marcar é 1 passo.</div>';
     var atr=S.sug.filter(function(k){return !R.some(function(x){return x.b+':'+x.c===k})});
     if(atr.length&&!S.edit)h+='<div class="sub" style="margin-top:4px">Atrasados para recuperar: <b>'+refOf(atr.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}))+'</b></div>';
@@ -2060,7 +2080,7 @@ function editCh(id){
   showSheet('<h1>✏️ Editar jornada</h1><h2>'+esc(c.name)+'</h2><div class="sub">Você criou esta caravana, então pode mudar tudo desta jornada.</div>'+
     '<div class="ecard"><b>📖 Roteiro de leitura</b><div class="sub">Troque por um roteiro pronto ou escreva o nome com o livro (ex.: "Romanos em 16 dias").</div>'+
     '<div>'+TPL.map(function(m,i){return '<button class="chip" data-etp="'+i+'">'+m.n+'</button>'}).join('')+'</div>'+
-    '<label>Nome da jornada</label><input id="en" value="'+esc(c.name)+'"><label>Descrição ou plano</label><input id="ed" value="'+esc(c.desc)+'"></div>'+
+    '<label>Nome da jornada</label><input id="en" value="'+esc(c.name)+'"><label>Descrição ou plano</label><input id="ed" value="'+esc(descShow(c.desc))+'" data-crono="'+esc((String(c.desc||'').match(/\[cronograma:[^\]]*\]/i)||[''])[0])+'">'+(cronoOf(c.desc)?'<div class="sub">📅 Esta jornada segue um cronograma dia a dia, que fica guardado e não muda ao salvar.</div>':'')+'</div>'+
     '<div class="ecard"><b>📅 Datas e meta</b><div class="two"><div><label>Partida</label><input type="date" id="es" value="'+c.start+'"></div><div><label>Chegada (prazo)</label><input type="date" id="ee" value="'+c.end+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="eg" min="1" max="7" value="'+c.goal+'"></div>'+
     '<div class="card sub" id="eprev" style="margin-top:12px"></div>'+(np?'<div class="sub">'+(np>1?'Já existem '+np+' passos':'Já existe 1 passo')+' nesta jornada. Eles continuam salvos mesmo se você trocar o roteiro ou as datas.</div>':'')+
     '<div class="ecard"><b>🐪 Caravana</b><label>Nome da caravana</label><input id="egn" value="'+esc(g?g.name:'')+'" data-gid="'+(g?g.id:'')+'"></div>'+
@@ -2083,7 +2103,8 @@ async function saveCh(id){
   var gi=document.getElementById('egn'),gn=gi?gi.value.trim():'',gid=gi?gi.dataset.gid:'',og=grpOf(gid);
   if(gi&&!gn){er.textContent='Escreva o nome da caravana.';return}
   b.disabled=true;b.textContent='Salvando…';
-  var r=await sb.from('challenges').update({name:n,description:val('ed').trim()||null,start_date:s,end_date:e,goal_per_week:g}).eq('id',id).select();
+  var edi=document.getElementById('ed'),dsc=(val('ed').trim()+' '+(edi&&edi.dataset.crono||'')).trim();
+  var r=await sb.from('challenges').update({name:n,description:dsc||null,start_date:s,end_date:e,goal_per_week:g}).eq('id',id).select();
   if(r.error||!r.data||!r.data.length){b.disabled=false;b.textContent='Salvar alterações';er.textContent=r.error?'Não foi possível salvar. '+why(r.error):'Não foi possível salvar: só quem criou a caravana pode editar esta jornada.';return}
   if(og&&gn!==og.name){
     var q=await sb.from('groups').update({name:gn}).eq('id',gid).select();
@@ -2515,7 +2536,10 @@ async function loadData(){
     // escolhe automaticamente uma jornada sua só ao abrir o app (antes isso acontecia a cada 30 s
     // e tirava a pessoa da jornada que ela estava olhando)
     if(FIRST){FIRST=false;var mineL=S.all.filter(function(x){return isMine(x.id)});
-      if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}}
+      if(S.cur&&!isMine(S.cur)&&mineL.length){S.cur=(mineL.filter(function(x){return TODAY>=x.start&&TODAY<=x.end})[0]||mineL[0]).id;useCur()}
+      // a jornada aberta já terminou e há outra em andamento: abre a em andamento (as suas primeiro; senão a da caravana, com "Participar")
+      var emAnd=function(x){return TODAY>=x.start&&TODAY<=x.end},atual=S.all.filter(function(x){return x.id===S.cur})[0];
+      if(!atual||!emAnd(atual)){var A=S.all.filter(emAnd),nx=A.filter(function(x){return isMine(x.id)})[0]||A.filter(function(x){return atual&&x.gid===atual.gid})[0]||A[0];if(nx){S.cur=nx.id;useCur()}}}
     loaded=true;S.err='';setTimeout(thumbFill,3000);setTimeout(slimOwn,8000);setTimeout(dropSolto,5000);fv.then(function(v){if(!stale()&&!S.err)FV=v});
   }catch(e){
     if(stale())return;

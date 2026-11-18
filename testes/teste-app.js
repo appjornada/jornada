@@ -856,6 +856,62 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Ana 6 passos (atrasados recuperados), Bia 3 passos com 3 dias seguidos';
   });
 
+  const CRONO = '1;2;3;4;5;6-7;8-9;10;11;12-13;14-15;16-17;18;19;20-21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39-40;41;42;43;44;45;46;47-48;49;50';
+  const jornadaGenesis = (S, g) => { const c = S.jornada(g, 'Gênesis'); c.description = 'Leitura mista · 42 dias · 50 capítulos [cronograma: ' + CRONO.split(';').join('; ') + ']'; c.start_date = '2026-11-18'; c.end_date = '2026-12-29'; return c };
+  await teste('Cronograma de Gênesis: cada um dos 42 dias mostra exatamente a leitura combinada; 50 capítulos sem repetir', async () => {
+    const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'Conhecendo as Cartas'); const c = jornadaGenesis(S, g);
+    const pa = await abrir(browser, base, S, A, { relogio: '2026-11-18T09:00:00-03:00' });
+    const r = await pa.evaluate(id => { const c = S.all.find(x => x.id === id), P = plan(c); return { dias: P.n, tot: totalSteps(c), crono: !!P.crono, leit: Array.from({ length: P.n }, (_, i) => dayRead(c, i).map(x => x.c).join('-')) } }, c.id);
+    await pa.context().close();
+    const esperado = CRONO.split(';').map(x => { const [a, b] = x.split('-').map(Number); return b ? Array.from({ length: b - a + 1 }, (_, k) => a + k).join('-') : String(a) });
+    exige(r.crono && r.dias === 42 && r.tot === 50, 'dias ' + r.dias + ', total ' + r.tot);
+    const dif = r.leit.map((x, i) => x === esperado[i] ? null : 'dia ' + (i + 1) + ': app ' + x + ' / cronograma ' + esperado[i]).filter(Boolean);
+    exige(!dif.length, dif.slice(0, 3).join('; '));
+    return '42 de 42 dias iguais ao cronograma (8 dias com 2 capítulos)';
+  });
+
+  await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {
+    const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'Cartas'); const c = jornadaGenesis(S, g);
+    const pa = await abrir(browser, base, S, A, { relogio: '2026-11-23T10:00:00-03:00' });
+    await pa.evaluate(id => { participate(id) }, c.id);
+    const hoje = await pa.textContent('.card.hoje').catch(() => '');
+    await pa.click('#add'); await pa.waitForSelector('#chg');
+    const meta = await pa.textContent('#stepr'), sug = await pa.evaluate(() => S.sug.map(k => k.split(':')[1]).join(','));
+    const travados = await pa.$$eval('#chg .chip.lk', e => e.map(x => x.textContent.replace(/\D/g, '')));
+    await pa.click('[data-sc="0:8"]', { force: true }); // travado: no celular dá para tocar e ver o aviso
+    const msg = await pa.textContent('#selc'); const sel8 = await pa.evaluate(() => S.sel.indexOf('0:8'));
+    await pa.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pa.waitForSelector('.mth');
+    await pa.click('#selsug'); await pa.click('[data-mn="30"]'); await pa.click('#ok');
+    await esperar(() => Object.keys(S.DB.checkins).length === 1);
+    const k = Object.values(S.DB.checkins)[0];
+    await pa.context().close();
+    exige(/Gênesis 6–7/.test(hoje), 'leitura de hoje: ' + hoje.slice(0, 60));
+    exige(/Meta do dia: Gênesis 6–7/.test(meta), 'meta: ' + meta.slice(0, 80));
+    exige(sug === '1,2,3,4,5,6,7', 'sugeridos ' + sug);
+    exige(travados[0] === '8' && travados.length === 43, 'travados: ' + travados.slice(0, 3) + '… (' + travados.length + ')');
+    exige(sel8 < 0 && /24\/11/.test(msg), 'Gênesis 8: ' + msg);
+    exige(k && k.ref === '1–7' && k.chapters === 7, 'gravou ' + JSON.stringify(k && { ref: k.ref, ch: k.chapters }));
+    return 'registrou Gênesis 1–7 (7 passos); Gênesis 8 "libera em 24/11"';
+  });
+
+  await teste('Fase nova: quem estava na jornada encerrada abre o app direto em Gênesis, com "Participar"', async () => {
+    const S = novoServidor(); const A = S.usuario('Ana'), B = S.usuario('Bia'); const g = S.caravana(A, 'Cartas'); S.entrar(B, g);
+    const velha = S.jornada(g, 'Tiago em 10 dias'); velha.start_date = '2026-11-06'; velha.end_date = '2026-11-16';
+    S.publicacao(B, velha, { book: 'Tiago', ref: '1', read_date: '2026-11-06' }); const c = jornadaGenesis(S, g);
+    B.md = { jornadas: [velha.id] };
+    const pb = await abrir(browser, base, S, B, { relogio: '2026-11-18T08:00:00-03:00' });
+    await pb.evaluate(id => { localStorage.setItem('pd_cur', id) }, velha.id); await pb.reload(); await pb.waitForFunction(() => typeof loaded !== 'undefined' && loaded);
+    const cur = await pb.evaluate(() => S.cur), txt = await pb.textContent('main');
+    await pb.click('[data-pj]'); await new Promise(r => setTimeout(r, 300));
+    const depois = await pb.evaluate(() => ({ mine: isMine(S.cur), hoje: (document.querySelector('.card.hoje') || {}).textContent || '' }));
+    await pb.click('nav [data-t="cfg"]'); const mapa = await pb.textContent('main');
+    await pb.context().close();
+    exige(cur === c.id, 'abriu na jornada ' + (cur === velha.id ? 'encerrada' : cur));
+    exige(/Participar/.test(txt), 'sem botão Participar');
+    exige(depois.mine && /Gênesis 1/.test(depois.hoje), 'depois de participar: ' + depois.hoje.slice(0, 50));
+    exige(/📅 Cronograma dia a dia/.test(mapa) && !/\[cronograma/.test(mapa), 'Mapa mostra a marcação interna');
+  });
+
   // ---------- 4. Bíblia ----------
   await teste('Bíblia: só versões lidas dentro do app, ir para o versículo e voltar onde parou', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');

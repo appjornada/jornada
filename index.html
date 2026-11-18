@@ -920,22 +920,25 @@ function openWho(u,back){
   var row=function(p){var M=(p.imgs||[]).filter(function(m){return !m.audio})[0],A=(p.imgs||[]).some(function(m){return m.audio});
     var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
     var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
-    var del=(p.uid===S.me||S.canEdit?'<button class="wdel" data-ep="'+p.id+'" aria-label="'+(p.uid===S.me?'Editar':'Corrigir')+' este passo">✏️</button>':'')+(S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
+    var del=(p.uid===S.me||S.canEdit?'<button class="wdel" data-ep="'+p.id+'" aria-label="'+(p.uid===S.me?'Editar':'Corrigir')+' este passo">✏️</button>':'')+(p.uid===S.me||S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
     return '<div class="wpr"><button class="wp" data-wpost="'+p.id+'" data-wu="'+u+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+((p.likes||[]).length?' · ♥ '+p.likes.length:'')+(p.cm.length?' · 💬 '+p.cm.length:'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
   showSheet((back?'<button class="link" data-rkopen="1" style="margin-bottom:8px">‹ Voltar ao ranking</button>':'')+'<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
     '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
     (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
     '<button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button>');
 }
-// A líder apaga o passo de alguém da caravana (supabase/9-lider-apaga-passo.sql); os Amém e comentários vão junto
+// Cada pessoa apaga a própria publicação; a líder também apaga a de alguém da caravana (supabase/9-lider-apaga-passo.sql).
+// Os Amém e comentários vão junto. Dá para apagar pelo ✏️ Editar da publicação ou pela lista no perfil.
 async function delPost(id){
   var p=S.posts.filter(function(x){return x.id===id})[0];if(!p)return;
   var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
-  if(!confirm('Apagar o passo de '+nm(p.uid)+': '+ref+' ('+fd(p.date)+')?\n\nOs Amém e comentários dele também somem. Não dá para desfazer.'))return;
+  var mine=p.uid===S.me,fromWho=!!document.querySelector('#shc [data-wpost]');
+  if(!confirm((mine?'Apagar a sua publicação: ':'Apagar o passo de '+nm(p.uid)+': ')+ref+' ('+fd(p.date)+')?\n\nOs Amém e comentários também somem. Não dá para desfazer.'))return;
   var r=await sb.from('checkins').delete().eq('id',id).select('id');
   if(r.error||!r.data||!r.data.length){alert('Não foi possível apagar. '+(r.error?why(r.error):'Só a líder da caravana pode apagar o passo de outra pessoa.'));return}
   if(p.uid===S.me)dropUnused((p.imgs||[]).map(function(m){return m.path}));
-  toast('Passo apagado');await loadData();openWho(p.uid);
+  if(!fromWho){S.edit=null;S.media=null;closeSheet(true)}
+  toast('Publicação apagada');await loadData();if(fromWho)openWho(p.uid);
 }
 function openPosts(P,d,more){
   var M=[],A=[],notes=[],refs=[];
@@ -1655,14 +1658,14 @@ function openSheet(pre){
   if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
   pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
   if(E&&E.uid!==S.me){
-    showSheet('<h1>✏️ Corrigir leitura</h1><h2>'+esc(nm(E.uid))+'</h2><div class="sub">Como líder, você corrige só o livro e os capítulos. Reflexão, fotos e tempo de estudo continuam como ela publicou.</div>'+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" value="'+dt+'" disabled><div id="stepr"></div><div class="err" id="er"></div><button class="btn" id="ok">💾 Salvar correção</button><button class="btn g" id="x">Cancelar</button>');
+    showSheet('<h1>✏️ Corrigir leitura</h1><h2>'+esc(nm(E.uid))+'</h2><div class="sub">Como líder, você corrige só o livro e os capítulos. Reflexão, fotos e tempo de estudo continuam como ela publicou.</div>'+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" value="'+dt+'" disabled><div id="stepr"></div><div class="err" id="er"></div><button class="btn" id="ok">💾 Salvar correção</button><button class="btn g" id="x">Cancelar</button>'+(E?'<button class="btn g" style="color:var(--err)" data-delpost="'+E.id+'">🗑️ Apagar esta publicação</button>':''));
     stepFor(dt);return;
   }
   showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
     '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
     ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
     '<label>Áudio (opcional, até 3 minutos)</label><div id="arec"></div><input type="file" id="faud" accept="audio/*" hidden>'+
-    '<label>Reflexão (opcional)</label><textarea id="t" rows="3" placeholder="O que Deus falou ao seu coração?">'+(E?esc(E.note):'')+'</textarea><div class="err" id="er"></div><button class="btn" id="ok">'+(E?'💾 Salvar alterações':'👣 Dar o passo')+'</button><button class="btn g" id="x">Cancelar</button>');
+    '<label>Reflexão (opcional)</label><textarea id="t" rows="3" placeholder="O que Deus falou ao seu coração?">'+(E?esc(E.note):'')+'</textarea><div class="err" id="er"></div><button class="btn" id="ok">'+(E?'💾 Salvar alterações':'👣 Dar o passo')+'</button><button class="btn g" id="x">Cancelar</button>'+(E?'<button class="btn g" style="color:var(--err)" data-delpost="'+E.id+'">🗑️ Apagar esta publicação</button>':''));
   if(E&&E.min){var mi=document.getElementById('mn');if(mi)mi.value=E.min}
   drawMedia();drawRec();
   stepFor(dt);

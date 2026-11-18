@@ -522,6 +522,38 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'mural, ranking e participantes abrem a ficha; passos do mais novo para o mais antigo; tocar abre o passo com Amém e comentários (salvam e aparecem na hora), com a foto, Voltar; a líder apaga (com Amém), os outros não veem o 🗑️';
   });
 
+  await teste('Quem publicou apaga a própria publicação (pelo ✏️ Editar e pela ficha), mesmo sem ser líder', async () => {
+    const S = novoServidor(), A = S.usuario('Ana Lima'), B = S.usuario('Bia Souza'), g = S.caravana(A, 'Caravana'); S.entrar(B, g);
+    const c = S.jornada(g, 'João em 21 dias', -3, 12);
+    const k1 = S.publicacao(B, c, { book: 'João', ref: '1', photo_path: 'antigo/bia1.jpg', note: 'Teste' });
+    const k2 = S.publicacao(B, c, { book: 'João', ref: '2', photo_path: 'antigo/bia2.jpg' });
+    const kA = S.publicacao(A, c, { book: 'João', ref: '1' });
+    S.DB.likes.push({ checkin_id: k1.id, user_id: A.id });
+    const pg = await abrir(browser, base, S, B);
+    // no Início: ✏️ Editar → 🗑️ Apagar esta publicação
+    await pg.waitForSelector('main [data-ep="' + k1.id + '"]'); await pg.click('main [data-ep="' + k1.id + '"]');
+    await pg.waitForSelector('#shc [data-delpost="' + k1.id + '"]');
+    let aviso = ''; pg.once('dialog', d => { aviso = d.message(); d.accept() });
+    await pg.click('#shc [data-delpost="' + k1.id + '"]');
+    exige(await esperar(() => !S.DB.checkins[k1.id]), 'não apagou pelo Editar');
+    exige(/sua publicação: João 1/.test(aviso), 'aviso: ' + aviso);
+    exige(!S.DB.likes.some(l => l.checkin_id === k1.id), 'o Amém ficou');
+    exige(await esperar(() => pg.evaluate(() => !document.getElementById('sh').classList.contains('show'))), 'a janela não fechou');
+    exige(await esperar(() => pg.evaluate(id => !document.querySelector('main [data-ep="' + id + '"]'), k1.id)), 'a publicação continua no Início');
+    // na própria ficha: 🗑️ só nos passos dela; na ficha da Ana, nenhum
+    await pg.click('main b[data-who="' + B.id + '"]'); await pg.waitForSelector('#shc [data-delpost="' + k2.id + '"]');
+    exige((await pg.$$('#shc [data-delpost]')).length === 1, 'na própria ficha deveria haver 1 🗑️');
+    pg.once('dialog', d => d.accept()); await pg.click('#shc [data-delpost="' + k2.id + '"]');
+    exige(await esperar(() => !S.DB.checkins[k2.id]), 'não apagou pela ficha');
+    exige(await esperar(() => pg.evaluate(() => /Ainda não deu passos/.test(document.getElementById('shc').textContent))), 'a ficha não atualizou');
+    await pg.click('#shc #x'); await pg.click('nav [data-t="cfg"]');
+    await pg.waitForSelector('main .rk[data-who="' + A.id + '"]'); await pg.click('main .rk[data-who="' + A.id + '"]'); await pg.waitForSelector('#shc .wp');
+    exige((await pg.$$('#shc [data-delpost]')).length === 0, 'vê 🗑️ no passo da Ana');
+    exige(!!S.DB.checkins[kA.id], 'o passo da Ana sumiu');
+    await pg.context().close();
+    return 'Bia (não líder) apaga pelo ✏️ Editar no Início e pela própria ficha; Amém vai junto; não vê 🗑️ nos passos dos outros';
+  });
+
   await teste('Início: leitura de hoje em destaque (capítulos grandes, ✓ quando lidos, atrasados à parte)', async () => {
     const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Tiago'); S.entrar(R, g);
     const c = S.jornada(g, 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS', -2, 8); // hoje é o dia 3 de 11

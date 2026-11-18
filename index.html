@@ -360,8 +360,24 @@ async function avSign(){
 }
 function profCard(){
   if(NOAV||!S.me)return '';var has=!!S.avp[S.me];
-  return '<div class="card"><b>📷 Sua foto de perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
+  return '<div class="card"><b>📷 Sua foto de perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b> <button class="link" data-myname="1">✏️ Mudar nome</button><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
     '<button class="btn'+(has?' o':'')+'" data-avp="1" style="text-align:center">'+(has?'Trocar foto':'Escolher foto')+'</button>'+(has?'<button class="link" data-avdel="1">Tirar a foto</button>':'')+'</div>';
+}
+// Mudar o próprio nome (profiles_update: cada pessoa só altera o próprio perfil). Vale em todo o app: mural, ranking, chat e oração.
+function nameSheet(){
+  showSheet('<h2>✏️ Seu nome</h2><div class="sub">É assim que a caravana vê você no mural, no ranking, no chat e na oração.</div><label>Nome</label><input id="mynm" maxlength="40" autocomplete="name" value="'+esc(nm(S.me))+'"><div class="err" id="mynmer"></div><button class="btn" id="mynmok" data-mynamesave="1">💾 Salvar nome</button><button class="btn g" id="x">Cancelar</button>');
+  var i=document.getElementById('mynm');if(i){i.focus();i.select()}
+}
+async function saveName(){
+  var i=document.getElementById('mynm'),er=document.getElementById('mynmer'),b=document.getElementById('mynmok');if(!i)return;
+  var v=i.value.replace(/\s+/g,' ').trim();
+  if(v.length<2){er.textContent='Escreva o seu nome (pelo menos 2 letras).';return}
+  if(v===nm(S.me)){closeSheet();return}
+  b.disabled=true;b.textContent='Salvando…';
+  var r=await sb.from('profiles').update({name:v}).eq('id',S.me).select('id');
+  if(r.error||!r.data||!r.data.length){b.disabled=false;b.textContent='💾 Salvar nome';er.textContent='Não foi possível salvar. '+(r.error?why(r.error):'Tente de novo.');return}
+  try{await sb.auth.updateUser({data:{name:v}})}catch(e){}
+  S.names[S.me]=v;closeSheet();toast('✓ Nome alterado para '+v);render();loadData();
 }
 // A foto vira um quadrado de 256 px (~12 KB), cortado no centro
 async function setAvatar(file){
@@ -2582,6 +2598,8 @@ document.addEventListener('click',function(e){
   else if(t.id==='x')closeSheet();
   else if(d.avp)document.getElementById('favt').click();
   else if(d.avdel)delAvatar();
+  else if(d.myname)nameSheet();
+  else if(d.mynamesave)saveName();
   else if(t.id==='ok')publish();
   else if(t.id==='pdgo'){S.pendErr='';render();resumePending()}
   else if(t.id==='pdno'){if(confirm('Descartar este passo pendente? Ele não será publicado.')){pendClear();render()}}

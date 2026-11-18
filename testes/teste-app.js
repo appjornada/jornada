@@ -554,6 +554,27 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Bia (não líder) apaga pelo ✏️ Editar no Início e pela própria ficha; Amém vai junto; não vê 🗑️ nos passos dos outros';
   });
 
+  await teste('Mudar o próprio nome no Mapa: salva, aparece para a caravana; nome vazio não salva', async () => {
+    const S = novoServidor(), A = S.usuario('Ana Lima'), B = S.usuario('TESTE'), g = S.caravana(A, 'Caravana'); S.entrar(B, g);
+    const c = S.jornada(g, 'João em 21 dias', -3, 12);
+    S.publicacao(B, c, { book: 'João', ref: '1' });
+    const pg = await abrir(browser, base, S, B);
+    await pg.click('nav [data-t="cfg"]'); await pg.waitForSelector('main [data-myname]');
+    await pg.click('main [data-myname]'); await pg.waitForSelector('#shc #mynm');
+    exige(await pg.inputValue('#shc #mynm') === 'TESTE', 'o campo não veio com o nome atual');
+    await pg.fill('#shc #mynm', ' '); await pg.click('#shc #mynmok');
+    exige(/pelo menos 2 letras/.test(await pg.textContent('#shc #mynmer')), 'nome vazio não avisou');
+    exige(S.DB.profiles[B.id].name === 'TESTE', 'salvou nome vazio');
+    await pg.fill('#shc #mynm', '  Mayara   Lima '); await pg.click('#shc #mynmok');
+    exige(await esperar(() => S.DB.profiles[B.id].name === 'Mayara Lima'), 'não salvou: ' + S.DB.profiles[B.id].name);
+    exige(await esperar(() => pg.evaluate(() => !document.getElementById('sh').classList.contains('show') && /Mayara Lima/.test(document.querySelector('main').textContent) && !/TESTE/.test(document.querySelector('main').textContent))), 'a tela não mostrou o nome novo');
+    await pg.context().close();
+    const pa = await abrir(browser, base, S, A);
+    exige(await esperar(() => pa.evaluate(id => (document.querySelector('main b[data-who="' + id + '"]') || {}).textContent === 'Mayara Lima', B.id)), 'a caravana não vê o nome novo no mural');
+    await pa.context().close();
+    return 'TESTE → Mayara Lima (espaços limpos); vazio recusado; Ana vê o nome novo no mural';
+  });
+
   await teste('Início: leitura de hoje em destaque (capítulos grandes, ✓ quando lidos, atrasados à parte)', async () => {
     const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Tiago'); S.entrar(R, g);
     const c = S.jornada(g, 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS', -2, 8); // hoje é o dia 3 de 11

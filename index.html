@@ -1338,7 +1338,7 @@ function moLast(){
   var id=MO.last;if(!id)return '';var x=moDone().filter(function(y){return y.id===id})[0];if(!x)return '';
   var d=moDur((x.e-x.s)/1000);
   if(MO.q[id])return '<div class="mo-pend" role="status">⏳ Seu momento de oração ('+d+') está guardado neste aparelho e <b>pendente de sincronização</b>. Ele será enviado quando a internet voltar. <button class="link" data-mo="retry">Tentar agora</button></div>';
-  return '<div class="mo-ok" role="status">✓ Seu momento de oração foi registrado · '+d+'</div>'+moShareBtn(id,1);
+  return '<div class="mo-ok" role="status">✓ Seu momento de oração foi registrado · '+d+' · <button class="link" data-mo="fix:'+id+'">✏️ Corrigir</button></div>'+moShareBtn(id,1);
 }
 function moShareBtn(id,big){
   if(!S.grp&&!MO.sh[id])return '';
@@ -1562,6 +1562,38 @@ async function moAuto(){
   if(mud){moSave();psLoad(true);if(loaded)render()}
 }
 function moNoAv(id){delete MO.av[id];moSave();if(MO.sh[id])moUnshare(id);else render()}
+// Corrigir o tempo de uma oração já registrada (ex.: esqueceu o cronômetro ligado). A pessoa diz quanto tempo orou;
+// o início fica igual e o fim vira início + esse tempo (nunca no futuro, até 24 h). supabase/18-orando-na-caravana.sql
+function moFix(id){
+  var x=moDone().filter(function(y){return y.id===id})[0];if(!x||x.pend)return;
+  var mn=Math.max(1,Math.round((x.e-x.s)/6e4)),mx=Math.max(1,Math.min(1440,Math.floor((Date.now()-x.s)/6e4)));
+  MO.fixBack=!!document.querySelector('#shc #mohist');
+  showSheet('<h1>✏️ Corrigir oração</h1><div class="sub">'+moDia(x.s)+', começou às '+moHora(x.s)+'. Está registrado: <b>'+moDur((x.e-x.s)/1000)+'</b>.</div>'+
+    '<h2>Quanto tempo você orou?</h2><div class="row" style="align-items:center;gap:10px"><input type="number" id="mofix" inputmode="numeric" min="1" max="'+mx+'" value="'+mn+'" style="max-width:120px;font-size:22px;text-align:center"><b>minutos</b></div>'+
+    '<div class="sub" id="mofixp" aria-live="polite"></div><div class="err" id="mofixer" role="alert"></div>'+
+    '<button class="btn" data-mo="fixok:'+id+'">💾 Salvar correção</button><button class="btn g" '+(MO.fixBack?'data-mo="hist"':'id="x"')+'>Cancelar</button>');
+  moFixPrev(id);var i=document.getElementById('mofix');if(i){i.dataset.id=id;i.focus();i.select()}
+}
+function moFixVal(id){
+  var x=moDone().filter(function(y){return y.id===id})[0];if(!x)return{err:'Esta oração não está mais no histórico.'};
+  var v=Math.round(+val('mofix'));if(!(v>=1))return{err:'Escreva quantos minutos você orou (pelo menos 1).'};
+  if(v>1440)return{err:'Uma oração pode ter no máximo 24 horas (1440 minutos).'};
+  var e=x.s+v*6e4;if(e>Date.now()+5e3)return{err:'Ainda não deu esse tempo desde que você começou (às '+moHora(x.s)+').'};
+  return{x:x,e:e,v:v};
+}
+function moFixPrev(id){var r=moFixVal(id),p=document.getElementById('mofixp'),er=document.getElementById('mofixer');if(er)er.textContent='';if(p)p.textContent=r.err?'':'Fica registrado: '+moDur(r.v*60)+', das '+moHora(r.x.s)+' às '+moHora(r.e)+'.'}
+async function moFixOk(id){
+  var r=moFixVal(id),er=document.getElementById('mofixer');if(r.err){if(er)er.textContent=r.err;return}
+  var b=document.querySelector('[data-mo="fixok:'+id+'"]');if(b){if(b.disabled)return;b.disabled=true;b.textContent='Salvando…'}
+  var q=await moCall(sb.rpc('ps_corrigir',{p_id:id,p_fim:new Date(r.e).toISOString()}));
+  var row=q.data&&(Array.isArray(q.data)?q.data[0]:q.data);
+  if(q.error||!row){if(b){b.disabled=false;b.textContent='💾 Salvar correção'}
+    if(er)er.textContent=q.error&&(q.error.code==='PGRST202'||/ps_corrigir/.test(q.error.message||''))?'A correção ainda não está ligada no servidor (falta rodar o script 18 no Supabase).':q.error&&moNet(q.error)?'Sem conexão. Tente de novo quando a internet voltar.':'Não foi possível corrigir. '+(q.error?moWhy(q.error):'Tente de novo.');return}
+  moRow({id:row.id,status:row.status,started_at:row.started_at,ended_at:row.ended_at});MO.ver++;
+  toast('✓ Corrigido: '+moDur((Date.parse(row.ended_at)-Date.parse(row.started_at))/1000));
+  moSave();if(MO.fixBack)moHist();else closeSheet(true);render();
+}
+document.addEventListener('input',function(e){if(e.target.id==='mofix')moFixPrev(e.target.dataset.id)});
 // histórico privado
 function moHist(){showSheet(moHistHtml());moLoad()}
 function moHistHtml(){
@@ -1569,7 +1601,7 @@ function moHistHtml(){
   var it=L.length?L.map(function(x){
     var dd=iso(new Date(x.e))!==iso(new Date(x.s));
     return '<div class="mo-it" data-moit="'+x.id+'"><div class="row"><div class="grow"><b>'+moDia(x.s)+'</b><div class="sub">Começou às '+moHora(x.s)+(dd?' · passou da meia-noite':'')+'</div></div><b class="mo-d">'+moDur((x.e-x.s)/1000)+'</b></div>'+
-      '<div class="mo-ia">'+(x.pend?'<span class="mo-tag">⏳ pendente de sincronização</span>':moShareBtn(x.id,0))+'<button class="link" data-mo="del:'+x.id+'">🗑️ Excluir</button></div></div>';
+      '<div class="mo-ia">'+(x.pend?'<span class="mo-tag">⏳ pendente de sincronização</span>':moShareBtn(x.id,0)+'<button class="link" data-mo="fix:'+x.id+'">✏️ Corrigir</button>')+'<button class="link" data-mo="del:'+x.id+'">🗑️ Excluir</button></div></div>';
   }).join(''):'<div class="sub" style="margin:14px 0">'+(MO.ok||!MO.err?'Nenhum momento de oração registrado ainda. Quando você orar, ele aparece aqui.':esc(MO.err))+'</div>';
   return '<div id="mohist"><h1>🕊️ Meu histórico de oração</h1><div class="sub">🔒 Só você vê. Semana de segunda a domingo.</div>'+
     '<div class="mo-res"><div><small>Hoje</small><b>'+(st.hoje?moDur(st.hoje):'—')+'</b></div><div><small>Nesta semana</small><b>'+(st.sem?moDur(st.sem):'—')+'</b></div></div>'+
@@ -1638,7 +1670,7 @@ function moClick(v){
   var i=v.indexOf(':'),k=i<0?v:v.slice(0,i),id=i<0?'':v.slice(i+1);
   if(k==='start')moStart();else if(k==='end')moEndAsk();else if(k==='cont')moCont();else if(k==='disc')moDisc();
   else if(k==='fim')moFim();else if(k==='hist')moHist();else if(k==='more')moMore();else if(k==='retry'){MO.err='';moSync();render()}
-  else if(k==='share')moShare(id);else if(k==='unsh')moUnshare(id);else if(k==='del')moDel(id);else if(k==='noav')moNoAv(id);
+  else if(k==='share')moShare(id);else if(k==='unsh')moUnshare(id);else if(k==='del')moDel(id);else if(k==='noav')moNoAv(id);else if(k==='fix')moFix(id);else if(k==='fixok')moFixOk(id);
   else if(k==='junto'){if(closeSheet()===false)return;tab='chat';if(S.grp){CV='ora';try{localStorage.setItem('pd_cv',CV)}catch(x){}}if(!MO.act)moStart();render();var mj=document.getElementById('mo');if(mj&&mj.scrollIntoView)mj.scrollIntoView({block:'start'})}
   else if(k==='go'){if(closeSheet()===false)return;tab='chat';if(S.grp){CV='ora';try{localStorage.setItem('pd_cv',CV)}catch(x){}}render();var m=document.getElementById('mo');if(m&&m.scrollIntoView)m.scrollIntoView({block:'start'})}
 }

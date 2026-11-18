@@ -1766,6 +1766,46 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'avisou ao começar; Bia viu "orando agora" e orou também; o fim tira do "agora"; Caio viu "Bia e Ana oraram hoje" e a lista sem tempo; Não avisar e caixinha lembrada; banco antigo avisa ao encerrar';
   });
 
+  await teste('Meu momento de oração: corrigir o tempo de quem esqueceu o cronômetro (histórico e logo depois de encerrar)', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); S.jornada(g, 'Romanos em 16 dias');
+    const h1 = fazSessao(S, A, Date.now() - 2 * 36e5, 85 * 60); // esqueceu ligado: 1 h 25 min
+    const pa = await abrir(browser, base, S, A, TZ); await irMo(pa);
+    exige(await esperar(async () => /Hoje\s*1 h 25 min/.test(await pa.textContent('#mo .mo-res'))), 'total antes: ' + await pa.textContent('#mo .mo-res'));
+    await pa.click('[data-mo="hist"]'); await pa.waitForSelector(`#mohist [data-mo="fix:${h1}"]`);
+    await pa.click(`[data-mo="fix:${h1}"]`); await pa.waitForSelector('#mofix');
+    exige(await pa.inputValue('#mofix') === '85', 'o campo não veio com o tempo registrado');
+    // valores impossíveis: recusados sem mudar nada
+    await pa.fill('#mofix', '0'); await pa.click(`[data-mo="fixok:${h1}"]`);
+    exige(/pelo menos 1/.test(await pa.textContent('#mofixer')), 'aceitou 0 minutos');
+    await pa.fill('#mofix', '500'); await pa.click(`[data-mo="fixok:${h1}"]`);
+    exige(/Ainda não deu esse tempo/.test(await pa.textContent('#mofixer')), 'aceitou fim no futuro');
+    exige(Math.round((Date.parse(S.DB.ps[h1].ended_at) - Date.parse(S.DB.ps[h1].started_at)) / 6e4) === 85, 'mudou com valor recusado');
+    await pa.fill('#mofix', '20');
+    exige(/Fica registrado: 20 min/.test(await pa.textContent('#mofixp')), 'prévia: ' + await pa.textContent('#mofixp'));
+    await pa.click(`[data-mo="fixok:${h1}"]`);
+    exige(await esperar(() => Math.round((Date.parse(S.DB.ps[h1].ended_at) - Date.parse(S.DB.ps[h1].started_at)) / 6e4) === 20), 'não corrigiu no banco');
+    exige(await esperar(async () => !!(await pa.$('#mohist')) && /Hoje\s*20 min/.test(await pa.textContent('#mohist .mo-res'))), 'o histórico não voltou com o total novo');
+    await pa.click('#shc #x');
+    exige(await esperar(async () => /Hoje\s*20 min/.test(await pa.textContent('#mo .mo-res'))), 'o resumo não mudou: ' + await pa.textContent('#mo .mo-res'));
+    // logo depois de encerrar também dá para corrigir
+    await pa.uncheck('#moav'); await pa.click('#mo [data-mo="start"]'); await pa.waitForTimeout(1600); await pa.click('#mo [data-mo="end"]');
+    await pa.waitForSelector('#mo .mo-ok [data-mo^="fix:"]');
+    // outra pessoa não consegue corrigir a oração da Ana
+    const pb = await abrir(browser, base, S, B, TZ);
+    const r = await pb.evaluate(async id => { const q = await sb.rpc('ps_corrigir', { p_id: id, p_fim: new Date().toISOString() }); return (q.data || []).length }, h1);
+    exige(r === 0 && Math.round((Date.parse(S.DB.ps[h1].ended_at) - Date.parse(S.DB.ps[h1].started_at)) / 6e4) === 20, 'Bia corrigiu a oração da Ana');
+    const erros = pa.erros.concat(pb.erros); await pa.context().close(); await pb.context().close();
+    // banco sem o script 18: avisa com clareza e não muda nada
+    const S2 = novoServidor({ pshAntigo: true }), A2 = S2.usuario('Ana'), g2 = S2.caravana(A2, 'G'); S2.jornada(g2, 'Romanos em 16 dias');
+    const k = fazSessao(S2, A2, Date.now() - 2 * 36e5, 85 * 60);
+    const qa = await abrir(browser, base, S2, A2, TZ); await irMo(qa); await qa.click('[data-mo="hist"]'); await qa.waitForSelector(`[data-mo="fix:${k}"]`);
+    await qa.click(`[data-mo="fix:${k}"]`); await qa.fill('#mofix', '20'); await qa.click(`[data-mo="fixok:${k}"]`);
+    exige(await esperar(async () => /falta rodar o script 18/.test(await qa.textContent('#mofixer'))), 'banco antigo: ' + await qa.textContent('#mofixer'));
+    const erros2 = qa.erros; await qa.context().close();
+    exige(!erros.length && !erros2.length, 'erros: ' + erros.concat(erros2).join(' | '));
+    return '1 h 25 min → 20 min (banco, histórico e resumo); 0 e futuro recusados; corrigir logo depois de encerrar; Bia não mexe; sem o script: aviso claro';
+  });
+
   await teste('Meu momento de oração: meia-noite e virada de semana (segunda a domingo)', async () => {
     const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
     const T = s => Date.parse(s + '-03:00');

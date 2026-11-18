@@ -21,6 +21,8 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   S.publicacao(T, c, { book: 'Gênesis', ref: '1', note: 'No princípio, Deus…', created_at: h(240), study_minutes: 15 });
   const ses = (u, ini, fim) => { const id = require('crypto').randomUUID(), s = new Date(Math.floor((Date.now() - ini * 6e4) / 1000) * 1000).toISOString(), e = fim == null ? null : new Date(Date.now() - fim * 6e4).toISOString();
     S.DB.ps[id] = { id, user_id: u.id, status: e ? 'done' : 'active', started_at: s, ended_at: e, created_at: s }; S.DB.psh[id] = { session_id: id, user_id: u.id, group_id: g.id, started_at: s, ended_at: e, created_at: s } };
+  const minha = require('crypto').randomUUID(), ini = new Date(Math.floor((Date.now() - 150 * 6e4) / 1000) * 1000).toISOString();
+  S.DB.ps[minha] = { id: minha, user_id: R.id, status: 'done', started_at: ini, ended_at: new Date(Date.parse(ini) + 85 * 6e4).toISOString(), created_at: ini };
   ses(M, 4, null); ses(Ro, 2, null); ses(T, 60, 45); ses(J, 120, 100); ses(T, 26 * 60, 25 * 60);
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block', timezoneId: 'America/Sao_Paulo' });
@@ -39,5 +41,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await pg.screenshot({ path: path.join(OUT, 'quem-orou-hoje.png') });
   await pg.evaluate(() => { closeSheet(true); tab = 'chat'; CV = 'ora'; render(); document.getElementById('mo').scrollIntoView({ block: 'center' }) }); await pg.waitForTimeout(400);
   await pg.screenshot({ path: path.join(OUT, 'oracao-caixinha.png') });
+  await pg.click('[data-mo="hist"]'); await pg.waitForSelector('#mohist [data-mo^="fix:"]'); await pg.waitForTimeout(300);
+  await pg.screenshot({ path: path.join(OUT, 'historico-corrigir.png') });
+  await pg.click('#mohist [data-mo^="fix:"]'); await pg.fill('#mofix', '20'); await pg.waitForTimeout(300);
+  await pg.screenshot({ path: path.join(OUT, 'corrigir-oracao.png') });
   await browser.close(); srv.close();
 })();

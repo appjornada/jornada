@@ -204,6 +204,14 @@ function novoServidor(opts = {}) {
     return err('operação desconhecida');
   }
   function rpc(me, name, a) {
+    if (name === 'ps_corrigir') { // supabase/18-orando-na-caravana.sql: só a própria, só concluída, só o fim (depois do início, nunca no futuro, até 24 h)
+      if (O.pshAntigo) return err('Could not find the function public.ps_corrigir(p_fim, p_id) in the schema cache', 'PGRST202');
+      const r = DB.ps[a.p_id]; if (!r || r.user_id !== me || r.status !== 'done') return { data: [], error: null };
+      const n = Object.assign({}, r, { ended_at: sec(a.p_fim) }); if (n.ended_at > agora()) n.ended_at = agora();
+      const c = psCheck(n); if (c) return err('new row for relation "prayer_sessions" violates check constraint "' + c + '"', '23514');
+      DB.ps[n.id] = n; if (DB.psh[n.id] && !O.pshAntigo) DB.psh[n.id].ended_at = n.ended_at;
+      return { data: [psOut(n)], error: null };
+    }
     if (name === 'feed_version') {
       if (O.semVersao) return err('Could not find the function public.feed_version(p_challenges, p_groups) in the schema cache', 'PGRST202');
       const cs = (a.p_challenges || []).map(String), gs = (a.p_groups || []).map(String);

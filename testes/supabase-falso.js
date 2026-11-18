@@ -79,6 +79,7 @@ function novoServidor(opts = {}) {
     const t = q.table;
     if (q.op === 'select') {
       if (t === 'profiles' && O.semAvatar && /avatar_path/.test(q.cols || '')) return err('column profiles.avatar_path does not exist', '42703');
+      if (t === 'prayer_shares' && O.pshAntigo && /ended_at/.test(q.cols || '')) return err('column prayer_shares.ended_at does not exist', '42703');
       let rows = applyFilters(visible(t, me), q.filters);
       if (q.order) { for (const o of [...q.order].reverse()) rows.sort((a, b) => (String(a[o.col]) < String(b[o.col]) ? -1 : String(a[o.col]) > String(b[o.col]) ? 1 : 0) * (o.asc ? 1 : -1)) }
       let from = 0, to = rows.length - 1;
@@ -131,10 +132,12 @@ function novoServidor(opts = {}) {
       }
       if (t === 'prayer_shares') { // psh_insert + gatilho psh_regras
         const sx = DB.ps[b.session_id];
-        if (!sx || sx.user_id !== me || sx.status !== 'done') return err('Só dá para compartilhar uma oração sua já concluída.', '42501');
+        // banco novo (supabase/18-orando-na-caravana.sql): aceita também a oração em andamento; O.pshAntigo imita o banco de antes
+        if (!sx || sx.user_id !== me || (O.pshAntigo && sx.status !== 'done')) return err(O.pshAntigo ? 'Só dá para compartilhar uma oração sua já concluída.' : 'Só dá para compartilhar uma oração sua.', '42501');
         if (!member(me, b.group_id)) return err('new row violates row-level security policy for table "prayer_shares"', '42501');
         if (DB.psh[b.session_id]) return err('duplicate key value violates unique constraint "prayer_shares_pkey"', '23505');
         const r = { session_id: sx.id, user_id: me, group_id: b.group_id, started_at: sx.started_at, created_at: new Date().toISOString() };
+        if (!O.pshAntigo) r.ended_at = sx.ended_at || null;
         DB.psh[r.session_id] = r; return { data: q.returning ? [r] : null, error: null };
       }
       return err('tabela desconhecida');
@@ -154,7 +157,7 @@ function novoServidor(opts = {}) {
           const c = psCheck(n); if (c) return err('new row for relation "prayer_sessions" violates check constraint "' + c + '"', '23514');
           novos.push(n);
         }
-        novos.forEach(n => { DB.ps[n.id] = n });
+        novos.forEach(n => { DB.ps[n.id] = n; if (!O.pshAntigo && DB.psh[n.id]) DB.psh[n.id].ended_at = n.ended_at || null }); // gatilho psh_fim
         return psDepois('update', { data: q.returning ? novos.map(psOut) : null, error: null });
       }
       let rows = applyFilters(visible(t, me), q.filters);

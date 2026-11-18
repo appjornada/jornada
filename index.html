@@ -360,8 +360,8 @@ async function avSign(){
 }
 function profCard(){
   if(NOAV||!S.me)return '';var has=!!S.avp[S.me];
-  return '<div class="card"><b>📷 Sua foto de perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b> <button class="link" data-myname="1">✏️ Mudar nome</button><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
-    '<button class="btn'+(has?' o':'')+'" data-avp="1" style="text-align:center">'+(has?'Trocar foto':'Escolher foto')+'</button>'+(has?'<button class="link" data-avdel="1">Tirar a foto</button>':'')+'</div>';
+  return '<div class="card"><b>👤 Seu perfil</b><div class="row" style="align-items:center;gap:14px;margin:10px 0 4px">'+av(S.me,null,'big')+'<div class="grow"><b>'+esc(nm(S.me))+'</b><div class="sub">'+(has?'Aparece no mural, no ranking e na lista da caravana.':'Coloque uma foto para a caravana reconhecer você. Ela aparece no lugar da letra.')+'</div></div></div>'+
+    '<button class="btn'+(has?' o':'')+'" data-avp="1" style="text-align:center">'+(has?'Trocar foto':'Escolher foto')+'</button>'+'<button class="btn o" data-myname="1" style="text-align:center">✏️ Mudar meu nome</button>'+(has?'<button class="link" data-avdel="1">Tirar a foto</button>':'')+'</div>';
 }
 // Mudar o próprio nome (profiles_update: cada pessoa só altera o próprio perfil). Vale em todo o app: mural, ranking, chat e oração.
 function nameSheet(){

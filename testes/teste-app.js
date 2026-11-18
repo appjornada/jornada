@@ -185,7 +185,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.waitForSelector('main .card .av.md');
     exige(!(await pa.$('main .av img')), 'apareceu foto sem ninguém ter colocado');
     await pa.click('nav [data-t="cfg"]'); await pa.waitForSelector('main [data-avp]');
-    exige((await pa.textContent('main .card')).includes('Sua foto de perfil'), 'o convite para pôr a foto não está no alto do Mapa');
+    exige((await pa.textContent('main .card')).includes('Seu perfil'), 'o convite para pôr a foto não está no alto do Mapa');
     // escolhe uma foto em pé (600x900): vira um quadrado pequeno
     const gera = cor => pa.evaluate(k => { const v = document.createElement('canvas'); v.width = 600; v.height = 900; const x = v.getContext('2d'); x.fillStyle = k; x.fillRect(0, 0, 600, 900); return v.toDataURL('image/png').split(',')[1] }, cor).then(b => Buffer.from(b, 'base64'));
     await pa.setInputFiles('#favt', { name: 'eu.png', mimeType: 'image/png', buffer: await gera('#2a6') });

@@ -1955,7 +1955,12 @@ function drawMedia(){
 }
 // ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
 var MAXB=150*1024,MAXSIDE=1280,MINSIDE=800;
-function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('imagem'))};im.src=u})}
+// Se o celular não consegue abrir a foto inteira (fotos de 48 MP em aparelho com pouca memória), abre já reduzida
+// (createImageBitmap com resizeWidth não carrega a foto cheia na memória). Sem isso a foto ia pesada (até 4 MB) para o mural.
+function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};
+  im.onerror=function(){URL.revokeObjectURL(u);if(!window.createImageBitmap)return rej(new Error('imagem'));
+    createImageBitmap(file,{resizeWidth:MAXSIDE,resizeQuality:'high'}).then(function(b){try{b.naturalWidth=b.width;b.naturalHeight=b.height}catch(e){}if(!b.naturalWidth)return rej(new Error('imagem'));res(b)},function(){rej(new Error('imagem'))})};
+  im.src=u})}
 function toJpg(cv,q){return new Promise(function(r){cv.toBlob(r,'image/jpeg',q)})}
 // Reduz o tamanho e a qualidade aos poucos até caber em 150 KB. Primeiro baixa a qualidade (até 0,56,
 // que ainda deixa letras legíveis); só depois diminui a imagem, até 800 px no lado maior.

@@ -249,6 +249,10 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .oc-agora{margin-top:10px;font-size:14px;color:var(--mut);display:flex;align-items:center;gap:8px}
 .psl{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;font-size:15px;color:var(--tx);padding:10px 14px;border-radius:14px;cursor:pointer;box-shadow:none}
 .psl .grow{min-width:0}.psl .sub{flex:none;font-size:13px}
+.volta{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 16%,var(--card)),var(--card) 75%)}
+.volta h3{margin:2px 0 6px;font-size:21px;line-height:1.25}.volta p{margin:0 0 6px;font-size:16px;line-height:1.45}
+.vt-hj{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);font-size:15px}.vt-hj b{display:block;font-size:18px;margin-top:2px}
+.volta .btn{margin-top:12px}
 .psb{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px;border-radius:16px;border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));background:color-mix(in srgb,var(--ac) 9%,var(--card))}
 .psb.on{border-color:color-mix(in srgb,#2e9e5b 50%,var(--bd));background:color-mix(in srgb,#2e9e5b 9%,var(--card))}
 .psb-t{width:100%;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;text-align:left;font:inherit;font-size:15px;color:var(--tx);cursor:pointer}
@@ -890,12 +894,30 @@ function feed(){
   if(!S.grp)return h+noCh();
   psLoad(); // quem está orando (no máximo 1 vez por minuto)
   if(!S.chs.length)return h+hcCard()+psBar()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>'+psMix([],true);
-  if(S.cur&&!isMine(S.cur))return h+hcCard()+psBar()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
+  if(S.cur&&!isMine(S.cur))return h+hcCard()+voltaCard()+psBar()+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
   h+=hcCard()+novaCard()+today()+psBar()+statsHtml()+revidCard();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>'+psMix([],true);
   var lim=S.feedN||FEEDN,mais=l.length-lim;
   return h+psMix(l.slice(0,lim),mais<=0)+(mais>0?'<button class="btn g" data-more="1" style="text-align:center">Ver mais '+Math.min(mais,FEEDN)+' publicações (faltam '+mais+')</button>':'');
+}
+// Cartão de boas-vindas para quem ainda não entrou na jornada atual (no lugar do antigo "Você ainda não participa").
+// Quem caminhou na jornada anterior da caravana vê quantos capítulos leu; quem nunca registrou, um convite.
+// Traz a leitura de hoje em uma linha; ao tocar em Entrar, some e aparece a Leitura de hoje completa.
+function voltaCard(){
+  var c=S.ch,nome=esc(nm(S.me).split(' ')[0]),P=plan(c),i=diff(c.start,TODAY);
+  var meus=S.posts.filter(function(p){return p.uid===S.me&&p.cid!==c.id}),ant=null;
+  meus.forEach(function(p){var j=S.all.filter(function(x){return x.id===p.cid&&x.gid===c.gid})[0];if(j&&j.start<=c.start&&(!ant||j.start>ant.start))ant=j});
+  var txt;
+  if(ant){
+    var k={};meus.filter(function(p){return p.cid===ant.id}).forEach(function(p){chOfPost(p).forEach(function(x){k[x]=1})});
+    var n=Object.keys(k).length,PA=plan(ant),nomeAnt=PA&&PA.L.length?(PA.L[0].b===PA.L[PA.L.length-1].b?'em '+BOOKS[PA.L[0].b]:'de '+BOOKS[PA.L[0].b]+' a '+BOOKS[PA.L[PA.L.length-1].b]):'na jornada '+esc(ant.name);
+    txt='<h3>👋 Que bom ter você aqui, '+nome+'!</h3><p>Você caminhou com a caravana '+nomeAnt+(n?' e leu <b>'+n+(n>1?' capítulos':' capítulo')+'</b> 🙌':' 🙌')+'</p><p>Agora estamos em <b>'+esc(c.name)+'</b>. Ainda dá tempo de chegar junto!</p>';
+  }else txt='<h3>👋 Que bom ter você na caravana, '+nome+'!</h3><p>Estamos lendo <b>'+esc(c.name)+'</b> juntos, um pouquinho por dia. É só ler o capítulo do dia e registrar aqui. 🙏</p>';
+  var hj='';
+  if(P&&i<0){var R0=dayRead(c,0);if(R0.length)hj='<div class="vt-hj">📖 Primeira leitura · começa em '+fd(c.start)+'<b>'+refOf(R0)+'</b></div>'}
+  else if(P&&i<P.n){var R=dayRead(c,i);if(R.length)hj='<div class="vt-hj">📖 Leitura de hoje · dia '+(i+1)+' de '+P.n+'<b>'+refOf(R)+'</b></div>'}
+  return '<div class="card volta" id="volta">'+txt+hj+'<button class="btn" data-pj="'+c.id+'">👣 '+(ant?'Entrar em ':'Começar em ')+esc(c.name)+'</button></div>';
 }
 var FEEDN=30; // o mural mostra 30 publicações por vez: as fotos antigas só são baixadas por quem pedir para ver
 // ---- Ranking compacto: 3 primeiros + a sua posição; "Ver ranking completo" abre a lista toda ----

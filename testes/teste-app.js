@@ -575,6 +575,33 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'TESTE → Mayara Lima (espaços limpos); vazio recusado; Ana vê o nome novo no mural';
   });
 
+  await teste('Cartão de boas-vindas para quem ainda não entrou na jornada: caravana → cartão → oração → publicações; Entrar mostra a Leitura de hoje', async () => {
+    const S = novoServidor(), R = S.usuario('Roger Martins'), B = S.usuario('Claudinha Souza'), C = S.usuario('Bruna'), g = S.caravana(R, 'JORNADA'); S.entrar(B, g); S.entrar(C, g);
+    const cartas = S.jornada(g, 'TIAGO + 1 PEDRO + JUDAS', -14, -4), gen = S.jornada(g, 'Gênesis', -2, 39);
+    const dia = n => { const x = new Date(); x.setDate(x.getDate() + n); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    S.publicacao(B, cartas, { book: 'Tiago', ref: '1–2', read_date: dia(-14) }); S.publicacao(B, cartas, { book: 'Tiago', ref: 'Tiago 2–5; 1 Pedro 1', read_date: dia(-13) });
+    S.publicacao(R, gen, { book: 'Gênesis', ref: '1', created_at: new Date(Date.now() - 36e5).toISOString() });
+    B.md = { jornadas: [cartas.id] }; C.md = { jornadas: [] };
+    const pb = await abrir(browser, base, S, B);
+    await pb.waitForSelector('main #volta');
+    const ordem = () => pb.evaluate(() => [...document.querySelectorAll('main > .card')].map(e => e.id === 'volta' ? 'volta' : e.classList.contains('hc') ? 'caravana' : e.classList.contains('hoje') ? 'leitura' : e.classList.contains('psb') ? 'oracao' : e.classList.contains('psl') ? 'linha' : e.querySelector('[data-l]') ? 'post' : 'outro:' + e.className).join(','));
+    exige(await ordem() === 'caravana,volta,oracao,post', 'ordem com o cartão: ' + await ordem());
+    const t = (await pb.innerText('#volta')).replace(/\s+/g, ' ');
+    exige(/Que bom ter você aqui, Claudinha!/.test(t) && /de Tiago a Judas e leu 6 capítulos/.test(t) && /Agora estamos em Gênesis/.test(t) && /Leitura de hoje · dia 3 de/.test(t) && /Entrar em Gênesis/.test(t), 'texto do cartão: ' + t);
+    exige(!/ainda não participa/.test(await pb.innerText('main')), 'o cartão antigo continua aparecendo');
+    await pb.click('#volta [data-pj]');
+    exige(await esperar(async () => await ordem() === 'caravana,leitura,oracao,post'), 'depois de entrar: ' + await ordem());
+    exige(await pb.evaluate(id => S.myJ.indexOf(id) >= 0, gen.id), 'não entrou na jornada');
+    const erros = pb.erros; await pb.context().close();
+    // quem nunca registrou: convite, sem falar de capítulos
+    const pc = await abrir(browser, base, S, C); await pc.waitForSelector('main #volta');
+    const tc = (await pc.innerText('#volta')).replace(/\s+/g, ' ');
+    exige(/Que bom ter você na caravana, Bruna!/.test(tc) && /Estamos lendo Gênesis juntos/.test(tc) && /Começar em Gênesis/.test(tc) && !/capítulos/.test(tc), 'cartão de quem nunca registrou: ' + tc);
+    const erros2 = pc.erros; await pc.context().close();
+    exige(!erros.length && !erros2.length, 'erros: ' + erros.concat(erros2).join(' | '));
+    return 'Claudinha: "de Tiago a Judas e leu 6 capítulos", leitura de hoje, ordem caravana → cartão → oração → publicações; Entrar troca pela Leitura de hoje; Bruna: convite sem capítulos';
+  });
+
   await teste('Início: leitura de hoje em destaque (capítulos grandes, ✓ quando lidos, atrasados à parte)', async () => {
     const S = novoServidor(), M = S.usuario('Mayara'), R = S.usuario('Roger'), g = S.caravana(M, 'Tiago'); S.entrar(R, g);
     const c = S.jornada(g, 'TIAGO + 1 JOÃO + 2 JOÃO + 3 JOÃO + 1 PEDRO + 2 PEDRO + JUDAS', -2, 8); // hoje é o dia 3 de 11
@@ -960,7 +987,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pb.click('nav [data-t="cfg"]'); const mapa = await pb.textContent('main');
     await pb.context().close();
     exige(cur === c.id, 'abriu na jornada ' + (cur === velha.id ? 'encerrada' : cur));
-    exige(/Participar/.test(txt), 'sem botão Participar');
+    exige(/Entrar em Gênesis|Começar em Gênesis/.test(txt), 'sem o botão para entrar em Gênesis: ' + txt.slice(0, 300));
     exige(depois.mine && /Gênesis 1/.test(depois.hoje), 'depois de participar: ' + depois.hoje.slice(0, 50));
     exige(/📅 Cronograma dia a dia/.test(mapa) && !/\[cronograma/.test(mapa), 'Mapa mostra a marcação interna');
   });

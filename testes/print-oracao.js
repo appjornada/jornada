@@ -33,9 +33,10 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await ctx.addInitScript(([id, md]) => { localStorage.setItem('fake_me', id); localStorage.setItem('fake_md', md) }, [R.id, JSON.stringify(R.md)]);
   const pg = await ctx.newPage(); await pg.goto(base + '/');
   await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await pg.evaluate(() => psLoad(true));
-  await pg.waitForSelector('main .pslive'); await pg.waitForTimeout(800);
+  await pg.waitForSelector('main .psb.on'); await pg.waitForTimeout(800);
+  await pg.evaluate(() => { const e = document.querySelector('main .psb'); window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 330) }); await pg.waitForTimeout(300);
   await pg.screenshot({ path: path.join(OUT, 'inicio-orando-agora.png') });
-  await pg.evaluate(() => document.querySelector('main .psl:not(.pslive)').scrollIntoView({ block: 'center' })); await pg.waitForTimeout(300);
+  await pg.evaluate(() => document.querySelector('main .psl').scrollIntoView({ block: 'center' })); await pg.waitForTimeout(300);
   await pg.screenshot({ path: path.join(OUT, 'inicio-linha-do-dia.png') });
   await pg.click('main [data-psd]'); await pg.waitForTimeout(500);
   await pg.screenshot({ path: path.join(OUT, 'quem-orou-hoje.png') });

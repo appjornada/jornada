@@ -249,8 +249,15 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .oc-agora{margin-top:10px;font-size:14px;color:var(--mut);display:flex;align-items:center;gap:8px}
 .psl{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;font-size:15px;color:var(--tx);padding:10px 14px;border-radius:14px;cursor:pointer;box-shadow:none}
 .psl .grow{min-width:0}.psl .sub{flex:none;font-size:13px}
-.pslive{border-color:color-mix(in srgb,#2e9e5b 45%,var(--bd));background:color-mix(in srgb,#2e9e5b 8%,var(--card))}
-.pslive .link{flex:none;font-weight:700;font-size:15px;padding:6px 0}
+.psb{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px;border-radius:16px;border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));background:color-mix(in srgb,var(--ac) 9%,var(--card))}
+.psb.on{border-color:color-mix(in srgb,#2e9e5b 50%,var(--bd));background:color-mix(in srgb,#2e9e5b 9%,var(--card))}
+.psb-t{width:100%;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;text-align:left;font:inherit;font-size:15px;color:var(--tx);cursor:pointer}
+.psb-t .sub{display:block;font-size:13px;margin-top:1px}
+.psb-av{display:flex;flex:none}.psb-av .av{width:30px;height:30px;font-size:13px;border:2px solid var(--card);margin-left:-9px}.psb-av .av:first-child{margin-left:0}
+.psb-av .av.on{box-shadow:0 0 0 2px #2e9e5b}
+.psb-i{flex:none;font-size:22px}
+.psb .btn{width:100%;margin:0;padding:9px 12px;font-size:16px;border-radius:12px}
+.psl .dot-on{margin:0 2px}
 .ps-it{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--bd)}
 .mo .chk{margin:12px 0 0;font-size:15px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:#2e9e5b;flex:none;animation:oracao-pulso 2s infinite}
@@ -882,9 +889,9 @@ function feed(){
   if(!loaded)return h+(S.err?'':'<div class="card sub">Carregando…</div>');
   if(!S.grp)return h+noCh();
   psLoad(); // quem está orando (no máximo 1 vez por minuto)
-  if(!S.chs.length)return h+hcCard()+psLive()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>'+psMix([],true);
-  if(S.cur&&!isMine(S.cur))return h+hcCard()+psLive()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
-  h+=hcCard()+psLive()+novaCard()+today()+statsHtml()+revidCard();
+  if(!S.chs.length)return h+hcCard()+psBar()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>'+psMix([],true);
+  if(S.cur&&!isMine(S.cur))return h+hcCard()+psBar()+'<div class="card"><b>Você ainda não participa desta jornada</b><div class="sub">'+esc(S.ch.name)+' · '+fd(S.ch.start)+' a '+fd(S.ch.end)+'. Participe para ela aparecer nas suas jornadas e caminhar com a caravana.</div><button class="btn" data-pj="'+S.cur+'">👣 Participar desta jornada</button></div>'+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
+  h+=hcCard()+novaCard()+today()+psBar()+statsHtml()+revidCard();
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>'+psMix([],true);
   var lim=S.feedN||FEEDN,mais=l.length-lim;
@@ -1637,24 +1644,42 @@ async function psLoad(force){
 function psRows(){return PS.g===(S.grp&&S.grp.id)?PS.rows:[]}
 function psNames(U,n){var N=U.map(function(u){return u===S.me?'Você':nm(u).split(' ')[0]});if(N.length<=n+1)return N.length>1?N.slice(0,-1).join(', ')+' e '+N[N.length-1]:N[0];return N.slice(0,n).join(', ')+' e mais '+(N.length-n)}
 function psUsers(L){var U=[];L.forEach(function(x){if(U.indexOf(x.user_id)<0)U.push(x.user_id)});return U}
-function psLive(){
-  var U=psUsers(psRows().filter(function(x){return x.user_id!==S.me&&psLiveRow(x)}));if(!U.length)return '';
-  return '<div class="card psl pslive" role="status"><span class="dot-on" aria-hidden="true"></span><div class="grow"><b>'+esc(psNames(U,2))+'</b> '+(U.length>1?'estão':'está')+' orando agora</div><button class="link" data-mo="junto">'+(MO.act?'Orar ›':'Orar também ›')+'</button></div>';
+// Faixa "Oração de hoje" (sempre no Início, logo depois da Leitura de hoje): quem orou hoje, quem está orando agora
+// e o botão "Quero orar". Tocar nos nomes mostra a lista do dia (com as horas; nunca o tempo de oração).
+function psToday(){return psRows().filter(function(x){return iso(new Date(Date.parse(x.started_at)))===TODAY})}
+function psBar(){
+  if(!S.grp)return '';
+  var L=psToday(),viv=L.filter(function(x){return x.user_id!==S.me&&psLiveRow(x)}),Uv=psUsers(viv),U=psUsers(viv.concat(L)),t,sub='';
+  if(!L.length)t='<b>Ninguém orou hoje ainda.</b><span class="sub">Que tal começar?</span>';
+  else if(Uv.length){var ou=U.filter(function(u){return Uv.indexOf(u)<0});t='<b>'+esc(psNames(Uv,2))+'</b> '+(Uv.length>1?'estão':'está')+' orando agora';if(ou.length)sub=psNames(ou,2)+' também '+(ou.length>1?'oraram':'orou')+' hoje';}
+  else t='<b>'+esc(psNames(U,2))+'</b> '+(U.length>1?'oraram':'orou')+' hoje';
+  if(sub)t+='<span class="sub">'+esc(sub)+'</span>';
+  var avs=U.length?'<span class="psb-av" aria-hidden="true">'+U.slice(0,4).map(function(u){return av(u,null,Uv.indexOf(u)>=0?'on':'')}).join('')+'</span>':'<span class="psb-i" aria-hidden="true">🙏</span>';
+  var bt=MO.act?'<button class="btn" data-mo="go">🟢 Em oração</button>':'<button class="btn" data-mo="junto">🙏 Quero orar</button>';
+  return '<div class="card psb'+(Uv.length?' on':'')+'" id="psb" role="status">'+(L.length?'<button class="psb-t" data-psd="'+TODAY+'">':'<div class="psb-t">')+avs+'<span class="grow">'+t+'</span>'+(L.length?'</button>':'</div>')+bt+'</div>';
 }
-// uma linha por dia (os últimos 7 dias), na posição da última oração avisada daquele dia
-function psDays(){
-  var D={},o=[];psRows().forEach(function(x){var t=Date.parse(x.started_at),k=iso(new Date(t));if(!D[k]){D[k]={k:k,ts:t,L:[]};o.push(D[k])}D[k].L.push(x);if(t>D[k].ts)D[k].ts=t});
-  return o.sort(function(a,b){return b.ts-a.ts});
+// No feed: cada oração aparece como uma linha fina na hora em que aconteceu ("🙏 Ana orou · há 10 min").
+// Orações seguidas (sem publicação entre elas, no mesmo dia) viram uma linha só.
+function psGroups(P){ // P: publicações mostradas (mais novas primeiro)
+  var R=psRows().slice().sort(function(a,b){return Date.parse(b.started_at)-Date.parse(a.started_at)||psLiveRow(b)-psLiveRow(a)}),G=[],cur=null,j=0;
+  R.forEach(function(x){
+    var t=Date.parse(x.started_at),k=iso(new Date(t));
+    while(j<P.length&&P[j].ts>t){j++;cur=null} // uma publicação entre elas separa as linhas
+    var vv=psLiveRow(x); // quem está orando agora fica numa linha separada de quem já orou
+    if(!cur||cur.k!==k||cur.v!==vv){cur={k:k,v:vv,ts:t,L:[],pos:j};G.push(cur)}
+    cur.L.push(x);
+  });
+  return G;
 }
-function psLine(d){
-  var U=psUsers(d.L.filter(psLiveRow).concat(d.L)),so=U.length===1; // quem está orando agora vem primeiro
-  return '<button class="card psl" data-psd="'+d.k+'"><span aria-hidden="true">🙏</span><div class="grow"><b>'+esc(psNames(U,2))+'</b> '+(so?'orou':'oraram')+' '+psDay(d.ts)+'</div><span class="sub" aria-hidden="true">›</span></button>';
+function psLine(g){
+  var viv=g.L.filter(psLiveRow),U=psUsers(viv.concat(g.L)),todosViv=viv.length&&psUsers(viv).length===U.length,v=U.length>1;
+  return '<button class="card psl" data-psd="'+g.k+'">'+(todosViv?'<span class="dot-on" aria-hidden="true"></span>':'<span aria-hidden="true">🙏</span>')+'<div class="grow"><b>'+esc(psNames(U,2))+'</b> '+(todosViv?(v?'estão orando agora':'está orando agora'):(v?'oraram':'orou')+' · '+(iso(new Date(g.ts))===TODAY?ago(g.ts):psDay(g.ts)))+'</div><span class="sub" aria-hidden="true">›</span></button>';
 }
 // junta as linhas de oração às publicações (mais novas primeiro); "fim": já mostrou todas as publicações
 function psMix(P,fim){
-  var D=psDays(),h='',j=0;
-  P.forEach(function(p){while(j<D.length&&D[j].ts>p.ts)h+=psLine(D[j++]);h+=post(p)});
-  if(fim)while(j<D.length)h+=psLine(D[j++]);
+  var G=psGroups(P),h='',j=0;
+  P.forEach(function(p,i){while(j<G.length&&G[j].pos===i)h+=psLine(G[j++]);h+=post(p)});
+  if(fim)while(j<G.length)h+=psLine(G[j++]);
   return h;
 }
 function psSheet(k){

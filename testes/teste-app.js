@@ -1676,8 +1676,9 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const pb = await abrir(browser, base, S, B, TZ);
     const v = new Date(Date.parse(S.DB.ps[velho].started_at)), dv = String(v.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }));
     const linhas = () => pb.evaluate(() => [...document.querySelectorAll('main .psl')].map(e => e.innerText.replace(/\s+/g, ' ').trim()));
-    exige(await esperar(async () => (await linhas()).join('|') === '🙏 Ana orou hoje ›|🙏 Ana orou em ' + dv + ' ›'), 'Bia não vê as orações no Início: ' + (await linhas()).join('|'));
-    exige(!(await pb.$('main .pslive')), 'oração concluída aparece como "orando agora"');
+    exige(await esperar(async () => (await linhas()).join('|') === '🙏 Ana orou · há 3 h ›|🙏 Ana orou · em ' + dv + ' ›'), 'Bia não vê as orações no Início: ' + (await linhas()).join('|'));
+    exige(await esperar(async () => /Ana orou hoje/.test(await pb.evaluate(() => (document.querySelector('main .psb') || {}).innerText || ''))), 'a faixa de hoje não mostra a Ana');
+    exige(!(await pb.$('main .psb.on')), 'oração concluída aparece como "orando agora"');
     await pb.click('main [data-psd]'); await pb.waitForSelector('#shc .ps-it');
     const fl = await pb.textContent('#shc');
     exige(/Ana/.test(fl) && /às \d\d:\d\d/.test(fl) && !/min\b|\d+ s\b|termin/.test(fl), 'lista de quem orou: ' + fl);
@@ -1707,32 +1708,36 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'compartilhou só ao tocar, sem duração; data certa no antigo; Bia sem acesso; excluir leva o compartilhamento junto';
   });
 
-  await teste('Orando na caravana: avisar ao começar, "orando agora" no Início, Orar também, uma linha por dia; caixinha lembrada; banco antigo', async () => {
+  await teste('Orando na caravana: avisar ao começar, faixa "Oração de hoje" com Quero orar, cada oração no feed; caixinha lembrada; banco antigo', async () => {
     const S = novoServidor(), A = S.usuario('Ana Lima'), B = S.usuario('Bia Souza'), C = S.usuario('Caio'), g = S.caravana(A, 'G'); S.entrar(B, g); S.entrar(C, g);
     const c = S.jornada(g, 'Romanos em 16 dias'); S.publicacao(C, c, { book: 'Romanos', ref: '1', created_at: new Date(Date.now() - 6e4).toISOString() });
     const pa = await abrir(browser, base, S, A, TZ), pb = await abrir(browser, base, S, B, TZ);
-    const viva = () => pb.evaluate(() => { const e = document.querySelector('main .pslive'); return e ? e.innerText.replace(/\s+/g, ' ').trim() : '' });
-    const linhas = pg => pg.evaluate(() => [...document.querySelectorAll('main .psl:not(.pslive)')].map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+    const faixa = pg => pg.evaluate(() => { const e = document.querySelector('main .psb'); return e ? (e.classList.contains('on') ? '[verde] ' : '') + e.innerText.replace(/\s+/g, ' ').trim() : '' });
+    const viva = () => faixa(pb);
+    const linhas = pg => pg.evaluate(() => [...document.querySelectorAll('main .psl')].map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+    // antes de alguém orar: a faixa convida (logo depois da Leitura de hoje)
+    exige(await esperar(async () => /^🙏 Ninguém orou hoje ainda\. Que tal começar\? 🙏 Quero orar$/.test(await faixa(pb))), 'faixa sem ninguém: ' + await faixa(pb));
+    exige(await pb.evaluate(() => { const h = document.querySelector('main .card.hoje'), f = document.querySelector('main .psb'); return !h || !!(h.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING) }), 'a faixa não ficou depois da Leitura de hoje');
     // Ana: a caixinha vem marcada; ao começar, a caravana é avisada na hora (sem duração)
     await irMo(pa); exige(await pa.isChecked('#moav'), 'a caixinha não veio marcada');
     await pa.click('#mo [data-mo="start"]');
     exige(await esperar(() => Object.values(S.DB.psh).some(x => x.user_id === A.id && x.ended_at === null)), 'não avisou a caravana ao começar');
     exige(await esperar(async () => /A caravana vê que você está orando/.test(await moTxt(pa))), 'Ana não vê que a caravana foi avisada');
     await pb.evaluate(() => psLoad(true));
-    exige(await esperar(async () => (await viva()) === 'Ana está orando agora Orar também ›'), 'Bia não vê "orando agora": ' + await viva());
-    exige((await linhas(pb)).join('|') === '🙏 Ana orou hoje ›', 'linha do dia: ' + (await linhas(pb)).join('|'));
+    exige(await esperar(async () => (await viva()) === '[verde] A Ana está orando agora 🙏 Quero orar'), 'Bia não vê "orando agora": ' + await viva());
+    exige((await linhas(pb)).join('|') === 'Ana está orando agora ›', 'linha no feed: ' + (await linhas(pb)).join('|'));
     // a linha fica no lugar certo: acima da publicação do Caio (que é mais antiga)
-    exige(await esperar(() => pb.evaluate(() => { const l = document.querySelector('main .psl:not(.pslive)'), p = document.querySelector('main [data-l]'); return !!l && !!p && !!(l.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING) })), 'a linha de oração não ficou acima da publicação mais antiga');
+    exige(await esperar(() => pb.evaluate(() => { const l = document.querySelector('main .psl'), p = document.querySelector('main [data-l]'); return !!l && !!p && !!(l.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING) })), 'a linha de oração não ficou acima da publicação mais antiga');
     // Bia toca em "Orar também": vai para a aba Oração com o cronômetro ligado, e avisa também
-    await pb.click('main .pslive [data-mo="junto"]');
+    await pb.click('main .psb [data-mo="junto"]');
     exige(await esperar(async () => await pb.evaluate(() => tab === 'chat' && CV === 'ora' && !!MO.act)), 'Orar também não começou a oração');
     exige(await esperar(() => Object.values(S.DB.psh).some(x => x.user_id === B.id)), 'Bia não avisou a caravana');
     // Ana encerra: deixa de estar "orando agora"; o dia junta as duas
     await pa.waitForTimeout(1600); await pa.click('#mo [data-mo="end"]');
     exige(await esperar(() => Object.values(S.DB.psh).every(x => x.user_id !== A.id || x.ended_at)), 'o fim da oração não chegou ao aviso');
     const pc = await abrir(browser, base, S, C, TZ);
-    exige(await esperar(async () => /^Bia está orando agora/.test(await pc.evaluate(() => (document.querySelector('main .pslive') || {}).textContent || ''))), 'Caio não vê a Bia orando');
-    exige(await esperar(async () => (await linhas(pc)).join('|') === '🙏 Bia e Ana oraram hoje ›'), 'Caio: ' + (await linhas(pc)).join('|'));
+    exige(await esperar(async () => /^\[verde\] B A Bia está orando agora Ana também orou hoje 🙏 Quero orar$/.test(await faixa(pc))), 'Caio não vê a Bia orando: ' + await faixa(pc));
+    exige(await esperar(async () => /^Bia está orando agora ›\|🙏 Ana orou · há \d+ min ›$/.test((await linhas(pc)).join('|'))), 'Caio: ' + (await linhas(pc)).join('|'));
     await pc.click('main [data-psd]'); await pc.waitForSelector('#shc .ps-it');
     const fl = await pc.textContent('#shc');
     exige(/Bia Souza🟢 orando agora/.test(fl) && /Ana Lima\s*às \d\d:\d\d/.test(fl) && !/min\b|\d+ s\b/.test(fl), 'lista do dia: ' + fl);
@@ -1758,12 +1763,12 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await qa.click('#mo [data-mo="end"]');
     exige(await esperar(() => Object.keys(S2.DB.psh).length === 1), 'banco antigo: não avisou ao encerrar');
     await qb.evaluate(() => psLoad(true));
-    exige(await esperar(async () => (await linhas(qb)).join('|') === '🙏 Ana orou hoje ›'), 'banco antigo, Bia: ' + (await linhas(qb)).join('|'));
-    exige(!(await qb.$('main .pslive')), 'banco antigo: apareceu "orando agora"');
+    exige(await esperar(async () => /^🙏 Ana orou · há \d+ min ›$/.test((await linhas(qb)).join('|'))), 'banco antigo, Bia: ' + (await linhas(qb)).join('|'));
+    exige(/Ana orou hoje/.test(await faixa(qb)) && !(await qb.$('main .psb.on')), 'banco antigo, faixa: ' + await faixa(qb));
     const erros2 = qa.erros.concat(qb.erros);
     await qa.context().close(); await qb.context().close();
     exige(!erros.length && !erros2.length, 'erros: ' + erros.concat(erros2).join(' | '));
-    return 'avisou ao começar; Bia viu "orando agora" e orou também; o fim tira do "agora"; Caio viu "Bia e Ana oraram hoje" e a lista sem tempo; Não avisar e caixinha lembrada; banco antigo avisa ao encerrar';
+    return 'avisou ao começar; Bia viu "orando agora" e orou também; o fim tira do "agora"; faixa depois da Leitura de hoje (convite, verde, quem orou); no feed, "orando agora" e "orou · há X min" separados; lista sem tempo; Não avisar e caixinha lembrada; banco antigo avisa ao encerrar';
   });
 
   await teste('Meu momento de oração: corrigir o tempo de quem esqueceu o cronômetro (histórico e logo depois de encerrar)', async () => {

@@ -950,6 +950,46 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return '42 de 42 dias iguais ao cronograma (8 dias com 2 capítulos)';
   });
 
+  await teste('Cronograma (caso Sabrina 21/11): com Gênesis 1–3 já registrados, no dia 4 só libera Gênesis 4; o 5 fica travado em todos os caminhos', async () => {
+    const S = novoServidor(); const A = S.usuario('Ana'); const B = S.usuario('Sabrina'); const g = S.caravana(A, 'JORNADA'); S.entrar(B, g); const c = jornadaGenesis(S, g);
+    ['2026-11-18', '2026-11-19', '2026-11-20'].forEach((d, i) => S.publicacao(B, c, { book: 'Gênesis', ref: String(i + 1), read_date: d, created_at: d + 'T18:00:00Z' }));
+    B.md = { jornadas: [c.id] };
+    const pb = await abrir(browser, base, S, B, { relogio: '2026-11-21T12:50:00-03:00', timezoneId: 'America/Sao_Paulo' });
+    const r = await pb.evaluate(() => ({ today: TODAY, sug: (function () { openSheet(); return S.sug.slice() })(), lk5: locked('0:5'), lk4: locked('0:4') }));
+    const travados = await pb.$$eval('#chg .chip.lk', e => e.map(x => x.textContent.replace(/\D/g, '')).slice(0, 3));
+    await pb.click('[data-sc="0:5"]', { force: true }); const sel5a = await pb.evaluate(() => S.sel.indexOf('0:5'));
+    await pb.click('#selsug').catch(() => {}); const selS = await pb.evaluate(() => S.sel.slice());
+    const info = JSON.stringify({ r, travados, sel5a, selS });
+    await pb.context().close();
+    exige(r.lk5 && !r.lk4 && sel5a < 0 && selS.indexOf('0:5') < 0 && travados[0] === '5', info);
+    return info;
+  });
+
+  await teste('Atualização automática: versão nova publicada → o app recarrega ao voltar (não com a janela de passo aberta) e não entra em laço', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
+    const pg = await abrir(browser, base, S, A);
+    await pg.waitForTimeout(4500); // a checagem de quando abre: mesma versão, nada acontece
+    await pg.evaluate(() => { window.__marca = 1 });
+    exige(await pg.evaluate(() => window.__marca === 1), 'recarregou sem ter versão nova');
+    // publica uma versão nova (o código do app muda)
+    const nova = fs.readFileSync(HTML, 'utf8').replace('<script id="app">', '<script id="app">/* versão nova */');
+    let pedidos = 0;
+    await pg.route(u => new URL(u).pathname === '/', r => { pedidos++; r.fulfill({ contentType: 'text/html; charset=utf-8', body: nova }) });
+    // com a janela de passo aberta: não recarrega
+    await pg.evaluate(() => openSheet()); await pg.evaluate(() => updCheck(true)); await pg.waitForTimeout(500);
+    exige(await pg.evaluate(() => window.__marca === 1), 'recarregou com a janela de passo aberta');
+    // janela fechada, volta ao app: recarrega na versão nova
+    await pg.evaluate(() => closeSheet(true)); await pg.evaluate(() => updCheck(true));
+    exige(await esperar(async () => await pg.evaluate(() => window.__marca !== 1 && typeof loaded !== 'undefined' && loaded).catch(() => false)), 'não recarregou com versão nova');
+    exige(await pg.evaluate(() => /versão nova/.test(document.getElementById('app').textContent)), 'recarregou mas continuou na versão antiga');
+    // já na versão nova: não recarrega de novo
+    await pg.evaluate(() => { window.__marca = 2 }); await pg.evaluate(() => updCheck(true)); await pg.waitForTimeout(600);
+    exige(await pg.evaluate(() => window.__marca === 2), 'entrou em laço de recarregar');
+    const erros = pg.erros; await pg.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'mesma versão: nada; janela aberta: espera; versão nova: recarrega 1 vez e fica nela (' + pedidos + ' pedidos)';
+  });
+
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'Cartas'); const c = jornadaGenesis(S, g);
     const pa = await abrir(browser, base, S, A, { relogio: '2026-11-23T10:00:00-03:00' });

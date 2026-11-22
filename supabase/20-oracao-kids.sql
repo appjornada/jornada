@@ -1,4 +1,4 @@
--- ORAÇÃO EM FAMÍLIA NA JORNADA KIDS (22/11/2026). Só ACRESCENTA; nada é apagado. Pode rodar de novo.
+-- ORAÇÃO EM FAMÍLIA NA JORNADA KIDS (22/11/2026). Já aplicado no banco em 22/11/2026 com autorização do Roger. Só ACRESCENTA; nada é apagado. Pode rodar de novo.
 -- Cada registro: quem orou, em que jornada, o dia, o momento (ao acordar, na refeição, no caminho,
 -- antes de dormir, outro) e com quais crianças. Sem duração. Só quem está na caravana vê;
 -- cada pessoa só registra para si e só apaga as próprias orações.

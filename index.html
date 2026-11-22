@@ -800,10 +800,6 @@ function hcCard(){
     '<div id="map">'+progHtml(c,on)+'</div>'+
     (on?'<div class="hc-ft" id="cd"><span>📅 '+(TODAY<c.start?'Partida · '+fdl(c.start):'Chegada prevista · '+fdl(c.end))+'</span><button class="link" data-t="cfg">Ver jornada</button></div>':'')+'</div>';
 }
-function statsHtml(){
-  var st=steps(S.me);
-  return '<div class="stats" id="stats"><div class="stat"><b>'+st+'</b><span>passos</span></div><div class="stat"><b>'+days(S.me).length+'</b><span>dias de leitura</span></div><div class="stat"><b>'+streak(S.me)+'🔥</b><span>seguidos</span></div><div class="stat"><b>'+fmin(mins(S.me))+'</b><span>de estudo</span></div></div>';
-}
 function noCh(){if(!S.canNew)return S.grp?'<div class="card sub">Nenhuma jornada traçada ainda. Aguarde o líder traçar a primeira.</div>':'<div class="card"><b>Você ainda não está numa caravana</b><div class="sub">Peça o código de convite a quem te chamou e toque abaixo para entrar.</div><button class="btn" data-o="code">Tenho um código de convite</button></div>';return '<div class="card"><b>Você ainda não está numa jornada</b><div class="sub">Foi convidado para uma caravana ou quer começar a sua?</div><button class="btn" data-o="code">Fui convidado</button><button class="btn o" data-o="new" style="text-align:center;font-weight:700">Começar minha jornada</button></div>'}
 function today(){
   var c=S.ch,P=plan(c),i=diff(c.start,TODAY),tot=totalSteps(c),done=P?chDay(S.me,S.cur,TODAY)>=needOn(c,TODAY):days(S.me).indexOf(TODAY)>=0;
@@ -822,7 +818,9 @@ function today(){
 function todayBtn(c,R){
   var got=chDay(S.me,S.cur,TODAY),need=needOn(c,TODAY),all=behind(S.me,c,TODAY),h='',hk={};(R||[]).forEach(function(x){hk[x.b+':'+x.c]=1});
   var atr=all.filter(function(x){return !hk[x.b+':'+x.c]});
-  if(got)h+='<div class="sub" style="color:var(--ok);margin-top:12px">✓ Hoje: '+got+(got>1?' capítulos registrados':' capítulo registrado')+(got>=need?' · meta do dia cumprida':' de '+need+' da meta')+'</div>';
+  var sk=streak(S.me),fogo=sk>=2?'<b>🔥 '+sk+' dias seguidos</b>':''; // a sequência de dias motiva: só aparece a partir de 2 dias
+  if(got)h+='<div class="sub" style="color:var(--ok);margin-top:12px">✓ Hoje: '+got+(got>1?' capítulos registrados':' capítulo registrado')+(got>=need?' · meta do dia cumprida':' de '+need+' da meta')+(fogo?' · '+fogo:'')+'</div>';
+  else if(fogo)h+='<div class="sub" style="margin-top:12px">'+fogo+' · registre hoje para continuar</div>';
   if(atr.length)h+='<div class="sub" style="margin-top:8px">Atrasados: <b>'+refOf(atr)+'</b> ('+atr.length+(atr.length>1?' capítulos':' capítulo')+')</div>';
   return h+(all.length?'<button class="btn" id="add2">👣 Registrar capítulos</button>':'<div class="sub" style="color:var(--ok);margin-top:12px">Tudo em dia. Siga firme!</div>');
 }
@@ -895,7 +893,7 @@ function feed(){
   psLoad(); // quem está orando (no máximo 1 vez por minuto)
   if(!S.chs.length)return h+hcCard()+psBar()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>'+psMix([],true);
   if(S.cur&&!isMine(S.cur))return h+hcCard()+voltaCard()+psBar()+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
-  h+=hcCard()+novaCard()+today()+psBar()+statsHtml()+revidCard();
+  h+=hcCard()+novaCard()+today()+psBar()+revidCard(); // passos, dias e tempo ficam no ranking (Mapa) e na ficha de cada um
   var l=S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts});
   if(!l.length)return h+'<div class="card sub">Ninguém deu o primeiro passo ainda. Toque em 👣 Passo e puxe a caravana!</div>'+psMix([],true);
   var lim=S.feedN||FEEDN,mais=l.length-lim;

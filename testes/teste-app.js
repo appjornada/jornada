@@ -856,7 +856,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await esperar(() => Object.keys(S.DB.checkins).length === 1);
     const k = Object.values(S.DB.checkins)[0];
     exige(k.study_minutes === 5, 'gravou ' + k.study_minutes + ' min');
-    const st = await pa.textContent('#stats'); exige(/5 min/.test(st), 'estatística: ' + st);
+    await pa.evaluate(() => openWho(S.me)); const st = await pa.textContent('#shc'); exige(/5 min/.test(st), 'tempo de estudo na ficha: ' + st); await pa.evaluate(() => closeSheet(true));
     const bloqueado = await pa.evaluate(k => { const s = readSet(S.me); return chOfPost({ book: k.book, ref: k.ref }).every(x => s[x]) }, k);
     exige(bloqueado, 'capítulo já lido não ficou travado');
     await pa.context().close();
@@ -988,6 +988,23 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const erros = pg.erros; await pg.context().close();
     exige(!erros.length, 'erros: ' + erros.join(' | '));
     return 'mesma versão: nada; janela aberta: espera; versão nova: recarrega 1 vez e fica nela (' + pedidos + ' pedidos)';
+  });
+
+  await teste('Início sem a faixa de números: 🔥 dias seguidos na linha da Leitura de hoje (a partir de 2 dias; "registre hoje" se ainda não registrou)', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), C = S.usuario('Caio'), g = S.caravana(A, 'JORNADA'); S.entrar(B, g); S.entrar(C, g); const c = jornadaGenesis(S, g);
+    ['18', '19', '20', '21'].forEach((d, i) => S.publicacao(A, c, { book: 'Gênesis', ref: String(i + 1), read_date: '2026-11-' + d }));
+    ['19', '20'].forEach((d, i) => S.publicacao(B, c, { book: 'Gênesis', ref: String(i + 1), read_date: '2026-11-' + d }));
+    S.publicacao(C, c, { book: 'Gênesis', ref: '4', read_date: '2026-11-21' });
+    [A, B, C].forEach(u => { u.md = { jornadas: [c.id] } });
+    const linha = async u => { const pg = await abrir(browser, base, S, u, { relogio: '2026-11-21T20:00:00-03:00', timezoneId: 'America/Sao_Paulo' }); await pg.waitForSelector('main .card.hoje');
+      const r = await pg.evaluate(() => ({ t: [...document.querySelectorAll('main .card.hoje .sub')].map(e => e.innerText).join(' | '), faixa: !!document.querySelector('#stats') })); r.erros = pg.erros; await pg.context().close(); return r };
+    const a = await linha(A), b = await linha(B), cc = await linha(C);
+    exige(!a.faixa && !b.faixa && !cc.faixa, 'a faixa de números continua no Início');
+    exige(/✓ Hoje: 1 capítulo registrado · meta do dia cumprida · 🔥 4 dias seguidos/.test(a.t), 'Ana (4 dias): ' + a.t);
+    exige(/🔥 2 dias seguidos · registre hoje para continuar/.test(b.t), 'Bia (ontem e anteontem, hoje não): ' + b.t);
+    exige(/✓ Hoje: 1 capítulo registrado/.test(cc.t) && !/🔥/.test(cc.t), 'Caio (só hoje): ' + cc.t);
+    exige(!a.erros.length && !b.erros.length && !cc.erros.length, 'erros: ' + a.erros.concat(b.erros, cc.erros).join(' | '));
+    return 'Ana: "· 🔥 4 dias seguidos"; Bia: "🔥 2 dias seguidos · registre hoje para continuar"; Caio (1 dia): sem 🔥; sem a faixa de números';
   });
 
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {
@@ -1587,6 +1604,11 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   // ---------- Meu momento de oração (supabase/15-meu-momento-de-oracao.sql) ----------
   const TZ = { timezoneId: 'America/Sao_Paulo' };
+  // Perto da meia-noite (Brasil) as orações "de 2 a 5 horas atrás" cairiam no dia anterior: nesses testes o relógio
+  // do app e as orações de teste andam juntos, 8 horas para trás (meio da tarde do dia anterior).
+  const DESLOC = (+new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hourCycle: 'h23' }) < 6) ? 8 * 36e5 : 0;
+  const AGORA = () => Date.now() - DESLOC;
+  const TZD = () => DESLOC ? Object.assign({}, TZ, { relogio: new Date(AGORA()).toISOString() }) : TZ;
   const irMo = async pg => { await pg.evaluate(() => { closeSheet(true); tab = 'chat'; if (S.grp) CV = 'ora'; render() }); await pg.waitForSelector('#mo') };
   const moTxt = pg => pg.textContent('#mo');
   const sessoes = (S, u) => Object.values(S.DB.ps).filter(r => r.user_id === u.id);
@@ -1636,7 +1658,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   await teste('Meu momento de oração: recarregar recupera; oração esquecida pede a hora do fim; outro aparelho; descartar', async () => {
     const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); S.jornada(g, 'Romanos em 16 dias');
-    const pg = await abrir(browser, base, S, A, TZ); pg.on('dialog', d => d.accept());
+    const pg = await abrir(browser, base, S, A, TZD()); pg.on('dialog', d => d.accept());
     await irMo(pg); await pg.click('[data-mo="start"]');
     exige(await esperar(() => sessoes(S, A).length === 1), 'não começou');
     await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded);
@@ -1646,7 +1668,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pg.click('[data-mo="cont"]');
     exige(/Em oração/.test(await moTxt(pg)) && !(await pg.$('[data-mo="cont"]')), 'continuar não voltou para "Em oração"');
     // esqueceu o cronômetro aberto: começou há 5 horas
-    const id = sessoes(S, A)[0].id, ini = Math.floor((Date.now() - 5 * 36e5) / 1000) * 1000; S.DB.ps[id].started_at = new Date(ini).toISOString();
+    const id = sessoes(S, A)[0].id, ini = Math.floor((AGORA() - 5 * 36e5) / 1000) * 1000; S.DB.ps[id].started_at = new Date(ini).toISOString();
     await pg.reload(); await pg.waitForFunction(() => typeof loaded !== 'undefined' && loaded); await irMo(pg);
     exige(await esperar(async () => /05:00:0\d/.test(await pg.textContent('#mo .mo-clk'))), 'cronômetro não usa o horário gravado no servidor');
     await pg.click('#mo [data-mo="end"]'); await pg.waitForSelector('#moet');
@@ -1654,7 +1676,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const dt = t => pg.evaluate(t => dtl(t), t);
     await pg.click('#moou'); await pg.fill('#moet', await dt(ini - 10 * 6e4)); await pg.click('[data-mo="fim"]');
     exige(/depois do início/.test(await pg.textContent('#moer')), 'aceitou término antes do início');
-    await pg.fill('#moet', await dt(Date.now() + 2 * 36e5)); await pg.click('[data-mo="fim"]');
+    await pg.fill('#moet', await dt(AGORA() + 2 * 36e5)); await pg.click('[data-mo="fim"]');
     exige(/futuro/.test(await pg.textContent('#moer')), 'aceitou término no futuro');
     exige(sessoes(S, A)[0].status === 'active', 'gravou com horário inválido');
     await pg.fill('#moet', await dt(ini + 30 * 6e4)); await pg.click('[data-mo="fim"]');
@@ -1664,8 +1686,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     exige(d === esp, 'duração corrigida: ' + d + ' s (esperado ' + esp + ')');
     exige(await esperar(async () => new RegExp('registrado · ' + Math.floor(esp / 60) + ' min').test(await moTxt(pg))), 'confirmação sem a duração corrigida');
     // outro aparelho começou uma oração: este aparelho mostra e deixa descartar
-    const id2 = require('crypto').randomUUID(); S.DB.ps[id2] = { id: id2, user_id: A.id, status: 'active', started_at: new Date(Math.floor(Date.now() / 1000) * 1000 - 6e4).toISOString(), ended_at: null };
-    const pg2 = await abrir(browser, base, S, A, TZ); pg2.on('dialog', d => d.accept()); await irMo(pg2);
+    const id2 = require('crypto').randomUUID(); S.DB.ps[id2] = { id: id2, user_id: A.id, status: 'active', started_at: new Date(Math.floor(AGORA() / 1000) * 1000 - 6e4).toISOString(), ended_at: null };
+    const pg2 = await abrir(browser, base, S, A, TZD()); pg2.on('dialog', d => d.accept()); await irMo(pg2);
     exige(await esperar(async () => /Oração em andamento/.test(await moTxt(pg2))), 'outro aparelho não mostra a oração em andamento');
     await pg2.click('#mo [data-mo="disc"]');
     exige(await esperar(() => !S.DB.ps[id2]), 'descartar não apagou');
@@ -1728,8 +1750,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   await teste('Meu momento de oração: excluir e descartar recalculam; compartilhar pelo histórico, sem duração (no Início); outra pessoa não lê nem mexe', async () => {
     const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); const c = S.jornada(g, 'Romanos em 16 dias');
-    const h1 = fazSessao(S, A, Date.now() - 3 * 36e5, 600), h2 = fazSessao(S, A, Date.now() - 2 * 36e5, 600), velho = fazSessao(S, A, Date.now() - 3 * 864e5, 900);
-    const pa = await abrir(browser, base, S, A, TZ); pa.on('dialog', d => d.accept()); await irMo(pa);
+    const h1 = fazSessao(S, A, AGORA() - 3 * 36e5, 600), h2 = fazSessao(S, A, AGORA() - 2 * 36e5, 600), velho = fazSessao(S, A, AGORA() - 3 * 864e5, 900);
+    const pa = await abrir(browser, base, S, A, TZD()); pa.on('dialog', d => d.accept()); await irMo(pa);
     exige(await esperar(async () => /Hoje\s*20 min/.test(await pa.textContent('#mo .mo-res'))), 'total de hoje: ' + await pa.textContent('#mo .mo-res'));
     exige(!Object.keys(S.DB.psh).length, 'compartilhou sem pedir');
     await pa.uncheck('#moav'); // aqui: sem avisar a caravana (o aviso automático tem teste próprio)
@@ -1740,7 +1762,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.click(`[data-mo="share:${h1}"]`); exige(await esperar(() => !!S.DB.psh[h1]), 'não compartilhou');
     await pa.click(`[data-mo="share:${velho}"]`); exige(await esperar(() => !!S.DB.psh[velho]), 'não compartilhou o antigo');
     exige(Object.keys(S.DB.psh[h1]).sort().join() === 'created_at,ended_at,group_id,session_id,started_at,user_id', 'compartilhamento com campos a mais: ' + Object.keys(S.DB.psh[h1]));
-    const pb = await abrir(browser, base, S, B, TZ);
+    const pb = await abrir(browser, base, S, B, TZD());
     const v = new Date(Date.parse(S.DB.ps[velho].started_at)), dv = String(v.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }));
     const linhas = () => pb.evaluate(() => [...document.querySelectorAll('main .psl')].map(e => e.innerText.replace(/\s+/g, ' ').trim()));
     exige(await esperar(async () => (await linhas()).join('|') === '🙏 Ana orou · há 3 h ›|🙏 Ana orou · em ' + dv + ' ›'), 'Bia não vê as orações no Início: ' + (await linhas()).join('|'));
@@ -1840,8 +1862,8 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   await teste('Meu momento de oração: corrigir o tempo de quem esqueceu o cronômetro (histórico e logo depois de encerrar)', async () => {
     const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); S.jornada(g, 'Romanos em 16 dias');
-    const h1 = fazSessao(S, A, Date.now() - 2 * 36e5, 85 * 60); // esqueceu ligado: 1 h 25 min
-    const pa = await abrir(browser, base, S, A, TZ); await irMo(pa);
+    const h1 = fazSessao(S, A, AGORA() - 2 * 36e5, 85 * 60); // esqueceu ligado: 1 h 25 min
+    const pa = await abrir(browser, base, S, A, TZD()); await irMo(pa);
     exige(await esperar(async () => /Hoje\s*1 h 25 min/.test(await pa.textContent('#mo .mo-res'))), 'total antes: ' + await pa.textContent('#mo .mo-res'));
     await pa.click('[data-mo="hist"]'); await pa.waitForSelector(`#mohist [data-mo="fix:${h1}"]`);
     await pa.click(`[data-mo="fix:${h1}"]`); await pa.waitForSelector('#mofix');
@@ -1863,14 +1885,14 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     await pa.uncheck('#moav'); await pa.click('#mo [data-mo="start"]'); await pa.waitForTimeout(1600); await pa.click('#mo [data-mo="end"]');
     await pa.waitForSelector('#mo .mo-ok [data-mo^="fix:"]');
     // outra pessoa não consegue corrigir a oração da Ana
-    const pb = await abrir(browser, base, S, B, TZ);
+    const pb = await abrir(browser, base, S, B, TZD());
     const r = await pb.evaluate(async id => { const q = await sb.rpc('ps_corrigir', { p_id: id, p_fim: new Date().toISOString() }); return (q.data || []).length }, h1);
     exige(r === 0 && Math.round((Date.parse(S.DB.ps[h1].ended_at) - Date.parse(S.DB.ps[h1].started_at)) / 6e4) === 20, 'Bia corrigiu a oração da Ana');
     const erros = pa.erros.concat(pb.erros); await pa.context().close(); await pb.context().close();
     // banco sem o script 18: avisa com clareza e não muda nada
     const S2 = novoServidor({ pshAntigo: true }), A2 = S2.usuario('Ana'), g2 = S2.caravana(A2, 'G'); S2.jornada(g2, 'Romanos em 16 dias');
-    const k = fazSessao(S2, A2, Date.now() - 2 * 36e5, 85 * 60);
-    const qa = await abrir(browser, base, S2, A2, TZ); await irMo(qa); await qa.click('[data-mo="hist"]'); await qa.waitForSelector(`[data-mo="fix:${k}"]`);
+    const k = fazSessao(S2, A2, AGORA() - 2 * 36e5, 85 * 60);
+    const qa = await abrir(browser, base, S2, A2, TZD()); await irMo(qa); await qa.click('[data-mo="hist"]'); await qa.waitForSelector(`[data-mo="fix:${k}"]`);
     await qa.click(`[data-mo="fix:${k}"]`); await qa.fill('#mofix', '20'); await qa.click(`[data-mo="fixok:${k}"]`);
     exige(await esperar(async () => /falta rodar o script 18/.test(await qa.textContent('#mofixer'))), 'banco antigo: ' + await qa.textContent('#mofixer'));
     const erros2 = qa.erros; await qa.context().close();

@@ -256,6 +256,11 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .kbig b{display:block;font-size:19px}.kbig span{display:block;color:var(--mut);font-size:15px;margin-top:3px}.kbig.kk{border-color:var(--ac)}
 .khj{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 14%,var(--card)),var(--card) 75%)}.khj .kt{font-size:18px;display:block}.khj .kf{margin-top:4px;font-size:15px}
 .chip.kn{font-size:16px;padding:9px 14px}
+.kfam{display:grid;gap:8px;margin:10px 0 2px}.kfam div{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);font-size:16px}.kfam .ok{color:var(--ok);font-weight:700}.kfam .no{color:var(--mut)}
+.kok{color:var(--ok);margin-top:6px;font-size:16px}
+.k2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.k2 .btn{margin-top:12px;padding:13px 6px;font-size:16px}
+.kdica{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px dashed var(--bd);font-size:15px;line-height:1.4}
+.kmo{display:block;width:100%;text-align:left;margin-top:8px;padding:13px 14px;border-radius:14px;border:2px solid var(--bd);background:var(--card);color:var(--tx);font:600 17px var(--ft);cursor:pointer}.kmo.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,var(--card))}
 .volta{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 16%,var(--card)),var(--card) 75%)}
 .volta h3{margin:2px 0 6px;font-size:21px;line-height:1.25}.volta p{margin:0 0 6px;font-size:16px;line-height:1.45}
 .vt-hj{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);font-size:15px}.vt-hj b{display:block;font-size:18px;margin-top:2px}
@@ -537,19 +542,102 @@ function openPasso(){
   showSheet('<h2>Para quem é este registro?</h2><button class="kbig" data-pp="'+b.a.id+'"><b>📖 Meu estudo</b><span>'+esc(jShort(b.a))+' · leitura de hoje</span></button><button class="kbig kk" data-pp="'+b.k.id+'"><b>🧒 Com meu filho</b><span>'+esc(b.k.name)+'</span></button><button class="btn g" id="x">Cancelar</button>');
 }
 function kidsHc(){var n=memberCount();return '<div class="card hc" id="hc"><div class="hc-top"><div class="hc-t"><h2>'+esc(S.grp.name)+'</h2><span class="sub"> · </span><span class="sub hcs" id="hcs">'+n+(n===1?' família':' famílias')+'</span></div><button class="hc-more" id="hcm" aria-label="Mais opções da caravana">•••</button></div></div>'}
+// ---- Oração em família (Jornada Kids): sem tempo; só o momento e com quem (supabase/20-oracao-kids.sql) ----
+var KMOM=[['acordar','☀️','Ao acordar','ao acordar'],['refeicao','🍽️','Na refeição','na refeição'],['caminho','🚗','No caminho','no caminho'],['dormir','🌙','Antes de dormir','antes de dormir'],['outro','💛','Outro momento','em outro momento']];
+function kMom(k){return KMOM.filter(function(m){return m[0]===k})[0]||KMOM[4]}
+var KP={cid:null,at:0,rows:[],busy:false,no:false};
+async function kpLoad(force){
+  var c=S.ch;if(!isKids(c)||KP.no||KP.busy||!S.me)return;
+  if(!force&&KP.cid===c.id&&Date.now()-KP.at<60e3)return;
+  KP.busy=true;
+  try{
+    var de=addD(TODAY,-14),r=await moCall(sb.from('kids_prayers').select('id,user_id,prayed_on,moment,child_names,created_at').eq('challenge_id',c.id).gte('prayed_on',de).order('created_at',{ascending:false}).limit(300));
+    if(r.error){if(r.error.code==='42P01'||r.error.code==='PGRST205'||/kids_prayers/.test(r.error.message||''))KP.no=true;return} // banco ainda sem a tabela: a oração não aparece
+    if(S.ch.id!==c.id)return;
+    KP.cid=c.id;KP.at=Date.now();KP.rows=r.data||[];
+    var miss=KP.rows.map(function(x){return x.user_id}).filter(function(u,i,a){return !S.names[u]&&a.indexOf(u)===i});if(miss.length)await profs(miss);
+  }finally{KP.busy=false}
+  if(loaded&&tab==='feed'&&isKids(S.ch))render();
+}
+function kpRows(){return KP.cid===S.cur?KP.rows:[]}
+function kpOn(){return !KP.no&&KP.cid===S.cur}
+// dias seguidos em família: dias com Palavra OU oração
+function kStreak(){
+  var o={};daysIn(S.me,S.cur).forEach(function(d){o[d]=1});kpRows().forEach(function(x){if(x.user_id===S.me)o[x.prayed_on]=1});
+  var s=0,d=o[TODAY]?TODAY:addD(TODAY,-1);while(o[d]){s++;d=addD(d,-1)}return s;
+}
+var KDICA=['Na refeição, a criança repete: "Obrigado, Jesus, por esta comida e pela nossa família."','Antes de dormir: "Jesus, obrigado por este dia. Cuida de nós esta noite."','Ao acordar: "Bom dia, Jesus! Fica comigo hoje."','Peça à criança para agradecer por uma coisa boa que aconteceu hoje.','Ore junto por alguém da família: vovó, vovô, um primo, um amigo.','No caminho para a escola: "Jesus, me ajuda a ser bondoso hoje."','Deixe a criança escolher por quem orar hoje.','Cante um louvor curtinho e depois façam uma oração juntos.','Oração de mãos dadas à mesa, cada um diz um "obrigado".','Antes de dormir, leiam um versículo curto e orem sobre ele.','Ensine a criança a dizer "Amém" no fim da oração, com alegria.','Orem por quem está doente ou triste que vocês conhecem.','Peça perdão junto com a criança por algo que não foi legal hoje.','Agradeçam pela casa, pela comida e pelas pessoas que cuidam de vocês.'];
+function kDica(){var n=Math.abs(diff('2026-01-01',TODAY));return KDICA[n%KDICA.length]}
 function kidsHoje(){
   var c=S.ch;
   if(TODAY<c.start)return '<div class="card khj"><b class="kt">🧒 A '+esc(c.name)+' começa em '+fd(c.start)+'</b><div class="sub">Nesse dia, é só registrar aqui o estudo da Palavra com seus filhos.</div></div>';
-  var hj=S.posts.filter(function(p){return p.uid===S.me&&p.cid===c.id&&p.date===TODAY}),sk=streak(S.me),fogo=sk>=2?'<div class="sub kf">🔥 '+sk+' dias seguidos em família</div>':'';
-  if(hj.length)return '<div class="card khj"><b class="kt">✓ Hoje vocês estudaram: '+esc(hj.map(function(p){return p.ref}).join(', '))+'</b>'+fogo+'<button class="btn o" id="add2">🧒 Registrar outro estudo</button></div>';
-  return '<div class="card khj"><b class="kt">🧒 Estudou com seu filho hoje?</b>'+(fogo||'<div class="sub kf">Leia uma história, cante, ore junto. Depois registre aqui.</div>')+'<button class="btn" id="add2">🧒 Registrar estudo</button></div>';
+  kpLoad();
+  var pal=S.posts.some(function(p){return p.uid===S.me&&p.cid===c.id&&p.date===TODAY}),ora=kpRows().some(function(x){return x.user_id===S.me&&x.prayed_on===TODAY}),on=kpOn();
+  var sk=on?kStreak():streak(S.me),fogo=sk>=2?'<div class="sub kf">🔥 '+sk+' dias seguidos em família</div>':'';
+  if(!on){ // sem a oração (banco ainda sem a tabela): como antes
+    var hj=S.posts.filter(function(p){return p.uid===S.me&&p.cid===c.id&&p.date===TODAY});
+    if(hj.length)return '<div class="card khj"><b class="kt">✓ Hoje vocês estudaram: '+esc(hj.map(function(p){return p.ref}).join(', '))+'</b>'+fogo+'<button class="btn o" id="add2">🧒 Registrar outro estudo</button></div>';
+    return '<div class="card khj"><b class="kt">🧒 Estudou com seu filho hoje?</b>'+(fogo||'<div class="sub kf">Leia uma história, cante, ore junto. Depois registre aqui.</div>')+'<button class="btn" id="add2">🧒 Registrar estudo</button></div>';
+  }
+  var lin=function(ic,t,ok){return '<div><span>'+ic+' '+t+'</span><span class="'+(ok?'ok">✓ feito':'no">ainda não')+'</span></div>'};
+  return '<div class="card khj"><b class="kt">🧒 Hoje em família</b><div class="kfam">'+lin('📖','Palavra',pal)+lin('🙏','Oração',ora)+'</div>'+fogo+
+    (pal&&ora?'<div class="sub kok">✓ Palavra e oração hoje 🙌</div>':'')+
+    '<div class="k2"><button class="btn'+(pal?' o':'')+'" id="add2">📖 '+(pal?'Outro estudo':'Registrar estudo')+'</button><button class="btn'+(ora?' o':'')+'" data-kora="1">🙏 '+(ora?'Orar de novo':'Oramos juntos')+'</button></div>'+
+    '<div class="kdica">💡 <b>Sugestão para hoje:</b> '+esc(kDica())+'</div></div>';
+}
+// mural Kids: publicações e, entre elas, as orações (orações seguidas no mesmo dia: até 2 linhas; mais que isso, uma só)
+function kpLine(G){
+  var L=G.L,ts=Date.parse(L[0].created_at),ids=L.map(function(x){return x.id}).join(',');
+  if(L.length<=2)return L.map(function(x){var t=Date.parse(x.created_at);return '<button class="card psl" data-kpl="'+x.id+'"><span aria-hidden="true">🙏</span><div class="grow"><b>'+esc(x.user_id===S.me?'Você':nm(x.user_id).split(' ')[0])+'</b> orou com <b>'+esc(kNames(x.child_names||[])||'a família')+'</b> · '+kMom(x.moment)[3]+'</div><span class="sub">'+(x.prayed_on===TODAY?ago(t):fd(x.prayed_on).slice(0,5))+'</span></button>'}).join('');
+  var U=[];L.forEach(function(x){if(U.indexOf(x.user_id)<0)U.push(x.user_id)});
+  return '<button class="card psl" data-kpl="'+ids+'"><span aria-hidden="true">🙏</span><div class="grow"><b>'+esc(psNames(U,2))+'</b> '+(U.length>1?'oraram':'orou')+' com os filhos</div><span class="sub">'+(L[0].prayed_on===TODAY?ago(ts):fd(L[0].prayed_on).slice(0,5))+' ›</span></button>';
 }
 function kidsFeed(){
   var c=S.ch,l=S.posts.filter(function(p){return p.cid===c.id}).sort(function(a,b){return b.ts-a.ts});
-  if(!l.length)return TODAY<c.start?'':'<div class="card sub">Nenhum estudo registrado ainda. Seja a primeira família! 🙏</div>';
-  var lim=S.feedN||FEEDN,mais=l.length-lim;
-  return l.slice(0,lim).map(function(p){return post(p)}).join('')+(mais>0?'<button class="btn g" data-more="1" style="text-align:center">Ver mais '+Math.min(mais,FEEDN)+' publicações (faltam '+mais+')</button>':'');
+  var R=kpRows(),lim=S.feedN||FEEDN,P=l.slice(0,lim),mais=l.length-lim;
+  if(!l.length&&!R.length)return TODAY<c.start?'':'<div class="card sub">Nenhum estudo registrado ainda. Seja a primeira família! 🙏</div>';
+  var G=[],cur=null,j=0;
+  R.forEach(function(x){var t=Date.parse(x.created_at);var jj=j;while(jj<P.length&&P[jj].ts>t)jj++;if(!cur||jj!==cur.pos||cur.d!==x.prayed_on){cur={pos:jj,d:x.prayed_on,L:[]};G.push(cur)}cur.L.push(x);j=jj});
+  var h='',g=0;
+  P.forEach(function(p,i){while(g<G.length&&G[g].pos===i)h+=kpLine(G[g++]);h+=post(p)});
+  if(mais<=0)while(g<G.length)h+=kpLine(G[g++]);
+  return h+(mais>0?'<button class="btn g" data-more="1" style="text-align:center">Ver mais '+Math.min(mais,FEEDN)+' publicações (faltam '+mais+')</button>':'');
 }
+function kpSheet(ids){
+  var L=kpRows().filter(function(x){return ids.indexOf(x.id)>=0});if(!L.length)return;
+  showSheet('<h2>🙏 Oração em família</h2><div style="margin:8px 0">'+L.map(function(x){return '<div class="ps-it">'+av(x.user_id)+'<div class="grow"><b>'+esc(nm(x.user_id))+(x.user_id===S.me?' (você)':'')+'</b><div class="sub">Orou com '+esc(kNames(x.child_names||[])||'a família')+' · '+kMom(x.moment)[3]+' · '+fd(x.prayed_on).slice(0,5)+'</div>'+(x.user_id===S.me?'<button class="link" data-kpdel="'+x.id+'" style="color:var(--err)">🗑️ Apagar esta oração</button>':'')+'</div></div>'}).join('')+'</div><button class="btn g" id="x">Fechar</button>');
+}
+function openKora(){
+  S.kidsList=(S.kidsList||[]).slice();S.kidsSel=S.kidsList.length===1?[S.kidsList[0]]:[];S.kidsAdd=!S.kidsList.length;S.kmom=null;
+  showSheet('<h1>🙏 Oração em família</h1><h2>Quando vocês oraram?</h2><div id="kmos">'+kMos()+'</div><label>Com quem?</label><div id="kch">'+kidsChips()+'</div><div class="err" id="kper"></div><button class="btn" data-kpok="1">🙏 Registrar oração</button><button class="btn g" id="x">Cancelar</button>');
+}
+function kMos(){return KMOM.map(function(m){return '<button class="kmo'+(S.kmom===m[0]?' on':'')+'" data-km="'+m[0]+'" aria-pressed="'+(S.kmom===m[0])+'">'+m[1]+' '+m[2]+'</button>'}).join('')}
+async function kpSave(){
+  var er=document.getElementById('kper'),b=document.querySelector('[data-kpok]');if(!er||!b||b.disabled)return;er.textContent='';
+  if(S.kidsAdd&&document.getElementById('kname')&&val('kname').trim())kidsAddName();
+  if(!S.kmom){er.textContent='Toque em quando vocês oraram.';return}
+  if(!S.kidsSel.length){er.textContent='Toque no nome de quem orou com você (ou em "+ Adicionar").';return}
+  var c=S.ch,dia=TODAY<c.end?TODAY:c.end;
+  b.disabled=true;b.textContent='Salvando…';
+  var r=await moCall(sb.from('kids_prayers').insert({challenge_id:c.id,prayed_on:dia,moment:S.kmom,child_names:S.kidsSel.slice()}).select('id,user_id,prayed_on,moment,child_names,created_at').single());
+  if(r.error||!r.data){b.disabled=false;b.textContent='🙏 Registrar oração';er.textContent=moNet(r.error)?'Sem conexão. Tente de novo quando a internet voltar.':'Não foi possível registrar. '+why(r.error);return}
+  KP.rows=[r.data].concat(KP.rows.filter(function(x){return x.id!==r.data.id}));KP.cid=c.id;
+  closeSheet(true);render();scrollTo(0,0);toast('🙏 Oração registrada');
+}
+async function kpDel(id){
+  if(!confirm('Apagar esta oração?'))return;
+  var r=await moCall(sb.from('kids_prayers').delete().eq('id',id).select('id'));
+  if(r.error||!r.data||!r.data.length){toast('Não foi possível apagar. '+(r.error?why(r.error):''));return}
+  KP.rows=KP.rows.filter(function(x){return x.id!==id});closeSheet(true);render();toast('Oração apagada');
+}
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('button');if(!b)return;var d=b.dataset;
+  if(d.kora)openKora();
+  else if(d.km){S.kmom=d.km;var k=document.getElementById('kmos');if(k)k.innerHTML=kMos()}
+  else if(d.kpok)kpSave();
+  else if(d.kpl)kpSheet(d.kpl.split(','));
+  else if(d.kpdel)kpDel(d.kpdel);
+});
 function kidsChips(){
   var L=S.kidsList||[],sel=S.kidsSel||[];
   return L.map(function(n){var on=sel.indexOf(n)>=0;return '<button class="chip kn'+(on?' on':'')+'" data-kn="'+esc(n)+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(n)+'</button>'}).join('')+
@@ -3054,7 +3142,7 @@ function init(){
   boot().then(function(){if(INV&&!S.me&&!S.linkErr&&gm==='in'){REG.step=1;gate('up')}});
   setInterval(function(){var t=iso(new Date()),nd=t!==TODAY;TODAY=t;if(S.me&&S.grp&&!document.hidden&&!document.getElementById('sh').classList.contains('show')){if(nd)loadData();else poll()}},30000);
   setInterval(function(){if(!document.hidden)loadChat()},5000);
-  setInterval(function(){if(!document.hidden&&tab==='feed'&&loaded)psLoad()},20000);
+  setInterval(function(){if(!document.hidden&&tab==='feed'&&loaded){if(isKids(S.ch))kpLoad();else psLoad()}},20000);
   setInterval(function(){if(!document.hidden)loadPray()},20000);
   setInterval(orBeat,2*60e3);
   // fotos guardadas no aparelho (sw.js): cada foto é baixada uma vez só, mesmo quando o link assinado muda

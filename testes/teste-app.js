@@ -1045,7 +1045,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     // mural Kids: só publicações Kids
     exige(await esperar(async () => /Roger Martins estudou com Ana/.test((await pr.innerText('main')).replace(/\s+/g, ' '))), 'mural Kids: ' + (await pr.innerText('main')).slice(0, 300));
     const mk = (await pr.innerText('main')).replace(/\s+/g, ' ');
-    exige(/✓ Hoje vocês estudaram: Arca de Noé/.test(mk) && /Mayara Martins estudou com Davi/.test(mk) && /📖 A Criação/.test(mk), 'Início Kids: ' + mk.slice(0, 400));
+    exige(/Hoje em família 📖 Palavra ✓ feito/.test(mk) && /Roger Martins estudou com Ana/.test(mk) && /📖 Arca de Noé/.test(mk) && /Mayara Martins estudou com Davi/.test(mk) && /📖 A Criação/.test(mk), 'Início Kids: ' + mk.slice(0, 400));
     exige(!/Gênesis 1|Oração de hoje|Ninguém orou|Leitura de hoje|passos/i.test(mk), 'Início Kids mostra coisa dos adultos: ' + mk.slice(0, 400));
     // volta para Gênesis pela chave: publicação Kids não aparece
     await pr.click('main .kseg button:first-child');
@@ -1090,6 +1090,51 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const erros = pr.erros; await pr.context().close();
     exige(!erros.length, 'erros: ' + erros.join(' | '));
     return 'descrição salva com [kids]; Mapa Kids sem trilha, ranking e calendário';
+  });
+
+  await teste('Jornada Kids: oração em família (Hoje em família, momento + com quem, linha no mural, 🔥 com Palavra ou oração, apagar); sem a tabela, tudo como antes', async () => {
+    const S = novoServidor(), R = S.usuario('Roger Martins'), M = S.usuario('Mayara Martins'), gk = S.caravana(R, 'Jornada Kids'); S.entrar(M, gk);
+    const kids = S.jornada(gk, 'Jornada Kids', -5, 400); kids.description = 'Estudo da Palavra em família. [kids]';
+    const dia = n => { const x = new Date('2026-11-22T12:00:00-03:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10) };
+    S.publicacao(R, kids, { book: 'Jornada Kids', ref: 'A Criação', chapters: 1, child_names: ['Ana'], read_date: dia(-2), created_at: dia(-2) + 'T20:00:00Z' }); // anteontem: Palavra
+    S.DB.kp['k0'] = { id: 'k0', user_id: R.id, challenge_id: kids.id, prayed_on: dia(-1), moment: 'dormir', child_names: ['Ana'], created_at: dia(-1) + 'T23:00:00Z' }; // ontem: só oração
+    S.DB.kp['k1'] = { id: 'k1', user_id: M.id, challenge_id: kids.id, prayed_on: dia(0), moment: 'refeicao', child_names: ['Davi'], created_at: '2026-11-22T12:00:00Z' };
+    R.md = { jornadas: [kids.id], kids: ['Ana', 'Pedro'] }; M.md = { jornadas: [kids.id] };
+    const RELOGIO = { relogio: '2026-11-22T20:00:00-03:00', timezoneId: 'America/Sao_Paulo' };
+    const pr = await abrir(browser, base, S, R, RELOGIO); await pr.waitForSelector('main .kfam');
+    const cartao = () => pr.evaluate(() => document.querySelector('main .khj').innerText.replace(/\s+/g, ' '));
+    let t = await cartao();
+    exige(/Hoje em família/.test(t) && /Palavra ainda não/.test(t) && /Oração ainda não/.test(t) && /🔥 2 dias seguidos em família/.test(t) && /Sugestão para hoje:/.test(t), 'cartão: ' + t);
+    exige(/Mayara orou com Davi · na refeição/.test((await pr.innerText('main')).replace(/\s+/g, ' ')), 'linha da Mayara no mural');
+    // registrar: sem momento avisa; com momento e nome, grava
+    await pr.click('main [data-kora]'); await pr.waitForSelector('#shc .kmo');
+    const mos = await pr.$$eval('#shc .kmo', b => b.map(x => x.textContent.trim()));
+    exige(mos.join('|') === '☀️ Ao acordar|🍽️ Na refeição|🚗 No caminho|🌙 Antes de dormir|💛 Outro momento', 'momentos: ' + mos.join('|'));
+    await pr.click('[data-kpok]'); exige(/Toque em quando vocês oraram/.test(await pr.textContent('#kper')), 'sem aviso de momento');
+    await pr.click('[data-km="dormir"]'); await pr.click('[data-kpok]');
+    exige(/Toque no nome/.test(await pr.textContent('#kper')), 'sem aviso de nome (com 2 filhos não pré-seleciona)');
+    await pr.click('[data-kn="Ana"]'); await pr.click('[data-kn="Pedro"]'); await pr.click('[data-kpok]');
+    exige(await esperar(() => Object.values(S.DB.kp).some(x => x.user_id === R.id && x.prayed_on === '2026-11-22')), 'não gravou');
+    const k = Object.values(S.DB.kp).find(x => x.user_id === R.id && x.prayed_on === '2026-11-22');
+    exige(k.moment === 'dormir' && JSON.stringify(k.child_names) === '["Ana","Pedro"]' && !('minutes' in k), 'gravou: ' + JSON.stringify(k));
+    t = await cartao();
+    exige(/Oração ✓ feito/.test(t) && /Palavra ainda não/.test(t) && /🔥 3 dias seguidos em família/.test(t) && /Orar de novo/.test(t), 'depois de orar: ' + t);
+    exige(/Você orou com Ana e Pedro · antes de dormir/.test((await pr.innerText('main')).replace(/\s+/g, ' ')), 'linha da oração no mural');
+    // apagar a própria oração
+    await pr.click('main [data-kpl="' + k.id + '"]'); await pr.waitForSelector('#shc [data-kpdel]');
+    pr.once('dialog', d => d.accept()); await pr.click('#shc [data-kpdel]');
+    exige(await esperar(() => !S.DB.kp[k.id]), 'não apagou');
+    exige(await esperar(async () => /Oração ainda não/.test(await cartao())), 'cartão não voltou');
+    const erros = pr.erros; await pr.context().close();
+    // banco sem a tabela: cartão como antes, sem erros
+    const S2 = novoServidor({ semKp: true }), R2 = S2.usuario('Roger'), g2 = S2.caravana(R2, 'Jornada Kids');
+    const k2 = S2.jornada(g2, 'Jornada Kids', -5, 400); k2.description = 'x [kids]'; R2.md = { jornadas: [k2.id] };
+    const qa = await abrir(browser, base, S2, R2, RELOGIO); await qa.waitForSelector('main .khj'); await qa.waitForTimeout(500);
+    const t2 = (await qa.innerText('main .khj')).replace(/\s+/g, ' ');
+    exige(/Estudou com seu filho hoje\?/.test(t2) && !/Oramos juntos/.test(t2), 'sem tabela: ' + t2);
+    const erros2 = qa.erros; await qa.context().close();
+    exige(!erros.length && !erros2.length, 'erros: ' + erros.concat(erros2).join(' | '));
+    return 'cartão Palavra/Oração + sugestão; momentos na ordem; avisos; gravou dormir com Ana e Pedro; 🔥 2→3 (ontem só oração conta); linha no mural; apagar; sem tabela: como antes';
   });
 
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {

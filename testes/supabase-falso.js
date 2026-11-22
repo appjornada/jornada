@@ -9,7 +9,7 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function novoServidor(opts = {}) {
   const O = Object.assign({ rosterRpc: true, maxRows: 1000, falhas: {}, atrasos: {} }, opts);
-  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, prayer_requests: {}, pi: [], ps: {}, psh: {}, objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
+  const DB = { users: {}, profiles: {}, groups: {}, gm: [], challenges: {}, checkins: {}, likes: [], comments: {}, messages: {}, prayer_requests: {}, pi: [], ps: {}, psh: {}, kp: {}, objects: {}, criadores: new Set() }; // criadores: lista de quem pode criar (supabase/6-so-a-lider-cria.sql)
   const SO_LIDER = o => err('Por enquanto, só a líder pode criar ' + o + '. Peça o código de convite a ela.', '42501');
   const log = [];
   const member = (u, g) => DB.gm.some(m => m.user_id === u && m.group_id === g);
@@ -28,6 +28,7 @@ function novoServidor(opts = {}) {
         .map(r => Object.assign({}, r, { prayer_intercessions: DB.pi.filter(x => x.request_id === r.id).map(x => ({ user_id: x.user_id, prayed_at: x.prayed_at, praying: x.praying !== false })) }));
       case 'prayer_intercessions': { const vis = new Set(visible('prayer_requests', me).map(r => r.id)); return DB.pi.filter(x => vis.has(x.request_id)) }
       case 'prayer_sessions': return Object.values(DB.ps).filter(r => r.user_id === me).map(psOut); // ps_select: só a própria pessoa (supabase/15-meu-momento-de-oracao.sql)
+      case 'kids_prayers': return Object.values(DB.kp).filter(r => member(me, chGroup(r.challenge_id))); // kp_select (supabase/20-oracao-kids.sql)
       case 'prayer_shares': return Object.values(DB.psh).filter(r => r.user_id === me || member(me, r.group_id)); // psh_select
       case 'comments': return Object.values(DB.comments);
       case 'likes': return DB.likes;
@@ -79,6 +80,7 @@ function novoServidor(opts = {}) {
     const t = q.table;
     if (q.op === 'select') {
       if (t === 'profiles' && O.semAvatar && /avatar_path/.test(q.cols || '')) return err('column profiles.avatar_path does not exist', '42703');
+      if (t === 'kids_prayers' && O.semKp) return err("Could not find the table 'public.kids_prayers' in the schema cache", 'PGRST205');
       if (t === 'prayer_shares' && O.pshAntigo && /ended_at/.test(q.cols || '')) return err('column prayer_shares.ended_at does not exist', '42703');
       let rows = applyFilters(visible(t, me), q.filters);
       if (q.order) { for (const o of [...q.order].reverse()) rows.sort((a, b) => (String(a[o.col]) < String(b[o.col]) ? -1 : String(a[o.col]) > String(b[o.col]) ? 1 : 0) * (o.asc ? 1 : -1)) }
@@ -129,6 +131,13 @@ function novoServidor(opts = {}) {
         if (DB.ps[r.id]) return err('duplicate key value violates unique constraint "prayer_sessions_pkey"', '23505');
         if (r.status === 'active' && Object.values(DB.ps).some(x => x.user_id === me && x.status === 'active')) return err('duplicate key value violates unique constraint "prayer_sessions_um_ativo"', '23505');
         DB.ps[r.id] = r; return psDepois('insert', { data: q.returning ? [psOut(r)] : null, error: null });
+      }
+      if (t === 'kids_prayers') { // kp_insert
+        const ch = DB.challenges[b.challenge_id];
+        if ((b.user_id && b.user_id !== me) || !ch || !member(me, ch.group_id) || b.prayed_on < ch.start_date || b.prayed_on > ch.end_date) return err('new row violates row-level security policy for table "kids_prayers"', '42501');
+        if (!['acordar', 'refeicao', 'caminho', 'dormir', 'outro'].includes(b.moment)) return err('new row for relation "kids_prayers" violates check constraint', '23514');
+        const r = { id: id(), user_id: me, challenge_id: b.challenge_id, prayed_on: b.prayed_on, moment: b.moment, child_names: b.child_names || null, created_at: new Date().toISOString() };
+        DB.kp[r.id] = r; return { data: q.returning ? (q.single ? r : [r]) : null, error: null };
       }
       if (t === 'prayer_shares') { // psh_insert + gatilho psh_regras
         const sx = DB.ps[b.session_id];
@@ -184,6 +193,7 @@ function novoServidor(opts = {}) {
     if (q.op === 'delete') {
       if (t === 'group_members') { const gid = (q.filters.find(f => f[1] === 'group_id') || [])[2], uid = (q.filters.find(f => f[1] === 'user_id') || [])[2]; const m = DB.gm.find(x => x.group_id === gid && x.user_id === uid && (uid === me || DB.gm.some(l => l.group_id === gid && l.user_id === me && l.role === 'leader'))); if (m) DB.gm = DB.gm.filter(x => x !== m); return { data: m ? [{ user_id: m.user_id }] : [], error: null } } // gm_delete
       if (t === 'prayer_sessions') { const rows = applyFilters(Object.values(DB.ps).filter(r => r.user_id === me), q.filters); rows.forEach(r => { delete DB.ps[r.id]; delete DB.psh[r.id] }); return psDepois('delete', { data: q.returning ? rows.map(r => ({ id: r.id })) : null, error: null }) } // ps_delete (+ compartilhamento junto)
+      if (t === 'kids_prayers') { const rows = applyFilters(Object.values(DB.kp).filter(r => r.user_id === me), q.filters); rows.forEach(r => { delete DB.kp[r.id] }); return { data: q.returning ? rows.map(r => ({ id: r.id })) : null, error: null } } // kp_delete
       if (t === 'prayer_shares') { const rows = applyFilters(Object.values(DB.psh).filter(r => r.user_id === me), q.filters); rows.forEach(r => { delete DB.psh[r.session_id] }); return { data: null, error: null } } // psh_delete
       if (t === 'prayer_requests') { // pr_delete: o autor, ou a líder da caravana (se não for pessoal)
         const lider = r => !r.is_private && DB.gm.some(m => m.group_id === r.group_id && m.user_id === me && m.role === 'leader');

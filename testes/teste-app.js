@@ -1007,6 +1007,91 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Ana: "· 🔥 4 dias seguidos"; Bia: "🔥 2 dias seguidos · registre hoje para continuar"; Caio (1 dia): sem 🔥; sem a faixa de números';
   });
 
+  await teste('Jornada Kids: chave Gênesis | Kids, Passo pergunta para quem é, registro com nome da criança, murais separados; quem não está na Kids não vê nada', async () => {
+    const S = novoServidor(), R = S.usuario('Roger Martins'), M = S.usuario('Mayara Martins'), T = S.usuario('Tânia Santos'), P = S.usuario('Paula Kids');
+    const g = S.caravana(R, 'JORNADA'); S.entrar(M, g); S.entrar(T, g); const gen = jornadaGenesis(S, g);
+    const gk = S.caravana(R, 'Jornada Kids'); S.entrar(M, gk); S.entrar(P, gk);
+    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]';
+    S.publicacao(T, gen, { book: 'Gênesis', ref: '1', read_date: '2026-11-18', created_at: '2026-11-18T12:00:00Z' });
+    S.publicacao(M, kids, { book: 'Jornada Kids', ref: 'A Criação', chapters: 1, child_names: ['Davi'], read_date: '2026-11-21', created_at: '2026-11-21T12:00:00Z', study_minutes: 15 });
+    R.md = { jornadas: [gen.id, kids.id] }; M.md = { jornadas: [gen.id, kids.id], kids: ['Davi'] }; T.md = { jornadas: [gen.id] }; P.md = { jornadas: [kids.id] };
+    const RELOGIO = { relogio: '2026-11-22T10:00:00-03:00', timezoneId: 'America/Sao_Paulo' };
+    const pr = await abrir(browser, base, S, R, RELOGIO);
+    await pr.evaluate(id => { S.cur = id; useCur(); render() }, gen.id);
+    // chave no alto, Gênesis marcado, mural só dos adultos
+    await pr.waitForSelector('main .kseg');
+    const seg = await pr.$$eval('main .kseg button', b => b.map(x => (x.classList.contains('on') ? '*' : '') + x.textContent.trim()));
+    exige(seg.join('|') === '*📖 Gênesis|🧒 Jornada Kids', 'chave: ' + seg.join('|'));
+    exige(!/A Criação/.test(await pr.innerText('main')), 'publicação Kids apareceu no mural dos adultos');
+    // 👣 Passo: pergunta para quem é → Com meu filho
+    await pr.click('#add'); await pr.waitForSelector('#shc [data-pp]');
+    exige(/Para quem é este registro\?/.test(await pr.innerText('#shc')), 'sem a pergunta');
+    await pr.click('#shc [data-pp="' + kids.id + '"]'); await pr.waitForSelector('#shc #kst');
+    exige(await pr.evaluate(id => S.cur === id, kids.id), 'não foi para a Kids');
+    // primeira vez: escreve o nome do filho
+    await pr.fill('#kname', 'Ana'); await pr.click('[data-kok]');
+    await pr.click('[data-kadd]'); await pr.fill('#kname', 'Pedro'); await pr.keyboard.press('Enter');
+    exige(await pr.evaluate(() => S.kidsSel.join(',')) === 'Ana,Pedro', 'seleção: ' + await pr.evaluate(() => S.kidsSel.join(',')));
+    await pr.click('[data-kn="Pedro"]'); // tira o Pedro
+    // sem o que estudaram: avisa
+    await pr.setInputFiles('#fgal', { name: 'a.png', mimeType: 'image/png', buffer: PNG }); await pr.waitForSelector('.mth');
+    await pr.click('[data-mn="10"]'); await pr.click('#ok');
+    exige(/Escreva o que vocês estudaram/.test(await pr.textContent('#er')), 'aviso: ' + await pr.textContent('#er'));
+    await pr.fill('#kst', 'Arca de Noé'); await pr.click('#ok');
+    exige(await esperar(() => Object.values(S.DB.checkins).some(k => k.ref === 'Arca de Noé')), 'não publicou');
+    const k = Object.values(S.DB.checkins).find(k => k.ref === 'Arca de Noé');
+    exige(k.challenge_id === kids.id && k.book === 'Jornada Kids' && k.chapters === 1 && JSON.stringify(k.child_names) === '["Ana"]' && k.study_minutes === 10 && k.read_date === '2026-11-22', 'gravou: ' + JSON.stringify(k));
+    exige(JSON.stringify(JSON.parse(await pr.evaluate(() => localStorage.getItem('fake_md'))).kids) === '["Ana","Pedro"]', 'nomes não ficaram guardados na conta');
+    // mural Kids: só publicações Kids
+    exige(await esperar(async () => /Roger Martins estudou com Ana/.test((await pr.innerText('main')).replace(/\s+/g, ' '))), 'mural Kids: ' + (await pr.innerText('main')).slice(0, 300));
+    const mk = (await pr.innerText('main')).replace(/\s+/g, ' ');
+    exige(/✓ Hoje vocês estudaram: Arca de Noé/.test(mk) && /Mayara Martins estudou com Davi/.test(mk) && /📖 A Criação/.test(mk), 'Início Kids: ' + mk.slice(0, 400));
+    exige(!/Gênesis 1|Oração de hoje|Ninguém orou|Leitura de hoje|passos/i.test(mk), 'Início Kids mostra coisa dos adultos: ' + mk.slice(0, 400));
+    // volta para Gênesis pela chave: publicação Kids não aparece
+    await pr.click('main .kseg button:first-child');
+    exige(await esperar(async () => /Leitura de hoje/i.test(await pr.innerText('main'))), 'não voltou para Gênesis: ' + (await pr.innerText('main')).slice(0, 200));
+    exige(!/Arca de Noé|A Criação/.test(await pr.innerText('main')), 'publicação Kids apareceu em Gênesis');
+    // editar o estudo: nome e texto
+    await pr.click('main .kseg button:last-child'); await pr.waitForSelector('main [data-ep="' + k.id + '"]');
+    await pr.click('main [data-ep="' + k.id + '"]'); await pr.waitForSelector('#shc #kst');
+    exige(await pr.inputValue('#kst') === 'Arca de Noé', 'editar não trouxe o texto');
+    await pr.click('[data-kn="Pedro"]'); await pr.fill('#kst', 'Arca de Noé e o arco-íris'); await pr.click('#ok');
+    exige(await esperar(() => S.DB.checkins[k.id].ref === 'Arca de Noé e o arco-íris' && JSON.stringify(S.DB.checkins[k.id].child_names) === '["Ana","Pedro"]'), 'edição: ' + JSON.stringify(S.DB.checkins[k.id]));
+    const erros = pr.erros; await pr.context().close();
+    // Tânia (só Gênesis): nada muda
+    const pt = await abrir(browser, base, S, T, RELOGIO); await pt.waitForSelector('main .card.hoje');
+    exige(!(await pt.$('main .kseg')) && !/Kids|Arca/.test(await pt.innerText('main')), 'Tânia vê algo da Kids');
+    await pt.click('#add'); await pt.waitForSelector('#shc #chg');
+    exige(!(await pt.$('#shc [data-pp]')), 'Tânia recebeu a pergunta "para quem"');
+    const erros2 = pt.erros; await pt.context().close();
+    // Paula (só Kids): sem chave, Passo vai direto para o registro Kids
+    const pp = await abrir(browser, base, S, P, RELOGIO); await pp.waitForSelector('main .khj');
+    exige(!(await pp.$('main .kseg')), 'Paula vê a chave');
+    await pp.click('#add'); await pp.waitForSelector('#shc #kst');
+    exige(!(await pp.$('#shc [data-pp]')), 'Paula recebeu a pergunta');
+    exige(await pp.evaluate(() => S.kidsAdd === true && !!document.getElementById('kname')), 'sem nomes salvos: deveria abrir o campo do nome');
+    const erros3 = pp.erros; await pp.context().close();
+    exige(!erros.length && !erros2.length && !erros3.length, 'erros: ' + erros.concat(erros2, erros3).join(' | '));
+    return 'Roger: chave, pergunta, registro com Ana (Pedro guardado), mural Kids separado, edição; Tânia: nada muda; Paula: direto no registro Kids';
+  });
+
+  await teste('Jornada Kids: líder edita a jornada e ela continua sendo Kids; Mapa sem trilha, ranking e calendário', async () => {
+    const S = novoServidor(), R = S.usuario('Roger Martins'), gk = S.caravana(R, 'Jornada Kids');
+    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]';
+    R.md = { jornadas: [kids.id] };
+    const pr = await abrir(browser, base, S, R);
+    await pr.click('nav [data-t="cfg"]'); await pr.waitForTimeout(400);
+    const mapa = await pr.innerText('main'), rk = await pr.$('main .rkc');
+    exige(!rk && !/Terra Prometida|Sua trilha/i.test(mapa), 'Mapa Kids mostra trilha/ranking/calendário: ' + mapa.slice(0, 300));
+    await pr.evaluate(id => editCh(id), kids.id); await pr.waitForSelector('#ed');
+    exige(!/\[kids\]/.test(await pr.inputValue('#ed')), 'a marcação interna aparece para o líder');
+    await pr.fill('#ed', 'Estudo da Palavra em família'); await pr.evaluate(id => saveCh(id), kids.id);
+    exige(await esperar(() => S.DB.challenges[kids.id].description === 'Estudo da Palavra em família [kids]'), 'descrição depois de salvar: ' + S.DB.challenges[kids.id].description);
+    const erros = pr.erros; await pr.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'descrição salva com [kids]; Mapa Kids sem trilha, ranking e calendário';
+  });
+
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'Cartas'); const c = jornadaGenesis(S, g);
     const pa = await abrir(browser, base, S, A, { relogio: '2026-11-23T10:00:00-03:00' });

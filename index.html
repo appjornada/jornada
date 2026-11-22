@@ -249,6 +249,13 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .oc-agora{margin-top:10px;font-size:14px;color:var(--mut);display:flex;align-items:center;gap:8px}
 .psl{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;font-size:15px;color:var(--tx);padding:10px 14px;border-radius:14px;cursor:pointer;box-shadow:none}
 .psl .grow{min-width:0}.psl .sub{flex:none;font-size:13px}
+.kseg{display:flex;background:var(--vt);border-radius:14px;padding:4px;margin-bottom:12px;gap:4px}
+.kseg button{flex:1;min-width:0;border:0;background:none;padding:11px 4px;border-radius:11px;color:var(--tx);font:600 16px var(--ft);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kseg button.on{background:var(--ac);color:var(--acx);font-weight:800}
+.kbig{display:block;width:100%;text-align:left;margin-top:12px;padding:16px;border-radius:16px;border:2px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;cursor:pointer}
+.kbig b{display:block;font-size:19px}.kbig span{display:block;color:var(--mut);font-size:15px;margin-top:3px}.kbig.kk{border-color:var(--ac)}
+.khj{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 14%,var(--card)),var(--card) 75%)}.khj .kt{font-size:18px;display:block}.khj .kf{margin-top:4px;font-size:15px}
+.chip.kn{font-size:16px;padding:9px 14px}
 .volta{border:2px solid var(--ac);background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 16%,var(--card)),var(--card) 75%)}
 .volta h3{margin:2px 0 6px;font-size:21px;line-height:1.25}.volta p{margin:0 0 6px;font-size:16px;line-height:1.45}
 .vt-hj{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);font-size:15px}.vt-hj b{display:block;font-size:18px;margin-top:2px}
@@ -504,8 +511,84 @@ var PL={};
 // ---- Cronograma dia a dia (opcional): fica na descrição da jornada como [cronograma: 1; 2; 6-7; …] ----
 // Cada item é um dia, a partir da partida. Sem cronograma, os capítulos são divididos por igual entre os dias.
 function cronoOf(desc){var m=String(desc||'').match(/\[cronograma:([^\]]*)\]/i);if(!m)return null;var d=m[1].split(';').map(function(x){return x.trim()});return d.length&&d.every(function(x){return x})?d:null}
-function descShow(desc){return String(desc||'').replace(/\s*\[cronograma:[^\]]*\]\s*/ig,' ').trim()}
+function descShow(desc){return String(desc||'').replace(/\s*\[cronograma:[^\]]*\]\s*/ig,' ').replace(/\s*\[kids\]\s*/ig,' ').trim()}
+// ---- Jornada Kids: jornada marcada com [kids] na descrição. Sem leitura do dia: os pais registram o estudo com os filhos
+// (com quem, o que estudaram, foto e tempo). Mural, progresso e registro próprios; nunca se mistura com a dos adultos.
+var KBOOK='Jornada Kids';
+function isKids(c){return !!c&&/\[kids\]/i.test(c.desc||'')}
+function kidsJ(){return S.all.filter(function(c){return isKids(c)&&isMine(c.id)&&c.end>=TODAY}).sort(function(a,b){return a.start<b.start?-1:1})[0]||null}
+function adultJ(){
+  var L=myJs().filter(function(c){return !isKids(c)});if(!L.length)return null;
+  if(!isKids(S.ch)&&L.some(function(c){return c.id===S.cur}))return S.ch;
+  var sv=null;try{sv=localStorage.getItem('pd_adulto')}catch(e){}
+  return L.filter(function(c){return c.id===sv})[0]||L[0];
+}
+function bothJ(){var k=kidsJ(),a=k&&adultJ();return k&&a?{k:k,a:a}:null}
+function kNames(L){L=L||[];return L.length>1?L.slice(0,-1).join(', ')+' e '+L[L.length-1]:L[0]||''}
+// chave no alto do Início para quem está nas duas: 📖 Gênesis | 🧒 Jornada Kids
+function kidsSeg(){
+  var b=bothJ();if(!b)return '';
+  if(S.cur===b.a.id){try{localStorage.setItem('pd_adulto',b.a.id)}catch(e){}}
+  return '<div class="kseg" role="tablist"><button role="tab" data-js="c:'+b.a.id+'" class="'+(S.cur===b.a.id?'on':'')+'">📖 '+esc(jShort(b.a))+'</button><button role="tab" data-js="c:'+b.k.id+'" class="'+(S.cur===b.k.id?'on':'')+'">🧒 '+esc(b.k.name)+'</button></div>';
+}
+// 👣 Passo: para quem está nas duas, pergunta antes para quem é o registro
+function openPasso(){
+  var b=bothJ();if(!b){openSheet();return}
+  showSheet('<h2>Para quem é este registro?</h2><button class="kbig" data-pp="'+b.a.id+'"><b>📖 Meu estudo</b><span>'+esc(jShort(b.a))+' · leitura de hoje</span></button><button class="kbig kk" data-pp="'+b.k.id+'"><b>🧒 Com meu filho</b><span>'+esc(b.k.name)+'</span></button><button class="btn g" id="x">Cancelar</button>');
+}
+function kidsHc(){var n=memberCount();return '<div class="card hc" id="hc"><div class="hc-top"><div class="hc-t"><h2>'+esc(S.grp.name)+'</h2><span class="sub"> · </span><span class="sub hcs" id="hcs">'+n+(n===1?' família':' famílias')+'</span></div><button class="hc-more" id="hcm" aria-label="Mais opções da caravana">•••</button></div></div>'}
+function kidsHoje(){
+  var c=S.ch;
+  if(TODAY<c.start)return '<div class="card khj"><b class="kt">🧒 A '+esc(c.name)+' começa em '+fd(c.start)+'</b><div class="sub">Nesse dia, é só registrar aqui o estudo da Palavra com seus filhos.</div></div>';
+  var hj=S.posts.filter(function(p){return p.uid===S.me&&p.cid===c.id&&p.date===TODAY}),sk=streak(S.me),fogo=sk>=2?'<div class="sub kf">🔥 '+sk+' dias seguidos em família</div>':'';
+  if(hj.length)return '<div class="card khj"><b class="kt">✓ Hoje vocês estudaram: '+esc(hj.map(function(p){return p.ref}).join(', '))+'</b>'+fogo+'<button class="btn o" id="add2">🧒 Registrar outro estudo</button></div>';
+  return '<div class="card khj"><b class="kt">🧒 Estudou com seu filho hoje?</b>'+(fogo||'<div class="sub kf">Leia uma história, cante, ore junto. Depois registre aqui.</div>')+'<button class="btn" id="add2">🧒 Registrar estudo</button></div>';
+}
+function kidsFeed(){
+  var c=S.ch,l=S.posts.filter(function(p){return p.cid===c.id}).sort(function(a,b){return b.ts-a.ts});
+  if(!l.length)return TODAY<c.start?'':'<div class="card sub">Nenhum estudo registrado ainda. Seja a primeira família! 🙏</div>';
+  var lim=S.feedN||FEEDN,mais=l.length-lim;
+  return l.slice(0,lim).map(function(p){return post(p)}).join('')+(mais>0?'<button class="btn g" data-more="1" style="text-align:center">Ver mais '+Math.min(mais,FEEDN)+' publicações (faltam '+mais+')</button>':'');
+}
+function kidsChips(){
+  var L=S.kidsList||[],sel=S.kidsSel||[];
+  return L.map(function(n){var on=sel.indexOf(n)>=0;return '<button class="chip kn'+(on?' on':'')+'" data-kn="'+esc(n)+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(n)+'</button>'}).join('')+
+    (S.kidsAdd?'<div class="row" style="margin-top:8px;gap:8px"><input id="kname" class="grow" maxlength="30" placeholder="Nome da criança" autocomplete="off"><button class="btn sbtn" data-kok="1" style="width:auto;margin:0">OK</button></div>':'<button class="chip kn" data-kadd="1">+ Adicionar</button>');
+}
+function kidsDraw(){var e=document.getElementById('kch');if(e)e.innerHTML=kidsChips();var i=document.getElementById('kname');if(i)i.focus()}
+function kidsAddName(){
+  var i=document.getElementById('kname'),v=i?i.value.replace(/\s+/g,' ').trim():'';
+  if(!v){S.kidsAdd=false;kidsDraw();return}
+  v=v.slice(0,30);var ja=(S.kidsList||[]).filter(function(n){return n.toLowerCase()===v.toLowerCase()})[0];
+  if(!ja){S.kidsList=(S.kidsList||[]).concat([v]).slice(-10);sb.auth.updateUser({data:{kids:S.kidsList}}).catch(function(){})}
+  ja=ja||v;if(S.kidsSel.indexOf(ja)<0)S.kidsSel.push(ja);S.kidsAdd=false;kidsDraw();
+}
+function openKids(E){
+  S.stepCid=S.cur;if(!E)S.ckey=uid();
+  S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
+  S.kidsList=(S.kidsList||[]).slice();if(E)(E.kids||[]).forEach(function(n){if(S.kidsList.indexOf(n)<0)S.kidsList.push(n)});
+  S.kidsSel=E?(E.kids||[]).slice():S.kidsList.length===1?[S.kidsList[0]]:[];S.kidsAdd=!S.kidsList.length&&!E;
+  showSheet('<h1>🧒 '+esc(S.ch.name)+'</h1><h2>'+(E?'Editar estudo':'Estudo com meu filho')+'</h2>'+
+    '<label>Com quem você estudou?</label><div id="kch">'+kidsChips()+'</div>'+
+    '<label for="kst">O que vocês estudaram?</label><input id="kst" maxlength="120" placeholder="Ex.: Arca de Noé" value="'+esc(E?E.ref:'')+'">'+
+    (E?'<label>Fotos ou vídeos</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Foto do momento (pelo menos 1)</label><div class="sub">Pode ser da história, do desenho ou de vocês estudando.</div>')+
+    '<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
+    '<label>Quanto tempo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
+    '<label>Como foi? (opcional)</label><textarea id="t" rows="3" placeholder="Uma frase sobre o momento de vocês">'+(E?esc(E.note):'')+'</textarea><div class="err" id="er"></div>'+
+    '<button class="btn" id="ok">'+(E?'💾 Salvar alterações':'🧒 Registrar estudo')+'</button><button class="btn g" id="x">Cancelar</button>'+(E?'<button class="btn g" style="color:var(--err)" data-delpost="'+E.id+'">🗑️ Apagar esta publicação</button>':''));
+  if(E&&E.min){var mi=document.getElementById('mn');if(mi)mi.value=E.min}
+  drawMedia();var ki=document.getElementById('kname');if(ki)ki.focus();
+}
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('button');if(!b)return;var d=b.dataset;
+  if(d.kn){var i=S.kidsSel.indexOf(d.kn);if(i>=0)S.kidsSel.splice(i,1);else S.kidsSel.push(d.kn);kidsDraw()}
+  else if(d.kadd){S.kidsAdd=true;kidsDraw()}
+  else if(d.kok)kidsAddName();
+  else if(d.pp){closeSheet(true);S.cur=d.pp;useCur();S.openC={};S.feedN=0;tab='feed';render();scrollTo(0,0);openSheet()}
+});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='kname'){e.preventDefault();kidsAddName()}});
 function plan(c){
+  if(isKids(c))return null;
   var k=c.name+'|'+(c.desc||'')+'|'+c.start+'|'+c.end;
   if(!(k in PL)){
     var cr=cronoOf(c.desc),bs=books(c.name+' '+descShow(c.desc));
@@ -714,6 +797,7 @@ function behind(u,c,d){var P=plan(c);if(!P)return[];var i=diff(c.start,d),set=do
 // Capítulos registrados no dia (para a meta do dia, que não é obrigatória)
 function chDay(u,cid,d){var o={};S.posts.forEach(function(p){if(p.uid===u&&p.cid===cid&&p.date===d)chOfPost(p).forEach(function(k){o[k]=1})});return Object.keys(o).length}
 function jStatus(c){
+  if(isKids(c)){if(TODAY<c.start)return['Começa em '+fd(c.start),''];var dk=daysIn(S.me,c.id);return dk.indexOf(TODAY)>=0?['✓ Estudo de hoje registrado','ok']:[dk.length+(dk.length===1?' dia de estudo':' dias de estudo'),'']}
   var tot=totalSteps(c),st=steps(S.me,c.id);
   if(st>=tot)return[BROTO+' Chegou à Terra Prometida','ok'];
   if(TODAY<c.start)return['Começa em '+fd(c.start),''];
@@ -734,6 +818,7 @@ function switcher(){
   return '<button class="jpill" data-jl="1" aria-label="'+(cur?'Jornada: '+esc(S.ch.name)+'. Toque para ver ou trocar':'Escolher jornada')+'"><span>'+esc(cur?jShort(S.ch):'Escolher jornada')+'</span>'+(pend?'<b class="jb" title="Outras jornadas com capítulos para ler">👣 '+pend+'</b>':'')+CHEV+'</button>';
 }
 function jCard(c){
+  if(isKids(c)){var gk=grpOf(c.gid),jk=jStatus(c),onk=c.id===S.cur;return '<button class="jc'+(onk?' on':'')+'" data-js="c:'+c.id+'"'+(onk?' aria-current="true"':'')+'><b>🧒 '+esc(c.name)+'</b><span class="sub">'+(gk?esc(cvName(gk)):'')+'</span><span class="js '+jk[1]+'">'+jk[0]+'</span></button>'}
   var g=grpOf(c.gid),on=c.id===S.cur,js=jStatus(c),st=steps(S.me,c.id),tot=totalSteps(c);
   return '<button class="jc'+(on?' on':'')+'" data-js="c:'+c.id+'"'+(on?' aria-current="true"':'')+'><b>'+esc(c.name)+'</b><span class="sub">'+(g?esc(cvName(g))+' · ':'')+'Passo '+st+' de '+tot+'</span><span class="bar"><i style="width:'+Math.min(100,Math.round(st*100/tot))+'%"></i></span><span class="js '+js[1]+'">'+js[0]+'</span></button>'
 }
@@ -868,9 +953,19 @@ function postSteps(p){
     })}
   return PSC.m[p.id]||{k:0,cum:0}
 }
+// publicação da Jornada Kids: "Mayara estudou com Davi · 📖 Arca de Noé · 15 min"
+function kidsPost(p,pre,lk,on,open){
+  return '<div class="card"><div class="row"><div data-who="'+p.uid+'" style="flex:none">'+av(p.uid,null,'md')+'</div><div class="grow"><b data-who="'+p.uid+'">'+esc(nm(p.uid))+'</b> <span class="sub">estudou com '+(p.kids.length?'<b>'+esc(kNames(p.kids))+'</b>':'a família')+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · estudo de '+fd(p.date):'')+'</div></div></div>'+
+    '<div class="ref">📖 '+esc(p.ref)+'</div>'+(p.min?'<div class="tags"><span class="tag">⏱️ '+fmin(p.min)+'</span></div>':'')+
+    (p.note?'<div class="txt" style="margin-top:8px">'+esc(p.note)+'</div>':'')+mediaHtml(p)+
+    '<div class="act"><button class="like'+(on?' on':'')+'" data-l="'+p.id+'">'+(on?'♥':'♡')+' '+lk.length+' Amém</button><button class="like" '+(pre?'data-cif="'+pre+'ci-'+p.id+'"':'data-cm="'+p.id+'"')+'>💬 '+p.cm.length+(p.cm.length===1?' comentário':' comentários')+'</button>'+(p.uid===S.me?'<button class="like" data-ep="'+p.id+'">✏️ Editar</button>':'')+'</div>'+
+    (open?'<div class="cms">'+p.cm.map(function(c){return '<div class="cm"><b>'+esc(nm(c.user_id))+'</b> <span class="sub">· '+ago(Date.parse(c.created_at))+'</span><div class="txt">'+esc(c.body)+'</div></div>'}).join('')+'<div class="row send" style="margin-top:6px"><textarea id="'+pre+'ci-'+p.id+'" class="grow" rows="1" data-keep placeholder="Escreva um comentário…" maxlength="1000"></textarea><button class="btn sbtn" data-cs="'+p.id+'" data-ci="'+pre+'ci-'+p.id+'">Enviar</button></div></div>':'')+'</div>';
+}
 function post(p,pre){
   pre=typeof pre==='string'?pre:''; // (o mural chama post pelo map, que passa o índice como 2º argumento)
   var lk=p.likes||[],on=lk.indexOf(S.me)>=0,open=pre?true:S.openC[p.id],ps=postSteps(p);
+  var K=isKids(jOf(p.cid));
+  if(K)return kidsPost(p,pre,lk,on,open);
   var what=ps.k?'avançou '+ps.k+(ps.k>1?' passos':' passo')+' · passo '+ps.cum:'registrou capítulos já contados';
   return '<div class="card"><div class="row"><div data-who="'+p.uid+'" style="flex:none">'+av(p.uid,null,'md')+'</div><div class="grow"><b data-who="'+p.uid+'">'+esc(nm(p.uid))+'</b> <span class="sub">'+what+'</span><div class="sub">'+ago(p.ts)+(p.date!==iso(new Date(p.ts))?' · leitura de '+fd(p.date):'')+'</div></div></div>'+
     '<div class="ref">'+(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?esc(p.ref):esc(p.book)+' '+esc(p.ref))+'</div><div class="tags">'+(p.min?'<span class="tag">⏱️ '+fmin(p.min)+' de estudo</span>':'')+'<span class="tag">📖 '+p.ch+(p.ch>1?' capítulos':' capítulo')+'</span>'+(p.ms==='camera'?'<span class="tag">📷 da câmera</span>':p.ms==='galeria'?'<span class="tag">🖼️ da galeria</span>':'')+'</div>'+
@@ -882,7 +977,7 @@ function post(p,pre){
 // Jornada em andamento de que a pessoa ainda não participa (ex.: começou uma fase nova): convite com 1 toque
 function novaCard(){
   var A=S.all.filter(function(x){return TODAY>=x.start&&TODAY<=x.end&&!isMine(x.id)&&x.id!==S.cur});
-  return A.map(function(c){var g=grpOf(c.gid);return '<div class="card nova"><b>📖 Nova jornada: '+esc(c.name)+'</b><div class="sub">'+(g?'Caravana '+esc(g.name)+' · ':'')+fd(c.start)+' a '+fd(c.end)+'. Toque para participar e ver a leitura de cada dia.</div><button class="btn" data-pj="'+c.id+'">👣 Participar desta jornada</button></div>'}).join('')
+  return A.map(function(c){var g=grpOf(c.gid);if(isKids(c))return '<div class="card nova"><b>🧒 '+esc(c.name)+'</b><div class="sub">'+(g?esc(cvName(g))+' · ':'')+'Registre aqui o estudo da Palavra com seus filhos.</div><button class="btn" data-pj="'+c.id+'">🧒 Participar da '+esc(c.name)+'</button></div>';return '<div class="card nova"><b>📖 Nova jornada: '+esc(c.name)+'</b><div class="sub">'+(g?'Caravana '+esc(g.name)+' · ':'')+fd(c.start)+' a '+fd(c.end)+'. Toque para participar e ver a leitura de cada dia.</div><button class="btn" data-pj="'+c.id+'">👣 Participar desta jornada</button></div>'}).join('')
 }
 function feed(){
   var h='';
@@ -890,6 +985,8 @@ function feed(){
   if(S.pendErr)h+='<div class="card" role="status"><b>⏳ Passo pendente</b><div class="err">'+esc(S.pendErr)+'</div><div class="two"><button class="btn" id="pdgo">Enviar agora</button><button class="btn g" id="pdno">Descartar</button></div></div>';
   if(!loaded)return h+(S.err?'':'<div class="card sub">Carregando…</div>');
   if(!S.grp)return h+noCh();
+  h+=kidsSeg();
+  if(S.chs.length&&isKids(S.ch))return h+kidsHc()+(isMine(S.cur)?kidsHoje():voltaCard())+kidsFeed();
   psLoad(); // quem está orando (no máximo 1 vez por minuto)
   if(!S.chs.length)return h+hcCard()+psBar()+'<div class="card sub">Nenhuma jornada traçada ainda. '+(canMake()?'Toque em Mapa para traçar a primeira.':'Aguarde o líder traçar a primeira.')+'</div>'+psMix([],true);
   if(S.cur&&!isMine(S.cur))return h+hcCard()+voltaCard()+psBar()+psMix(S.posts.filter(function(p){return p.cid===S.cur}).sort(function(a,b){return b.ts-a.ts}),true);
@@ -904,6 +1001,7 @@ function feed(){
 // Traz a leitura de hoje em uma linha; ao tocar em Entrar, some e aparece a Leitura de hoje completa.
 function voltaCard(){
   var c=S.ch,nome=esc(nm(S.me).split(' ')[0]),P=plan(c),i=diff(c.start,TODAY);
+  if(isKids(c))return '<div class="card volta" id="volta"><h3>🧒 Que bom ter você na '+esc(c.name)+', '+nome+'!</h3><p>Aqui cada família registra o estudo da Palavra com os filhos, no ritmo de cada criança. 🙏</p><button class="btn" data-pj="'+c.id+'">🧒 Entrar na '+esc(c.name)+'</button></div>';
   var meus=S.posts.filter(function(p){return p.uid===S.me&&p.cid!==c.id}),ant=null;
   meus.forEach(function(p){var j=S.all.filter(function(x){return x.id===p.cid&&x.gid===c.gid})[0];if(j&&j.start<=c.start&&(!ant||j.start>ant.start))ant=j});
   var txt;
@@ -969,11 +1067,11 @@ function openWho(u,back){
   var st=steps(u),dd=days(u).length;
   var row=function(p){var M=(p.imgs||[]).filter(function(m){return !m.audio})[0],A=(p.imgs||[]).some(function(m){return m.audio});
     var th=M?(M.video?(M.poster?'<img class="th" src="'+esc(M.poster)+'" alt="" loading="lazy">':'<div class="th">▶️</div>'):'<img class="th" src="'+esc(M.thumb||M.img)+'" alt="" loading="lazy">'):'<div class="th">'+(A?'🎧':'📖')+'</div>';
-    var ref=(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
+    var kp=p.book===KBOOK,ref=kp?'📖 '+p.ref+(p.kids&&p.kids.length?' · com '+kNames(p.kids):''):(BYLEN.some(function(n){return p.ref.indexOf(n+' ')===0})?p.ref:(p.book||'')+' '+(p.ref!=='—'?p.ref:'')).trim();
     var del=(p.uid===S.me||S.canEdit?'<button class="wdel" data-ep="'+p.id+'" aria-label="'+(p.uid===S.me?'Editar':'Corrigir')+' este passo">✏️</button>':'')+(p.uid===S.me||S.canEdit?'<button class="wdel" data-delpost="'+p.id+'" aria-label="Apagar este passo">🗑️</button>':'');
-    return '<div class="wpr"><button class="wp" data-wpost="'+p.id+'" data-wu="'+u+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+' · '+p.ch+(p.ch>1?' capítulos':' capítulo')+(p.min?' · '+fmin(p.min):'')+((p.likes||[]).length?' · ♥ '+p.likes.length:'')+(p.cm.length?' · 💬 '+p.cm.length:'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
+    return '<div class="wpr"><button class="wp" data-wpost="'+p.id+'" data-wu="'+u+'">'+th+'<div class="grow"><b>'+esc(ref)+'</b><div class="sub">'+WD[new Date(p.date+'T12:00:00').getDay()].slice(0,3)+', '+fd(p.date).slice(0,5)+(kp?'':' · '+p.ch+(p.ch>1?' capítulos':' capítulo'))+(p.min?' · '+fmin(p.min):'')+((p.likes||[]).length?' · ♥ '+p.likes.length:'')+(p.cm.length?' · 💬 '+p.cm.length:'')+'</div>'+(p.note?'<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">'+esc(p.note)+'</div>':'')+'</div></button>'+del+'</div>'};
   showSheet((back?'<button class="link" data-rkopen="1" style="margin-bottom:8px">‹ Voltar ao ranking</button>':'')+'<div class="row" style="gap:14px;align-items:center">'+av(u,null,'big')+'<div class="grow"><h2 style="margin:0">'+esc(nm(u))+(u===S.me?' (você)':'')+'</h2><div class="sub">'+esc(S.ch.name)+'</div></div></div>'+
-    '<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>'+
+    (isKids(S.ch)?'<div class="who-st" style="grid-template-columns:1fr 1fr"><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia de estudo':'dias de estudo')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>':'<div class="who-st"><div><b>'+(pos||'–')+(pos?'º':'')+'</b><span class="sub">posição</span></div><div><b>'+st+'</b><span class="sub">'+(st===1?'passo':'passos')+'</span></div><div><b>'+dd+'</b><span class="sub">'+(dd===1?'dia':'dias')+'</span></div><div><b>'+fmin(mins(u))+'</b><span class="sub">de estudo</span></div></div>')+
     (P.length?'<div class="sub" style="margin:10px 0 2px">O que '+esc(nm(u).split(' ')[0])+' registrou nesta jornada (toque para ver):</div>'+P.map(row).join(''):'<div class="sub" style="margin:14px 0">Ainda não deu passos nesta jornada.</div>')+
     '<button class="btn g" id="x" style="text-align:center;margin-top:12px">Fechar</button>');
 }
@@ -992,7 +1090,7 @@ async function delPost(id){
 }
 function openPosts(P,d,more){
   var M=[],A=[],notes=[],refs=[];
-  P.forEach(function(p){(p.imgs||[]).forEach(function(m){(m.audio?A:M).push(m)});if(p.note)notes.push(p.note);refs.push(((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim())});
+  P.forEach(function(p){(p.imgs||[]).forEach(function(m){(m.audio?A:M).push(m)});if(p.note)notes.push(p.note);refs.push(p.book===KBOOK?p.ref:((p.book||'')+' '+(p.ref&&p.ref!=='—'?p.ref:'')).trim())});
   var lb=document.getElementById('lb');
   lb.innerHTML='<div class="top"><div><b>'+WD[new Date(d+'T12:00:00').getDay()]+', '+fd(d)+'</b><div style="color:#bbb;font-size:14px">'+esc(refs.filter(Boolean).join(' · '))+'</div></div><button class="x" data-lbx="1" aria-label="Fechar">✕</button></div>'+
     (M.length?'<div class="lbm">'+M.map(function(m){return m.video?vtag(m):'<img src="'+esc(m.img)+'" alt="Foto do estudo">'}).join('')+'</div>'+(M.length>1?'<div style="text-align:center;color:#aaa;font-size:13px;margin-top:6px">Deslize para ver as '+M.length+'</div>':''):'')+
@@ -1035,7 +1133,7 @@ function cfg(){
   var oth=S.all.filter(function(c){return S.grp&&c.gid!==S.grp.id&&!isMine(c.id)&&c.end>=TODAY});
   var O=oth.length?'<div class="card"><b>Jornadas abertas nas suas outras caravanas</b><div class="sub">Você está nessas caravanas, mas ainda não participa destas jornadas.</div>'+oth.map(function(c){var g=grpOf(c.gid);return '<div class="rk"><div class="grow"><b>'+esc(c.name)+'</b><div class="sub">Caravana '+esc(g?g.name:'')+' · '+fd(c.start)+' a '+fd(c.end)+'</div></div><button class="btn sbtn" style="font-size:14px;padding:8px 14px" data-pj="'+c.id+'">👣 Participar</button></div>'}).join('')+'</div>':'';
   var trl=S.chs.length&&S.chs.some(function(x){return x.id===S.cur})?'<div class="card"><b>🗺️ A trilha até a Terra Prometida</b><div id="trilha">'+trail()+'</div><div class="sub">Você e os '+TRAILN+' primeiros da caravana.</div></div>':'';
-  return top+trl+(S.chs.length?rank():'')+(S.chs.length&&isMine(S.cur)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+bot+out;
+  return top+(isKids(S.ch)?'':trl)+(S.chs.length&&!isKids(S.ch)?rank():'')+(S.chs.length&&isMine(S.cur)&&!isKids(S.ch)?cal():'')+membersCard()+'<div class="card"><b>🗺️ Jornadas da caravana '+esc(S.grp.name)+'</b><div class="sub">Na barra de cima aparecem só as jornadas de que você participa.</div>'+L+'</div>'+O+inv.split(out)[0]+tp+f+bot+out;
 }
 // ---- Bíblia: livros → capítulos → leitura (Almeida) ----
 var BIB={v:'books',b:0,c:1,fs:19,last:null,ver:'ALM'};
@@ -1858,7 +1956,8 @@ function openSheet(pre){
   if(!S.chs.length){onb('ask');return}
   var c=S.ch,mx=TODAY<c.end?TODAY:c.end;
   if(TODAY<c.start){showSheet('<h2>A caravana ainda não partiu</h2><div class="sub">Esta jornada começa em '+fd(c.start)+'.</div><button class="btn g" id="x">Fechar</button>');return}
-  pre=pre||{};var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
+  pre=pre||{};if(isKids(c)){S.edit=pre.edit||null;openKids(S.edit);return}
+  var E=S.edit=pre.edit||null;S.stepCid=S.cur;if(!E)S.ckey=uid();var dt=E?E.date:pre.d&&pre.d>=c.start&&pre.d<=mx?pre.d:mx;S.media=E?(E.imgs||[]).map(function(m){return{path:m.path,img:m.img,video:m.video,audio:m.audio,poster:m.poster}}):[];
   if(E&&E.uid!==S.me){
     showSheet('<h1>✏️ Corrigir leitura</h1><h2>'+esc(nm(E.uid))+'</h2><div class="sub">Como líder, você corrige só o livro e os capítulos. Reflexão, fotos e tempo de estudo continuam como ela publicou.</div>'+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" value="'+dt+'" disabled><div id="stepr"></div><div class="err" id="er"></div><button class="btn" id="ok">💾 Salvar correção</button><button class="btn g" id="x">Cancelar</button>'+(E?'<button class="btn g" style="color:var(--err)" data-delpost="'+E.id+'">🗑️ Apagar esta publicação</button>':''));
     stepFor(dt);return;
@@ -2090,6 +2189,7 @@ async function publish(){
   var er=document.getElementById('er'),btn=document.getElementById('ok'),dt=val('dt'),cid=S.stepCid||S.cur,c=jOf(cid)||S.ch,mx=TODAY<c.end?TODAY:c.end,m=S.media,mn=parseInt(val('mn'),10);
   er.textContent='';
   if(REC&&REC.on){er.textContent='Você está gravando um áudio: toque em "Parar e usar o áudio" antes de registrar.';return}
+  if(isKids(c))return publishKids(c,mx,mn,er,btn);
   if(!dt||dt<c.start||dt>mx){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
   if(S.edit)dt=S.edit.date;
   if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
@@ -2125,6 +2225,37 @@ async function publish(){
     if(e&&e.leve){btn.textContent=okLbl();er.textContent=e.message+' Toque no ✕ do vídeo para tirá-lo.';return}
     btn.textContent='🔁 Tentar de novo';
     er.textContent='Não foi possível publicar. '+why(e)+' Sua leitura e as fotos continuam aqui: toque em "Tentar de novo".';
+  }
+}
+// Jornada Kids: com quem, o que estudaram, foto e tempo; sem capítulos (1 publicação = 1 estudo)
+async function publishKids(c,mx,mn,er,btn){
+  var names=(S.kidsSel||[]).slice(),story=(val('kst')||'').replace(/\s+/g,' ').trim().slice(0,120);
+  if(S.kidsAdd&&document.getElementById('kname')&&val('kname').trim()){kidsAddName();names=S.kidsSel.slice()}
+  if(!names.length){er.textContent='Toque no nome de quem estudou com você (ou em "+ Adicionar").';return}
+  if(!story){er.textContent='Escreva o que vocês estudaram (ex.: Arca de Noé).';return}
+  if(!(mn>=1&&mn<=600)){er.textContent='Diga quanto tempo durou o estudo.';return}
+  if(!S.media.some(function(x){return !x.audio})){er.textContent=S.edit?'Deixe pelo menos uma foto ou vídeo na publicação.':'Adicione uma foto do momento (câmera ou galeria).';return}
+  if(S.media.some(function(x){return x.video&&!x.path}))vzUnlock();
+  var st={kids:true,ref:story,names:names};
+  if(S.edit)return saveEdit(st,mn,S.media,btn,er);
+  btn.disabled=true;btn.textContent='Enviando… não feche o app';
+  try{
+    var pm=await upMedia();
+    btn.textContent='Salvando…';
+    var row={challenge_id:c.id,read_date:mx,book:KBOOK,ref:story,chapters:1,child_names:names,note:tidy(val('t'))||null,photo_path:pm.photo_path,media_type:pm.media_type,media_source:pm.media_source||'galeria',study_minutes:mn};
+    pendSave({row:row,key:S.ckey||(S.ckey=uid()),at:Date.now()});
+    var saved=await saveCheckin(row);
+    pendClear();
+    var lu={};S.media.forEach(function(x){if(x.path)lu[x.path]=x.img});
+    var np=toPost(Object.assign({likes:[],comments:[]},saved),lu);np.local=true;
+    S.posts=S.posts.filter(function(x){return x.id!==np.id});S.posts.unshift(np);
+    S.media=null;S.ckey=null;closeSheet();tab='feed';render();scrollTo(0,0);toast('✓ Estudo publicado');
+    loadData();
+  }catch(e){
+    btn.disabled=false;
+    if(e&&e.leve){btn.textContent='🧒 Registrar estudo';er.textContent=e.message+' Toque no ✕ do vídeo para tirá-lo.';return}
+    btn.textContent='🔁 Tentar de novo';
+    er.textContent='Não foi possível publicar. '+why(e)+' O que você escreveu e as fotos continuam aqui: toque em "Tentar de novo".';
   }
 }
 // ---- Publicação que não terminou de enviar ----
@@ -2258,7 +2389,7 @@ async function saveMod(st,btn,er){
 async function saveEdit(st,mn,m,btn,er){
   btn.disabled=true;btn.textContent='Salvando…';
   try{
-    var up={book:BOOKS[st.b],ref:st.ref||null,chapters:st.n,note:tidy(val('t'))||null,study_minutes:mn};
+    var up=st.kids?{book:KBOOK,ref:st.ref,chapters:1,child_names:st.names,note:tidy(val('t'))||null,study_minutes:mn}:{book:BOOKS[st.b],ref:st.ref||null,chapters:st.n,note:tidy(val('t'))||null,study_minutes:mn};
     var pm=await upMedia();up.photo_path=pm.photo_path;up.media_type=pm.media_type;up.media_source=pm.media_source||S.edit.ms||null;
     var r;
     try{r=await withTimeout(sb.from('checkins').update(up).eq('id',S.edit.id).eq('user_id',S.me).select('id'),45000)}
@@ -2290,7 +2421,7 @@ function editCh(id){
   showSheet('<h1>✏️ Editar jornada</h1><h2>'+esc(c.name)+'</h2><div class="sub">Você criou esta caravana, então pode mudar tudo desta jornada.</div>'+
     '<div class="ecard"><b>📖 Roteiro de leitura</b><div class="sub">Troque por um roteiro pronto ou escreva o nome com o livro (ex.: "Romanos em 16 dias").</div>'+
     '<div>'+TPL.map(function(m,i){return '<button class="chip" data-etp="'+i+'">'+m.n+'</button>'}).join('')+'</div>'+
-    '<label>Nome da jornada</label><input id="en" value="'+esc(c.name)+'"><label>Descrição ou plano</label><input id="ed" value="'+esc(descShow(c.desc))+'" data-crono="'+esc((String(c.desc||'').match(/\[cronograma:[^\]]*\]/i)||[''])[0])+'">'+(cronoOf(c.desc)?'<div class="sub">📅 Esta jornada segue um cronograma dia a dia, que fica guardado e não muda ao salvar.</div>':'')+'</div>'+
+    '<label>Nome da jornada</label><input id="en" value="'+esc(c.name)+'"><label>Descrição ou plano</label><input id="ed" value="'+esc(descShow(c.desc))+'" data-crono="'+esc(((String(c.desc||'').match(/\[cronograma:[^\]]*\]/i)||[''])[0]+(isKids(c)?' [kids]':'')).trim())+'">'+(cronoOf(c.desc)?'<div class="sub">📅 Esta jornada segue um cronograma dia a dia, que fica guardado e não muda ao salvar.</div>':'')+'</div>'+
     '<div class="ecard"><b>📅 Datas e meta</b><div class="two"><div><label>Partida</label><input type="date" id="es" value="'+c.start+'"></div><div><label>Chegada (prazo)</label><input type="date" id="ee" value="'+c.end+'"></div></div><label>Meta (dias por semana)</label><input type="number" id="eg" min="1" max="7" value="'+c.goal+'"></div>'+
     '<div class="card sub" id="eprev" style="margin-top:12px"></div>'+(np?'<div class="sub">'+(np>1?'Já existem '+np+' passos':'Já existe 1 passo')+' nesta jornada. Eles continuam salvos mesmo se você trocar o roteiro ou as datas.</div>':'')+
     '<div class="ecard"><b>🐪 Caravana</b><label>Nome da caravana</label><input id="egn" value="'+esc(g?g.name:'')+'" data-gid="'+(g?g.id:'')+'"></div>'+
@@ -2521,7 +2652,7 @@ async function boot(){
   if(!ses){S.me=null;if(gm!=='mail'&&gm!=='forgot')gate('in',S.linkErr);S.linkErr='';return}
   S.me=ses.user.id;
   moLocal(true);moLoad(true).then(moSync); // oração aberta neste aparelho ou em outro
-  var md=ses.user.user_metadata||{};S.myJ=Array.isArray(md.jornadas)?md.jornadas.slice():[];
+  var md=ses.user.user_metadata||{};S.myJ=Array.isArray(md.jornadas)?md.jornadas.slice():[];S.kidsList=Array.isArray(md.kids)?md.kids.filter(function(n){return typeof n==='string'&&n}).slice(0,10):[];
   if(S.recovery){gate('newpw');return}
   if(await phoneOn()){
     var gu=await sb.auth.getUser(),us=gu.data&&gu.data.user;
@@ -2760,7 +2891,7 @@ async function loadData(){
 function toPost(p,urls){
   var pl=p.photo_path?p.photo_path.split(PSEP):[];
   return{imgs:pl.map(function(x){var aud=isAudPath(x),vid=!aud&&(pl.length===1?p.media_type==='video':isVidPath(x)),t=!aud&&urls[thumbOf(x)];return{path:x,img:urls[x]||'',thumb:(!vid&&t)||urls[x]||'',poster:vid&&t||'',video:vid,audio:aud}}).filter(function(m){return m.img}),
-    id:p.id,uid:p.user_id,cid:p.challenge_id,date:p.read_date,book:p.book,ref:p.ref||'—',ch:p.chapters,note:p.note||'',mt:p.media_type||'image',ms:p.media_source||'',min:p.study_minutes||0,
+    id:p.id,uid:p.user_id,cid:p.challenge_id,date:p.read_date,book:p.book,ref:p.ref||'—',ch:p.chapters,note:p.note||'',mt:p.media_type||'image',ms:p.media_source||'',min:p.study_minutes||0,kids:Array.isArray(p.child_names)?p.child_names:[],
     likes:(p.likes||[]).map(function(l){return l.user_id}),cm:(p.comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1}),ts:Date.parse(p.created_at)}
 }
 async function auth(){
@@ -2785,7 +2916,8 @@ async function auth(){
 document.addEventListener('click',function(e){
   var t=e.target.closest('button');if(!t)return;var d=t.dataset;
   if(d.t){if(closeSheet()===false)return;tab=d.t;render();scrollTo(0,0)}
-  else if(t.id==='add'||t.id==='add2')openSheet();
+  else if(t.id==='add')openPasso();
+  else if(t.id==='add2')openSheet();
   else if(t.id==='x')closeSheet();
   else if(d.avp)document.getElementById('favt').click();
   else if(d.avdel)delAvatar();

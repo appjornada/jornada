@@ -1,4 +1,4 @@
--- JORNADA KIDS (22/11/2026). Já aplicado no banco em 22/11/2026 com autorização do Roger.
+-- JORNADA KIDS (22/11/2026). Já aplicado no banco em 22/11/2026 com autorização do Roger (início ajustado para 22/11 a pedido dele).
 -- Só ACRESCENTA; nada é apagado.
 --
 -- 1) checkins.child_names: nomes das crianças que estudaram com o pai/mãe (publicações da Jornada Kids).
@@ -26,7 +26,7 @@ with g as (
   returning group_id
 )
 insert into public.challenges(group_id, name, description, start_date, end_date, goal_per_week, created_by)
-select g.id, 'Jornada Kids', 'Estudo da Palavra em família, no ritmo de cada criança. [kids]', '2026-11-23', '2027-12-31', 5, '392047ee-6e1e-442e-82df-fbc0c26a310c' from g;
+select g.id, 'Jornada Kids', 'Estudo da Palavra em família, no ritmo de cada criança. [kids]', '2026-11-22', '2027-12-31', 5, '392047ee-6e1e-442e-82df-fbc0c26a310c' from g;
 
 notify pgrst, 'reload schema';
 

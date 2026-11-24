@@ -1011,7 +1011,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const S = novoServidor(), R = S.usuario('Roger Martins'), M = S.usuario('Mayara Martins'), T = S.usuario('Tânia Santos'), P = S.usuario('Paula Kids');
     const g = S.caravana(R, 'JORNADA'); S.entrar(M, g); S.entrar(T, g); const gen = jornadaGenesis(S, g);
     const gk = S.caravana(R, 'Jornada Kids'); S.entrar(M, gk); S.entrar(P, gk);
-    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]';
+    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]'; kids.start_date = '2026-11-15'; kids.end_date = '2027-12-31'; // datas fixas: o relógio destes testes é fixo
     S.publicacao(T, gen, { book: 'Gênesis', ref: '1', read_date: '2026-11-18', created_at: '2026-11-18T12:00:00Z' });
     S.publicacao(M, kids, { book: 'Jornada Kids', ref: 'A Criação', chapters: 1, child_names: ['Davi'], read_date: '2026-11-21', created_at: '2026-11-21T12:00:00Z', study_minutes: 15 });
     R.md = { jornadas: [gen.id, kids.id] }; M.md = { jornadas: [gen.id, kids.id], kids: ['Davi'] }; T.md = { jornadas: [gen.id] }; P.md = { jornadas: [kids.id] };
@@ -1077,7 +1077,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   await teste('Jornada Kids: líder edita a jornada e ela continua sendo Kids; Mapa sem trilha, ranking e calendário', async () => {
     const S = novoServidor(), R = S.usuario('Roger Martins'), gk = S.caravana(R, 'Jornada Kids');
-    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]';
+    const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]'; kids.start_date = '2026-11-15'; kids.end_date = '2027-12-31'; // datas fixas: o relógio destes testes é fixo
     R.md = { jornadas: [kids.id] };
     const pr = await abrir(browser, base, S, R);
     await pr.click('nav [data-t="cfg"]'); await pr.waitForTimeout(400);
@@ -1094,7 +1094,7 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
 
   await teste('Jornada Kids: oração em família (Hoje em família, momento + com quem, linha no mural, 🔥 com Palavra ou oração, apagar); sem a tabela, tudo como antes', async () => {
     const S = novoServidor(), R = S.usuario('Roger Martins'), M = S.usuario('Mayara Martins'), gk = S.caravana(R, 'Jornada Kids'); S.entrar(M, gk);
-    const kids = S.jornada(gk, 'Jornada Kids', -5, 400); kids.description = 'Estudo da Palavra em família. [kids]';
+    const kids = S.jornada(gk, 'Jornada Kids', -5, 400); kids.description = 'Estudo da Palavra em família. [kids]'; kids.start_date = '2026-11-15'; kids.end_date = '2027-12-31'; // datas fixas: o relógio destes testes é fixo
     const dia = n => { const x = new Date('2026-11-22T12:00:00-03:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10) };
     S.publicacao(R, kids, { book: 'Jornada Kids', ref: 'A Criação', chapters: 1, child_names: ['Ana'], read_date: dia(-2), created_at: dia(-2) + 'T20:00:00Z' }); // anteontem: Palavra
     S.DB.kp['k0'] = { id: 'k0', user_id: R.id, challenge_id: kids.id, prayed_on: dia(-1), moment: 'dormir', child_names: ['Ana'], created_at: dia(-1) + 'T23:00:00Z' }; // ontem: só oração
@@ -1135,6 +1135,29 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     const erros2 = qa.erros; await qa.context().close();
     exige(!erros.length && !erros2.length, 'erros: ' + erros.concat(erros2).join(' | '));
     return 'cartão Palavra/Oração + sugestão; momentos na ordem; avisos; gravou dormir com Ana e Pedro; 🔥 2→3 (ontem só oração conta); linha no mural; apagar; sem tabela: como antes';
+  });
+
+  await teste('Duas ou mais fotos de uma vez pela Galeria entram juntas (passo e Kids) e vão todas para a publicação', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), g = S.caravana(A, 'G'); const c = S.jornada(g, 'Romanos em 16 dias'); A.md = { jornadas: [c.id] };
+    const pa = await abrir(browser, base, S, A);
+    await pa.click('#add'); await pa.waitForSelector('#fgal', { state: 'attached' });
+    exige(await pa.$eval('#fgal', e => e.multiple), 'a Galeria não permite escolher várias');
+    // PNG de verdade, de cor diferente para cada foto (fotos iguais viram um arquivo só, de propósito)
+    const zlib = require('zlib');
+    const crc = b => { let c, t = []; for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } let r = 0xffffffff; for (const x of b) r = t[(r ^ x) & 255] ^ (r >>> 8); return (r ^ 0xffffffff) >>> 0 };
+    const chunk = (ty, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(ty), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]) };
+    const mkPng = (r, g2, b) => { const w = 40, h = 30, ih = Buffer.alloc(13); ih.writeUInt32BE(w, 0); ih.writeUInt32BE(h, 4); ih[8] = 8; ih[9] = 2; const raw = Buffer.alloc((w * 3 + 1) * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = y * (w * 3 + 1) + 1 + x * 3; raw[o] = r; raw[o + 1] = (g2 + x * 5) & 255; raw[o + 2] = b } return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]) };
+    const cores = [[200, 30, 30], [30, 160, 40], [40, 60, 210]];
+    const png = n => ({ name: 'foto' + n + '.png', mimeType: 'image/png', buffer: mkPng(...cores[n - 1]) });
+    await pa.setInputFiles('#fgal', [png(1), png(2), png(3)]);
+    exige(await esperar(async () => (await pa.$$('.mth')).length === 3), 'entraram ' + (await pa.$$('.mth')).length + ' de 3 fotos');
+    await marcar(pa); await pa.click('[data-mn="10"]'); await pa.click('#ok');
+    exige(await esperar(() => Object.keys(S.DB.checkins).length === 1), 'não publicou');
+    const k = Object.values(S.DB.checkins)[0];
+    exige(k.photo_path.split('|').length === 3, 'publicação com ' + k.photo_path.split('|').length + ' fotos');
+    const erros = pa.erros; await pa.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return '3 fotos de uma vez: 3 na tela e 3 na publicação';
   });
 
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {

@@ -2133,20 +2133,35 @@ function selSug(){var f=S.edit?null:folga(S.ch),cap=f===null?MAXSEL:Math.min(MAX
 function vidDur(f){return new Promise(function(res){var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';v.muted=true;
   var done=function(d){URL.revokeObjectURL(u);res(d)};v.onloadedmetadata=function(){done(isFinite(v.duration)?v.duration:null)};v.onerror=function(){done(null)};setTimeout(function(){done(null)},8000);v.src=u})}
 var MAXSEC=15,MAXVUP=4*1048576; // vídeo que o celular não conseguiu deixar leve: até 4 MB (cada play baixa o arquivo inteiro)
+// Miniatura leve para a tela (240 px): várias fotos do celular (12 a 48 MP) mostradas inteiras de uma vez
+// estouravam a memória do iPhone e a tela recarregava. A foto original continua guardada para o envio.
+async function prevOf(f){
+  try{
+    if(!window.createImageBitmap)return '';
+    var b=await createImageBitmap(f,{resizeWidth:240,resizeQuality:'medium'});
+    var w=b.width,h=b.height;if(!w||!h)return '';
+    if(w>240){h=Math.round(h*240/w);w=240}
+    var cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(b,0,0,w,h);try{b.close&&b.close()}catch(e){}
+    var bl=await toJpg(cv,.72);cv.width=cv.height=0;return bl?URL.createObjectURL(bl):'';
+  }catch(e){return ''}
+}
 async function setMedia(inp,src,rep){
-  var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');inp.value='';if(!fs.length)return;er.textContent='';
-  for(var i=0;i<fs.length;i++){
+  var fs=Array.prototype.slice.call(inp.files||[]),er=document.getElementById('er');if(!fs.length){inp.value='';return}er.textContent='';
+  var bt=document.getElementById('ok'),bx=bt&&bt.textContent;if(fs.length>1&&bt){bt.disabled=true;bt.textContent='Preparando as fotos…'}
+  try{for(var i=0;i<fs.length;i++){
     var f=fs[i],v=/^video\//.test(f.type)||(!f.type&&isVidPath(f.name||''));
     if(/^audio\//.test(f.type)||(!f.type&&isAudPath(f.name||''))){if(await addAudio(f,src))continue;else continue}
     if(!v&&!/^image\//.test(f.type)){er.textContent='Escolha fotos ou vídeos.';continue}
     if(v&&vidOff()){er.textContent=vidOffMsg()+' Mande uma foto ou um áudio.';continue}
     if(v&&f.size>MAXV){er.textContent='Um vídeo tem mais de 50 MB. Grave um vídeo mais curto (até '+MAXSEC+' segundos).';continue}
     if(v){var du=await vidDur(f);if(du&&du>MAXSEC+0.9){er.textContent='O vídeo tem '+Math.round(du)+' segundos. O máximo é '+MAXSEC+' segundos: grave um vídeo mais curto.';continue}}
+    if(rep==null&&S.media.filter(function(m){return !m.audio}).length>=MAXF){er.textContent='No máximo '+MAXF+' fotos por publicação.';break}
     var it={file:f,src:src,video:v,img:URL.createObjectURL(f)};
+    if(!v)it.prev=await prevOf(f); // uma foto por vez
     if(rep!=null&&S.media[rep]){S.media[rep]=it;rep=null}
-    else if(S.media.filter(function(m){return !m.audio}).length>=MAXF){er.textContent='No máximo '+MAXF+' fotos por publicação.';break}
     else S.media.push(it);
-  }
+    drawMedia(); // cada foto aparece assim que fica pronta
+  }}finally{inp.value='';if(bt&&fs.length>1){bt.disabled=false;bt.textContent=bx}}
   drawMedia();
 }
 // ---- Áudio: gravar no app ou escolher do celular (até 3 por publicação, de até 3 minutos cada) ----
@@ -2206,13 +2221,18 @@ function recStop(keep){if(!REC)return;REC.keep=keep;REC.on=false;try{REC.mr.stop
 function drawMedia(){
   var e=document.getElementById('mprev');if(!e)return;var M=S.media||[],L=M.filter(function(m){return !m.audio});
   var au=M.map(function(m,i){return m.audio?'<div class="aud"><span aria-hidden="true">🎙️</span><audio src="'+esc(m.img)+'" controls preload="metadata"></audio><button class="link" data-mx="'+i+'" aria-label="Remover áudio" style="color:var(--err)">✕ Remover</button></div>':''}).join('');
-  e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?(m.path?'<img src="'+esc(m.poster||VPOSTER)+'" alt="Vídeo">':'<video src="'+esc(m.img)+'" playsinline muted preload="metadata"></video>'):'<img src="'+esc(m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
+  e.innerHTML=(L.length?'<div class="mgrid">'+L.map(function(m){var i=M.indexOf(m);return '<div class="mth">'+(m.video?(m.path?'<img src="'+esc(m.poster||VPOSTER)+'" alt="Vídeo">':'<video src="'+esc(m.img)+'" playsinline muted preload="metadata"></video>'):'<img src="'+esc(m.prev||m.img)+'" alt="Foto '+(i+1)+'">')+'<button class="mx" data-mx="'+i+'" aria-label="Remover foto '+(i+1)+'">✕</button><button class="mr" data-mr="'+i+'">Trocar</button></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">'+L.length+(L.length>1?' fotos · no mural, deslize para ver todas':' foto')+'</div>':'')+au;
 }
 // ---- Fotos: compressão (até ~300 KB), sem duplicar arquivos e apagando as que saem das publicações ----
 var MAXB=150*1024,MAXSIDE=1280,MINSIDE=800;
 // Se o celular não consegue abrir a foto inteira (fotos de 48 MP em aparelho com pouca memória), abre já reduzida
 // (createImageBitmap com resizeWidth não carrega a foto cheia na memória). Sem isso a foto ia pesada (até 4 MB) para o mural.
-function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};
+function loadImg(file){
+  // foto grande (mais de 2,5 MB): abre já reduzida, sem carregar a foto inteira na memória
+  if(window.createImageBitmap&&file&&file.size>2.5*1048576)return createImageBitmap(file,{resizeWidth:MAXSIDE,resizeQuality:'high'}).then(function(b){try{b.naturalWidth=b.width;b.naturalHeight=b.height}catch(e){}if(!b.naturalWidth)throw new Error('imagem');return b}).catch(function(){return loadImgFull(file)});
+  return loadImgFull(file);
+}
+function loadImgFull(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};
   im.onerror=function(){URL.revokeObjectURL(u);if(!window.createImageBitmap)return rej(new Error('imagem'));
     createImageBitmap(file,{resizeWidth:MAXSIDE,resizeQuality:'high'}).then(function(b){try{b.naturalWidth=b.width;b.naturalHeight=b.height}catch(e){}if(!b.naturalWidth)return rej(new Error('imagem'));res(b)},function(){rej(new Error('imagem'))})};
   im.src=u})}

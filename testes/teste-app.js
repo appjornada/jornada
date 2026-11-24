@@ -1160,6 +1160,32 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return '3 fotos de uma vez: 3 na tela e 3 na publicação';
   });
 
+  await teste('Editar a própria publicação: dá para corrigir a data (ex.: postou hoje a leitura de ontem); a líder corrigindo outra pessoa não muda a data', async () => {
+    const S = novoServidor(), A = S.usuario('Ana'), B = S.usuario('Bia'), g = S.caravana(A, 'G'); S.entrar(B, g); const c = jornadaGenesis(S, g);
+    const ka = S.publicacao(A, c, { book: 'Gênesis', ref: '7', read_date: '2026-11-24', created_at: '2026-11-24T12:00:00Z' });
+    const kb = S.publicacao(B, c, { book: 'Gênesis', ref: '7', read_date: '2026-11-24', created_at: '2026-11-24T12:00:00Z' });
+    A.md = { jornadas: [c.id] };
+    const RELOGIO = { relogio: '2026-11-24T20:00:00-03:00', timezoneId: 'America/Sao_Paulo' };
+    const pa = await abrir(browser, base, S, A, RELOGIO);
+    await pa.evaluate(id => editPost(id), ka.id); await pa.waitForSelector('#shc #dt');
+    exige(!(await pa.$eval('#shc #dt', e => e.disabled)), 'a data continua travada para quem publicou');
+    await pa.fill('#shc #dt', '2026-11-23'); await pa.dispatchEvent('#shc #dt', 'change');
+    await pa.click('#ok');
+    exige(await esperar(() => S.DB.checkins[ka.id].read_date === '2026-11-23'), 'data não mudou: ' + S.DB.checkins[ka.id].read_date);
+    exige(S.DB.checkins[ka.id].ref === '7', 'mudou os capítulos: ' + S.DB.checkins[ka.id].ref);
+    // data fora da jornada (antes de começar) é recusada
+    await pa.evaluate(id => editPost(id), ka.id); await pa.waitForSelector('#shc #dt');
+    await pa.fill('#shc #dt', '2026-11-10'); await pa.click('#ok');
+    exige(/Escolha uma data entre/.test(await pa.textContent('#er')), 'aceitou data antes da jornada');
+    await pa.evaluate(() => closeSheet(true));
+    // líder corrigindo a Bia: data travada e não muda
+    await pa.evaluate(id => editPost(id), kb.id); await pa.waitForSelector('#shc #dt');
+    exige(await pa.$eval('#shc #dt', e => e.disabled), 'a líder consegue mudar a data da Bia');
+    const erros = pa.erros; await pa.context().close();
+    exige(!erros.length, 'erros: ' + erros.join(' | '));
+    return 'Ana mudou 24/11 → 23/11 (capítulos iguais); data fora da jornada recusada; líder não muda a data da Bia';
+  });
+
   await teste('Cronograma: em 23/11 libera Gênesis 1 a 7 (atrasados + o dia) e trava Gênesis 8 em diante', async () => {
     const S = novoServidor(); const A = S.usuario('Ana'); const g = S.caravana(A, 'Cartas'); const c = jornadaGenesis(S, g);
     const pa = await abrir(browser, base, S, A, { relogio: '2026-11-23T10:00:00-03:00' });

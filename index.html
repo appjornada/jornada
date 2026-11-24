@@ -659,6 +659,7 @@ function openKids(E){
   showSheet('<h1>🧒 '+esc(S.ch.name)+'</h1><h2>'+(E?'Editar estudo':'Estudo com meu filho')+'</h2>'+
     '<label>Com quem você estudou?</label><div id="kch">'+kidsChips()+'</div>'+
     '<label for="kst">O que vocês estudaram?</label><input id="kst" maxlength="120" placeholder="Ex.: Arca de Noé" value="'+esc(E?E.ref:'')+'">'+
+    '<label for="dt">Data do estudo</label><input type="date" id="dt" min="'+S.ch.start+'" max="'+(TODAY<S.ch.end?TODAY:S.ch.end)+'" value="'+(E?E.date:(TODAY<S.ch.end?TODAY:S.ch.end))+'">'+
     (E?'<label>Fotos ou vídeos</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Foto do momento (pelo menos 1)</label><div class="sub">Pode ser da história, do desenho ou de vocês estudando.</div>')+
     '<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
     '<label>Quanto tempo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
@@ -2050,7 +2051,7 @@ function openSheet(pre){
     showSheet('<h1>✏️ Corrigir leitura</h1><h2>'+esc(nm(E.uid))+'</h2><div class="sub">Como líder, você corrige só o livro e os capítulos. Reflexão, fotos e tempo de estudo continuam como ela publicou.</div>'+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" value="'+dt+'" disabled><div id="stepr"></div><div class="err" id="er"></div><button class="btn" id="ok">💾 Salvar correção</button><button class="btn g" id="x">Cancelar</button>'+(E?'<button class="btn g" style="color:var(--err)" data-delpost="'+E.id+'">🗑️ Apagar esta publicação</button>':''));
     stepFor(dt);return;
   }
-  showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"'+(E?' disabled':'')+'><div id="stepr"></div>'+
+  showSheet((E?'<h1>✏️ Editar publicação</h1><h2>Corrigir leitura</h2>':'<h1>👣 Dar um passo</h1><h2>Registrar leitura</h2>')+(S.all.length>1?'<div class="jtag">📍 Jornada: <b>'+esc(c.name)+'</b></div>':'')+'<label>Data do passo</label><input type="date" id="dt" min="'+c.start+'" max="'+mx+'" value="'+dt+'"><div id="stepr"></div>'+
     '<label>Quanto tempo durou o estudo?</label><div>'+[[5,'5 min'],[10,'10 min'],[15,'15 min'],[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'1 hora'],[90,'1h30'],[120,'2 horas']].map(function(m){return '<button class="chip" data-mn="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div><div class="row" style="margin-top:10px"><span class="sub" style="white-space:nowrap">Outro tempo:</span><input id="mn" type="number" min="1" max="600" inputmode="numeric" placeholder="minutos"><span class="sub">min</span></div>'+
     ''+(E?'<label>Fotos ou vídeos do seu estudo</label><div class="sub">Adicione, remova ou troque as fotos.</div>':'<label>Fotos ou vídeos do seu estudo (pelo menos 1)</label><div class="sub">Pode colocar várias, como a Bíblia e o caderno de anotações.</div>')+'<div class="two"><label class="btn o" for="fcam" style="margin-top:0">📷 Câmera</label><label class="btn o" for="fgal" style="margin-top:0">🖼️ Galeria</label></div><input type="file" id="fcam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="fgal" accept="image/*,video/*" multiple hidden><input type="file" id="frep" accept="image/*,video/*" hidden><div id="mprev"></div>'+
     '<label>Áudio (opcional, até 3 minutos)</label><div id="arec"></div><input type="file" id="faud" accept="audio/*" hidden>'+
@@ -2299,7 +2300,7 @@ async function publish(){
   if(REC&&REC.on){er.textContent='Você está gravando um áudio: toque em "Parar e usar o áudio" antes de registrar.';return}
   if(isKids(c))return publishKids(c,mx,mn,er,btn);
   if(!dt||dt<c.start||dt>mx){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
-  if(S.edit)dt=S.edit.date;
+  if(S.edit&&isMod())dt=S.edit.date; // a líder não muda a data do passo de outra pessoa; quem publicou pode corrigir a data
   if(!S.sel.length){er.textContent='Toque nos capítulos que você leu (cada um é 1 passo).';return}
   var R=S.sel.map(function(k){var q=k.split(':');return{b:+q[0],c:+q[1]}}).sort(function(a,b){return a.b-b.b||a.c-b.c});
   if(R.some(function(x){return readSet(who(),S.edit&&S.edit.id)[x.b+':'+x.c]})){er.textContent='Um dos capítulos marcados já foi registrado antes.';return}
@@ -2337,6 +2338,7 @@ async function publish(){
 }
 // Jornada Kids: com quem, o que estudaram, foto e tempo; sem capítulos (1 publicação = 1 estudo)
 async function publishKids(c,mx,mn,er,btn){
+  var kd=val('dt');if(kd&&(kd<c.start||kd>mx)){er.textContent='Escolha uma data entre '+fd(c.start)+' e '+fd(mx)+'.';return}
   var names=(S.kidsSel||[]).slice(),story=(val('kst')||'').replace(/\s+/g,' ').trim().slice(0,120);
   if(S.kidsAdd&&document.getElementById('kname')&&val('kname').trim()){kidsAddName();names=S.kidsSel.slice()}
   if(!names.length){er.textContent='Toque no nome de quem estudou com você (ou em "+ Adicionar").';return}
@@ -2350,7 +2352,7 @@ async function publishKids(c,mx,mn,er,btn){
   try{
     var pm=await upMedia();
     btn.textContent='Salvando…';
-    var row={challenge_id:c.id,read_date:mx,book:KBOOK,ref:story,chapters:1,child_names:names,note:tidy(val('t'))||null,photo_path:pm.photo_path,media_type:pm.media_type,media_source:pm.media_source||'galeria',study_minutes:mn};
+    var row={challenge_id:c.id,read_date:val('dt')||mx,book:KBOOK,ref:story,chapters:1,child_names:names,note:tidy(val('t'))||null,photo_path:pm.photo_path,media_type:pm.media_type,media_source:pm.media_source||'galeria',study_minutes:mn};
     pendSave({row:row,key:S.ckey||(S.ckey=uid()),at:Date.now()});
     var saved=await saveCheckin(row);
     pendClear();
@@ -2498,6 +2500,7 @@ async function saveEdit(st,mn,m,btn,er){
   btn.disabled=true;btn.textContent='Salvando…';
   try{
     var up=st.kids?{book:KBOOK,ref:st.ref,chapters:1,child_names:st.names,note:tidy(val('t'))||null,study_minutes:mn}:{book:BOOKS[st.b],ref:st.ref||null,chapters:st.n,note:tidy(val('t'))||null,study_minutes:mn};
+    var nd=val('dt');if(nd&&nd!==S.edit.date)up.read_date=nd; // corrigir a data (ex.: postou hoje a leitura de ontem)
     var pm=await upMedia();up.photo_path=pm.photo_path;up.media_type=pm.media_type;up.media_source=pm.media_source||S.edit.ms||null;
     var r;
     try{r=await withTimeout(sb.from('checkins').update(up).eq('id',S.edit.id).eq('user_id',S.me).select('id'),45000)}
@@ -3137,7 +3140,7 @@ document.addEventListener('keydown',function(e){
 document.getElementById('sh').addEventListener('click',function(e){if(e.target.id==='sh')closeSheet()});
 document.addEventListener('change',function(e){
   var id=e.target.id;
-  if(id==='dt')stepFor(e.target.value);
+  if(id==='dt'){if(!isKids(S.ch))stepFor(e.target.value)}
   else if(id==='sbk'){S.bk=+e.target.value;drawChaps()}
   else if(id==='bver'){BIB.ver=e.target.value;bibSave();render()}
   else if(id==='vsel'&&e.target.value)goVerse(e.target.value);

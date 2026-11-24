@@ -1075,21 +1075,34 @@ function exige(c, msg) { if (!c) throw new Error(msg) }
     return 'Roger: chave, pergunta, registro com Ana (Pedro guardado), mural Kids separado, edição; Tânia: nada muda; Paula: direto no registro Kids';
   });
 
-  await teste('Jornada Kids: líder edita a jornada e ela continua sendo Kids; Mapa sem trilha, ranking e calendário', async () => {
+  await teste('Jornada Kids: líder edita a jornada e ela continua sendo Kids; Mapa sem trilha e ranking, com calendário próprio', async () => {
     const S = novoServidor(), R = S.usuario('Roger Martins'), gk = S.caravana(R, 'Jornada Kids');
     const kids = S.jornada(gk, 'Jornada Kids', -1, 400); kids.description = 'Estudo da Palavra em família, no ritmo de cada criança. [kids]'; kids.start_date = '2026-11-15'; kids.end_date = '2027-12-31'; // datas fixas: o relógio destes testes é fixo
     R.md = { jornadas: [kids.id] };
+    S.publicacao(R, kids, { book: 'Jornada Kids', ref: 'Arca de Noé', chapters: 1, child_names: ['Ana'] });
     const pr = await abrir(browser, base, S, R);
-    await pr.click('nav [data-t="cfg"]'); await pr.waitForTimeout(400);
+    await pr.click('nav [data-t="cfg"]'); await pr.waitForTimeout(600);
     const mapa = await pr.innerText('main'), rk = await pr.$('main .rkc');
-    exige(!rk && !/Terra Prometida|Sua trilha/i.test(mapa), 'Mapa Kids mostra trilha/ranking/calendário: ' + mapa.slice(0, 300));
+    exige(!rk && !/Terra Prometida|Sua trilha/i.test(mapa), 'Mapa Kids mostra trilha/ranking: ' + mapa.slice(0, 300));
+    // calendário próprio da Kids: só até o fim do mês atual (a jornada vai até 2027), com a foto do dia
+    exige(/Seus estudos em família/.test(mapa), 'Mapa Kids sem o calendário');
+    const dias = await pr.$$eval('main .cal button, main .cal div:not(.w)', e => e.length);
+    exige(dias > 0 && dias <= 92, 'calendário da Kids com ' + dias + ' dias (deveria ir só até o mês atual)');
+    exige(await pr.$('main .cal [data-dv]'), 'o dia com estudo não mostra a foto');
+    await pr.click('main .cal [data-dv]'); await pr.waitForTimeout(400);
+    exige(/Arca de Noé/.test(await pr.innerText('body')), 'tocar na foto não mostrou o estudo');
+    await pr.evaluate(() => { closeLb && closeLb(); closeSheet(true) });
+    const ontem = await pr.evaluate(() => addD(TODAY, -1));
+    await pr.click('main .cal [data-day="' + ontem + '"]'); await pr.waitForSelector('#shc #kst');
+    exige(await pr.inputValue('#shc #dt') === ontem, 'tocar num dia sem estudo não abriu o registro com aquela data');
+    await pr.evaluate(() => closeSheet(true));
     await pr.evaluate(id => editCh(id), kids.id); await pr.waitForSelector('#ed');
     exige(!/\[kids\]/.test(await pr.inputValue('#ed')), 'a marcação interna aparece para o líder');
     await pr.fill('#ed', 'Estudo da Palavra em família'); await pr.evaluate(id => saveCh(id), kids.id);
     exige(await esperar(() => S.DB.challenges[kids.id].description === 'Estudo da Palavra em família [kids]'), 'descrição depois de salvar: ' + S.DB.challenges[kids.id].description);
     const erros = pr.erros; await pr.context().close();
     exige(!erros.length, 'erros: ' + erros.join(' | '));
-    return 'descrição salva com [kids]; Mapa Kids sem trilha, ranking e calendário';
+    return 'descrição salva com [kids]; Mapa Kids sem trilha e ranking, com calendário próprio (até o mês atual, foto do dia, dia vazio abre o registro com a data)';
   });
 
   await teste('Jornada Kids: oração em família (Hoje em família, momento + com quem, linha no mural, 🔥 com Palavra ou oração, apagar); sem a tabela, tudo como antes', async () => {
